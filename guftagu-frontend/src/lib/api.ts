@@ -108,7 +108,7 @@ export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),
   getUsers: (params?: any) => api.get('/admin/users', { params }),
   getUserDetails: (userId: string) => api.get(`/admin/users/${userId}`),
-  banUser: (userId: string, data: { reason: string; duration?: number; type: 'temporary' | 'permanent' }) =>
+  banUser: (userId: string, data: { reason: string; duration?: number; type: 'temporary' | 'permanent'; description?: string }) =>
     api.post(`/admin/users/${userId}/ban`, data),
   unbanUser: (userId: string) => api.post(`/admin/users/${userId}/unban`),
   getReports: (params?: any) => api.get('/admin/reports', { params }),

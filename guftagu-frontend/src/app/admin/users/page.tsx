@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Search, MoreVertical, Ban, Shield, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, MoreVertical, Ban, Shield, Eye, ChevronLeft, ChevronRight, X, AlertTriangle } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -29,6 +29,29 @@ interface AdminUser {
   lastActive: string;
 }
 
+// Ban reason options matching backend enum
+const BAN_REASONS = [
+  { value: 'inappropriate_content', label: 'Inappropriate Content' },
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'spam', label: 'Spam' },
+  { value: 'multiple_reports', label: 'Multiple Reports' },
+  { value: 'admin_discretion', label: 'Admin Discretion' },
+  { value: 'underage', label: 'Underage User' },
+  { value: 'impersonation', label: 'Impersonation' },
+  { value: 'terms_violation', label: 'Terms of Service Violation' },
+  { value: 'other', label: 'Other' },
+];
+
+// Duration options in hours
+const BAN_DURATIONS = [
+  { value: 1, label: '1 Hour' },
+  { value: 24, label: '1 Day' },
+  { value: 72, label: '3 Days' },
+  { value: 168, label: '7 Days' },
+  { value: 720, label: '30 Days' },
+  { value: 2160, label: '90 Days' },
+];
+
 export default function AdminUsersPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -39,6 +62,16 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  
+  // Ban Modal State
+  const [banModalOpen, setBanModalOpen] = useState(false);
+  const [banTargetUser, setBanTargetUser] = useState<AdminUser | null>(null);
+  const [banReason, setBanReason] = useState('');
+  const [banType, setBanType] = useState<'temporary' | 'permanent'>('temporary');
+  const [banDuration, setBanDuration] = useState(24);
+  const [banDescription, setBanDescription] = useState('');
+  const [isBanning, setIsBanning] = useState(false);
+  const [banError, setBanError] = useState('');
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -73,17 +106,52 @@ export default function AdminUsersPage() {
     fetchUsers();
   };
 
-  const handleBanUser = async (userId: string) => {
-    const reason = prompt('Enter ban reason:');
-    if (!reason) return;
+  // Open ban modal
+  const openBanModal = (targetUser: AdminUser) => {
+    setBanTargetUser(targetUser);
+    setBanReason('');
+    setBanType('temporary');
+    setBanDuration(24);
+    setBanDescription('');
+    setBanError('');
+    setBanModalOpen(true);
+    setActionMenuOpen(null);
+  };
+
+  // Close ban modal
+  const closeBanModal = () => {
+    setBanModalOpen(false);
+    setBanTargetUser(null);
+    setBanError('');
+  };
+
+  // Submit ban
+  const handleBanSubmit = async () => {
+    if (!banTargetUser) return;
+    
+    if (!banReason) {
+      setBanError('Please select a ban reason');
+      return;
+    }
+
+    setIsBanning(true);
+    setBanError('');
 
     try {
-      await adminApi.banUser(userId, { reason, type: 'permanent' });
+      await adminApi.banUser(banTargetUser._id, {
+        reason: banReason,
+        type: banType,
+        duration: banType === 'temporary' ? banDuration : undefined,
+        description: banDescription || undefined,
+      });
+      closeBanModal();
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to ban user:', error);
+      setBanError(error.response?.data?.error || 'Failed to ban user. Please try again.');
+    } finally {
+      setIsBanning(false);
     }
-    setActionMenuOpen(null);
   };
 
   const handleUnbanUser = async (userId: string) => {
@@ -232,7 +300,7 @@ export default function AdminUsersPage() {
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => handleBanUser(u._id)}
+                                  onClick={() => openBanModal(u)}
                                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-400 hover:bg-zinc-700"
                                 >
                                   <Ban className="w-4 h-4" />
@@ -276,6 +344,160 @@ export default function AdminUsersPage() {
           )}
         </div>
       </div>
+
+      {/* Ban User Modal */}
+      {banModalOpen && banTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeBanModal}
+          />
+          
+          {/* Modal */}
+          <div className="relative w-full max-w-md mx-4 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">Ban User</h2>
+              </div>
+              <button
+                onClick={closeBanModal}
+                className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* User Info */}
+            <div className="p-4 border-b border-zinc-800">
+              <div className="flex items-center gap-3">
+                <Avatar src={banTargetUser.profilePicture} alt={banTargetUser.displayName || banTargetUser.username || ''} size="md" />
+                <div>
+                  <p className="font-medium text-white">{banTargetUser.displayName || banTargetUser.username || 'No name'}</p>
+                  <p className="text-sm text-zinc-400">@{banTargetUser.username || 'unnamed'}</p>
+                  <p className="text-xs text-zinc-500">{banTargetUser.email}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="p-4 space-y-4">
+              {/* Error Message */}
+              {banError && (
+                <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                  <p className="text-sm text-red-400">{banError}</p>
+                </div>
+              )}
+
+              {/* Ban Reason */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Ban Reason <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={banReason}
+                  onChange={(e) => setBanReason(e.target.value)}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-violet-500 transition-colors"
+                >
+                  <option value="">Select a reason...</option>
+                  {BAN_REASONS.map((reason) => (
+                    <option key={reason.value} value={reason.value}>
+                      {reason.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Ban Type */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">Ban Type</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setBanType('temporary')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      banType === 'temporary'
+                        ? 'bg-violet-600 text-white'
+                        : 'bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700'
+                    }`}
+                  >
+                    Temporary
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBanType('permanent')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      banType === 'permanent'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700'
+                    }`}
+                  >
+                    Permanent
+                  </button>
+                </div>
+              </div>
+
+              {/* Duration (only for temporary) */}
+              {banType === 'temporary' && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Duration</label>
+                  <select
+                    value={banDuration}
+                    onChange={(e) => setBanDuration(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-violet-500 transition-colors"
+                  >
+                    {BAN_DURATIONS.map((duration) => (
+                      <option key={duration.value} value={duration.value}>
+                        {duration.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Additional Notes <span className="text-zinc-500">(optional)</span>
+                </label>
+                <textarea
+                  value={banDescription}
+                  onChange={(e) => setBanDescription(e.target.value)}
+                  placeholder="Add any additional details about this ban..."
+                  rows={3}
+                  maxLength={500}
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 transition-colors resize-none"
+                />
+                <p className="text-xs text-zinc-500 mt-1">{banDescription.length}/500 characters</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 p-4 border-t border-zinc-700">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={closeBanModal}
+                disabled={isBanning}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 !bg-red-600 hover:!bg-red-700"
+                onClick={handleBanSubmit}
+                isLoading={isBanning}
+              >
+                {isBanning ? 'Banning...' : 'Ban User'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
