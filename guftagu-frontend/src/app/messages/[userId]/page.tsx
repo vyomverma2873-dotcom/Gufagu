@@ -81,17 +81,24 @@ export default function ConversationPage() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const scrollToBottom = useCallback((smooth = true) => {
-    if (messagesContainerRef.current) {
-      const container = messagesContainerRef.current;
-      if (smooth) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth'
-        });
-      } else {
-        container.scrollTop = container.scrollHeight;
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      if (messagesContainerRef.current) {
+        const container = messagesContainerRef.current;
+        if (smooth) {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+          });
+        } else {
+          container.scrollTop = container.scrollHeight;
+        }
       }
-    }
+      // Also scroll the end ref into view as backup
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -128,16 +135,30 @@ export default function ConversationPage() {
   // Scroll to bottom when timeline changes
   const initialScrollDone = useRef(false);
   useEffect(() => {
-    if (timeline.length > 0) {
+    if (timeline.length > 0 && !isLoading) {
       // Use instant scroll on first load, smooth scroll for subsequent updates
       if (!initialScrollDone.current) {
-        scrollToBottom(false); // instant
-        initialScrollDone.current = true;
+        // Add a small delay to ensure DOM is fully rendered after data load
+        const timer = setTimeout(() => {
+          scrollToBottom(false); // instant
+          initialScrollDone.current = true;
+        }, 100);
+        return () => clearTimeout(timer);
       } else {
         scrollToBottom(true); // smooth
       }
     }
-  }, [timeline, scrollToBottom]);
+  }, [timeline, scrollToBottom, isLoading]);
+
+  // Force scroll to bottom after initial render is complete
+  useEffect(() => {
+    if (!isLoading && timeline.length > 0) {
+      const timer = setTimeout(() => {
+        scrollToBottom(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]); // Only run when loading state changes
 
   // Socket event listeners
   useEffect(() => {
@@ -578,6 +599,7 @@ export default function ConversationPage() {
                       animation: 'fadeInUp 0.3s ease-out forwards'
                     } : undefined}
                   >
+                    {/* Other user's avatar */}
                     {!isOwn && (
                       <div className={`w-6 sm:w-8 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
                         <Avatar
@@ -587,25 +609,48 @@ export default function ConversationPage() {
                         />
                       </div>
                     )}
-                    <div
-                      className={`max-w-[80%] sm:max-w-[70%] px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl transition-all duration-300 ${
-                        isOwn
-                          ? 'bg-white text-neutral-900 rounded-br-md shadow-lg shadow-white/10'
-                          : 'bg-neutral-800/80 border border-neutral-700/50 text-white rounded-bl-md'
-                      } ${
-                        message.isNew ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
-                      }`}
-                      style={message.isNew ? {
-                        animation: 'scaleIn 0.3s ease-out 0.1s forwards'
-                      } : undefined}
-                    >
-                      <p className="break-words text-sm sm:text-base">{message.content}</p>
-                      <p className={`text-[9px] sm:text-[10px] mt-0.5 sm:mt-1 ${
-                        isOwn ? 'text-neutral-500' : 'text-neutral-500'
-                      }`}>
-                        {formatTime(message.timestamp || message.createdAt || '')}
-                      </p>
+                    
+                    {/* Message content */}
+                    <div className="flex flex-col">
+                      {/* Sender name - show when avatar is visible */}
+                      {showAvatar && (
+                        <span className={`text-[10px] sm:text-xs mb-0.5 ${
+                          isOwn ? 'text-right text-neutral-400' : 'text-left text-neutral-400'
+                        }`}>
+                          {isOwn ? (user?.displayName || user?.username || 'You') : (chatUser.displayName || chatUser.username)}
+                        </span>
+                      )}
+                      <div
+                        className={`max-w-[80%] sm:max-w-[70%] px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl transition-all duration-300 ${
+                          isOwn
+                            ? 'bg-white text-neutral-900 rounded-br-md shadow-lg shadow-white/10'
+                            : 'bg-neutral-800/80 border border-neutral-700/50 text-white rounded-bl-md'
+                        } ${
+                          message.isNew ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
+                        }`}
+                        style={message.isNew ? {
+                          animation: 'scaleIn 0.3s ease-out 0.1s forwards'
+                        } : undefined}
+                      >
+                        <p className="break-words text-sm sm:text-base">{message.content}</p>
+                        <p className={`text-[9px] sm:text-[10px] mt-0.5 sm:mt-1 ${
+                          isOwn ? 'text-neutral-500' : 'text-neutral-500'
+                        }`}>
+                          {formatTime(message.timestamp || message.createdAt || '')}
+                        </p>
+                      </div>
                     </div>
+                    
+                    {/* Own user's avatar */}
+                    {isOwn && (
+                      <div className={`w-6 sm:w-8 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
+                        <Avatar
+                          src={user?.profilePicture}
+                          alt={user?.username || 'You'}
+                          size="sm"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
