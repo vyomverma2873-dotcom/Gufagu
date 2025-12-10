@@ -1,142 +1,214 @@
-import { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy - Guftagu',
-  description: 'Privacy Policy for Guftagu random video chat platform',
-};
+import { Lock, Shield, Eye, Database, UserCheck, Cookie, AlertTriangle } from 'lucide-react';
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] py-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-white mb-8">Privacy Policy</h1>
-        <p className="text-zinc-400 mb-8">Last updated: December 2024</p>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <Lock className="w-16 h-16 text-white mx-auto mb-4" />
+          <h1 className="text-4xl font-bold text-white mb-4">Privacy Policy</h1>
+          <p className="text-xl text-neutral-400">Last updated: December 2024</p>
+        </div>
 
-        <div className="prose prose-invert prose-zinc max-w-none">
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">1. Introduction</h2>
-            <p className="text-zinc-300 mb-4">
-              At Guftagu, we take your privacy seriously. This Privacy Policy explains how
-              we collect, use, disclose, and safeguard your information when you use our
-              video chat platform.
-            </p>
-          </section>
+        {/* Introduction */}
+        <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 shadow-lg mb-8">
+          <p className="text-neutral-300 leading-relaxed">
+            At Guftagu, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our video chat platform. By using Guftagu, you agree to the collection and use of information in accordance with this policy.
+          </p>
+        </div>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">2. Information We Collect</h2>
-            <h3 className="text-xl font-medium text-white mb-3">Personal Information</h3>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 mb-4">
-              <li>Email address (for authentication)</li>
-              <li>Username and display name</li>
-              <li>Profile picture (if uploaded)</li>
-              <li>Bio and interests</li>
-            </ul>
-            
-            <h3 className="text-xl font-medium text-white mb-3">Usage Data</h3>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 mb-4">
-              <li>IP address and device information</li>
-              <li>Browser type and version</li>
-              <li>Pages visited and features used</li>
-              <li>Time and date of visits</li>
-            </ul>
-          </section>
+        <div className="space-y-6">
+          {/* Information We Collect */}
+          <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <Database className="w-6 h-6 text-white" />
+              <h2 className="text-2xl font-semibold text-white">Information We Collect</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Personal Information</h3>
+                <ul className="space-y-2 text-neutral-400 text-sm">
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Email address (for authentication)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Username and display name</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Profile picture (if uploaded)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Bio and interests</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Usage Data</h3>
+                <ul className="space-y-2 text-neutral-400 text-sm">
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>IP address and device information</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Browser type and version</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Pages visited and features used</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Time and date of visits</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">3. How We Use Your Information</h2>
-            <p className="text-zinc-300 mb-4">We use the collected information to:</p>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 mb-4">
-              <li>Provide and maintain our service</li>
-              <li>Authenticate and manage user accounts</li>
-              <li>Send verification codes and notifications</li>
-              <li>Match users for video chats</li>
-              <li>Improve and optimize our platform</li>
-              <li>Detect and prevent fraud or abuse</li>
-              <li>Respond to support requests</li>
-            </ul>
-          </section>
+          {/* How We Use Your Information */}
+          <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <UserCheck className="w-6 h-6 text-white" />
+              <h2 className="text-2xl font-semibold text-white">How We Use Your Information</h2>
+            </div>
+            <p className="text-neutral-300 mb-4">We use the collected information to:</p>
+            <div className="grid md:grid-cols-2 gap-3">
+              {[
+                'Provide and maintain our service',
+                'Authenticate and manage user accounts',
+                'Send verification codes and notifications',
+                'Connect users for video and text chats',
+                'Improve and optimize our platform',
+                'Detect and prevent fraud or abuse',
+                'Respond to support requests',
+                'Analyze usage patterns and trends'
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-neutral-400 text-sm">
+                  <span className="text-white mt-0.5">✓</span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">4. Video Chat Privacy</h2>
-            <p className="text-zinc-300 mb-4">
+          {/* Video Chat Privacy */}
+          <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <Eye className="w-6 h-6 text-white" />
+              <h2 className="text-2xl font-semibold text-white">Video Chat Privacy</h2>
+            </div>
+            <p className="text-neutral-300 mb-4">
               Guftagu uses peer-to-peer WebRTC connections for video chats. This means:
             </p>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 mb-4">
-              <li>Video and audio streams are not stored on our servers</li>
-              <li>Conversations are directly between users</li>
-              <li>We do not record or monitor video chat content</li>
-            </ul>
-          </section>
+            <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl p-6">
+              <ul className="space-y-3 text-neutral-400">
+                <li className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>Video and audio streams are transmitted directly between users</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>Conversations are not stored on our servers</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>We do not record or monitor video chat content</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+                  <span>End-to-end encrypted connections for maximum privacy</span>
+                </li>
+              </ul>
+            </div>
+          </div>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">5. Data Storage and Security</h2>
-            <p className="text-zinc-300 mb-4">
-              We implement industry-standard security measures to protect your data:
+          {/* Grid Layout for Additional Sections */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <Shield className="w-6 h-6 text-white" />
+                <h2 className="text-xl font-semibold text-white">Data Security</h2>
+              </div>
+              <p className="text-neutral-400 text-sm mb-3">
+                We implement industry-standard security measures:
+              </p>
+              <ul className="space-y-2 text-neutral-400 text-sm">
+                <li>• Encrypted data transmission (HTTPS/TLS)</li>
+                <li>• Secure authentication system</li>
+                <li>• Regular security audits</li>
+                <li>• Limited access to personal data</li>
+              </ul>
+            </div>
+
+            <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6 shadow-lg">
+              <h2 className="text-xl font-semibold text-white mb-4">Data Sharing</h2>
+              <p className="text-neutral-400 text-sm mb-3">
+                We do not sell your personal information. We may share data with:
+              </p>
+              <ul className="space-y-2 text-neutral-400 text-sm">
+                <li>• Service providers who assist in operating our platform</li>
+                <li>• Law enforcement when required by law</li>
+                <li>• Other users (only information you choose to make public)</li>
+              </ul>
+            </div>
+
+            <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6 shadow-lg">
+              <h2 className="text-xl font-semibold text-white mb-4">Your Rights</h2>
+              <p className="text-neutral-400 text-sm mb-3">You have the right to:</p>
+              <ul className="space-y-2 text-neutral-400 text-sm">
+                <li>• Access your personal data</li>
+                <li>• Correct inaccurate information</li>
+                <li>• Request deletion of your account</li>
+                <li>• Export your data</li>
+                <li>• Opt out of marketing communications</li>
+              </ul>
+            </div>
+
+            <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <Cookie className="w-6 h-6 text-white" />
+                <h2 className="text-xl font-semibold text-white">Cookies</h2>
+              </div>
+              <p className="text-neutral-400 text-sm">
+                We use essential cookies to maintain your session and preferences. These are necessary for the platform to function properly. We do not use tracking or advertising cookies.
+              </p>
+            </div>
+          </div>
+
+          {/* Children's Privacy Warning */}
+          <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-2xl p-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-white mb-2">Children's Privacy</h3>
+                <p className="text-neutral-400 text-sm">
+                  Guftagu is not intended for users under 18 years of age. We do not knowingly collect information from minors. If we discover that a minor has provided us with personal information, we will delete it immediately.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 shadow-lg">
+            <h2 className="text-2xl font-semibold text-white mb-4">Contact Us About Privacy</h2>
+            <p className="text-neutral-300 mb-4">
+              If you have questions about this Privacy Policy or how we handle your data, please contact us:
             </p>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 mb-4">
-              <li>Encrypted data transmission (HTTPS/TLS)</li>
-              <li>Secure password hashing</li>
-              <li>Regular security audits</li>
-              <li>Limited access to personal data</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">6. Data Sharing</h2>
-            <p className="text-zinc-300 mb-4">
-              We do not sell your personal information. We may share data with:
+            <a href="mailto:vyomverma2873@gmail.com" className="text-white hover:underline font-medium">
+              vyomverma2873@gmail.com
+            </a>
+            <p className="text-neutral-500 text-sm mt-4">
+              We will respond to your privacy-related inquiries within 48 hours.
             </p>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 mb-4">
-              <li>Service providers who assist in operating our platform</li>
-              <li>Law enforcement when required by law</li>
-              <li>Other users (only information you choose to make public)</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">7. Your Rights</h2>
-            <p className="text-zinc-300 mb-4">You have the right to:</p>
-            <ul className="list-disc list-inside text-zinc-300 space-y-2 mb-4">
-              <li>Access your personal data</li>
-              <li>Correct inaccurate information</li>
-              <li>Request deletion of your account</li>
-              <li>Export your data</li>
-              <li>Opt out of marketing communications</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">8. Cookies</h2>
-            <p className="text-zinc-300 mb-4">
-              We use essential cookies to maintain your session and preferences. These
-              are necessary for the platform to function properly.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">9. Children&apos;s Privacy</h2>
-            <p className="text-zinc-300 mb-4">
-              Guftagu is not intended for users under 18 years of age. We do not knowingly
-              collect information from minors. If we discover that a minor has provided us
-              with personal information, we will delete it immediately.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">10. Changes to This Policy</h2>
-            <p className="text-zinc-300 mb-4">
-              We may update this Privacy Policy from time to time. We will notify you of
-              any changes by posting the new policy on this page and updating the &quot;Last
-              updated&quot; date.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">11. Contact Us</h2>
-            <p className="text-zinc-300 mb-4">
-              If you have questions about this Privacy Policy, please contact us at
-              privacy@guftagu.com.
-            </p>
-          </section>
+          </div>
         </div>
       </div>
     </div>
