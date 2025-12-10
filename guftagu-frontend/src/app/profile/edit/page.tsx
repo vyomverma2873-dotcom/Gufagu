@@ -102,10 +102,6 @@ export default function EditProfilePage() {
     
     // Validate username if changed
     if (username !== user?.username) {
-      if (!user?.canChangeUsername) {
-        setError('You can only change your username once every 30 days');
-        return;
-      }
       if (usernameAvailable === false) {
         setError('Please choose an available username');
         return;
@@ -227,9 +223,6 @@ export default function EditProfilePage() {
             )}
             {usernameAvailable === true && (
               <p className="text-[11px] text-emerald-400 mt-1">Username is available!</p>
-            )}
-            {!user?.canChangeUsername && username !== user?.username && (
-              <p className="text-[11px] text-amber-400 mt-1">You can only change username once every 30 days</p>
             )}
             <p className="text-[11px] text-neutral-500 mt-1">3-20 characters, letters, numbers, and underscores only</p>
           </div>

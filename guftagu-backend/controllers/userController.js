@@ -43,12 +43,6 @@ const updateProfile = async (req, res, next) => {
 
     // Handle username change
     if (username && username !== req.user.username) {
-      if (!req.user.canChangeUsername) {
-        return res.status(400).json({
-          error: 'You can only change your username once every 30 days',
-        });
-      }
-
       // Validate username
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
         return res.status(400).json({
