@@ -125,6 +125,7 @@ export default function VideoCallOverlay() {
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null); // For voice calls - plays remote audio
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localAudioAnalyserRef = useRef<AnalyserNode | null>(null);
   const remoteAudioAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -448,6 +449,30 @@ export default function VideoCallOverlay() {
       }
     }
   }, [remoteStream, callStatus, connectionState]);
+
+  // Sync remote audio element for voice calls
+  useEffect(() => {
+    if (remoteStream && remoteAudioRef.current) {
+      console.log('[Audio] Setting remote audio element srcObject for voice call');
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.volume = 1.0;
+      
+      // Play the audio
+      const playAudio = async () => {
+        for (let i = 0; i < 5; i++) {
+          try {
+            await remoteAudioRef.current?.play();
+            console.log('[Audio] Remote audio playing via audio element!');
+            return;
+          } catch (e) {
+            console.log(`[Audio] Remote audio play attempt ${i + 1} failed:`, e);
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+      };
+      playAudio();
+    }
+  }, [remoteStream]);
 
   // Auto-hide controls after 3 seconds of inactivity
   const resetControlsTimeout = useCallback(() => {
@@ -796,6 +821,32 @@ export default function VideoCallOverlay() {
           };
           
           setRemoteVideo();
+          
+          // Also set up audio element for voice calls (ensures audio plays even without video element)
+          const setRemoteAudio = async () => {
+            if (remoteAudioRef.current) {
+              console.log('[WebRTC] Setting remote audio srcObject for voice call');
+              remoteAudioRef.current.srcObject = stream;
+              remoteAudioRef.current.volume = 1.0;
+              
+              // Multiple play attempts for audio
+              for (let i = 0; i < 3; i++) {
+                try {
+                  await remoteAudioRef.current.play();
+                  console.log('[WebRTC] Remote audio playing successfully!');
+                  break;
+                } catch (e) {
+                  console.log(`[WebRTC] Remote audio play attempt ${i + 1} failed:`, e);
+                  await new Promise(r => setTimeout(r, 300));
+                }
+              }
+            } else {
+              console.warn('[WebRTC] Remote audio ref not available yet, will retry...');
+              setTimeout(setRemoteAudio, 200);
+            }
+          };
+          
+          setRemoteAudio();
           
           // Setup audio analyser for remote stream
           setupAudioAnalyser(stream, false);
@@ -1641,6 +1692,14 @@ export default function VideoCallOverlay() {
       {/* Connected Call Interface */}
       {(callStatus === 'connected' || (callStatus === 'calling' && connectionState === 'connected')) && !callEnded && (
         <>
+          {/* Hidden audio element for remote audio playback (voice calls) */}
+          <audio 
+            ref={remoteAudioRef}
+            autoPlay
+            playsInline
+            style={{ display: 'none' }}
+          />
+          
           {/* Main Call Area */}
           <div className="flex-1 relative overflow-hidden animate-fade-in">
             {/* Video Call View */}
