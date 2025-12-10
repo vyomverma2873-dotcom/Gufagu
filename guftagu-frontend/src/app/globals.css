@@ -115,20 +115,18 @@ body {
   animation: scaleIn 0.3s ease-out forwards;
 }
 
-/* Typing indicator - subtle pulse animation */
-@keyframes typing-pulse {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(0.85);
+/* Typing indicator - contained opacity animation */
+@keyframes typing-fade {
+  0%, 80%, 100% {
+    opacity: 0.3;
   }
-  50% {
+  40% {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
 .animate-typing-dot {
-  animation: typing-pulse 1.2s ease-in-out infinite;
+  animation: typing-fade 1.4s ease-in-out infinite;
 }
 
 /* Safe area for mobile devices */
