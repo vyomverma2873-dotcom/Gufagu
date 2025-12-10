@@ -121,8 +121,12 @@ body {
     transform: translateY(0);
   }
   30% {
-    transform: translateY(-4px);
+    transform: translateY(-3px);
   }
+}
+
+.animate-typing-bounce {
+  animation: typing-bounce 0.6s ease-in-out infinite;
 }
 
 /* Safe area for mobile devices */
