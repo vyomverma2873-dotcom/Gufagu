@@ -28,7 +28,6 @@ export default function Header() {
   }, [pathname]);
 
   const navLinks = [
-    { href: '/chat', label: 'Chat', icon: MessageSquare },
     { href: '/friends', label: 'Friends', icon: Users },
     { href: '/messages', label: 'Messages', icon: Sparkles },
   ];
@@ -67,27 +66,29 @@ export default function Header() {
               </span>
             </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map((link) => {
-                const Icon = link.icon;
-                const isActive = pathname.startsWith(link.href);
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${
-                      isActive
-                        ? 'bg-white text-neutral-900 font-medium shadow-lg shadow-white/10'
-                        : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-sm">{link.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+            {/* Desktop Navigation - Only for authenticated users */}
+            {isAuthenticated && (
+              <nav className="hidden md:flex items-center gap-1">
+                {navLinks.map((link) => {
+                  const Icon = link.icon;
+                  const isActive = pathname.startsWith(link.href);
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                        isActive
+                          ? 'bg-white text-neutral-900 font-medium shadow-lg shadow-white/10'
+                          : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm">{link.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
 
             {/* Right Side */}
             <div className="flex items-center gap-2">
@@ -203,8 +204,8 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
+      {/* Mobile Menu - Only for authenticated users */}
+      {mobileMenuOpen && isAuthenticated && (
         <div className="md:hidden px-4 pb-3">
           <div className="bg-neutral-900/95 backdrop-blur-2xl border border-neutral-700/50 rounded-2xl p-4 mt-2">
             <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800/60 border border-neutral-700/50 rounded-xl mb-4">

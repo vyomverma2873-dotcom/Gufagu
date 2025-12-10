@@ -83,7 +83,7 @@ export default function Home() {
 
             {/* Right Content - How to Use */}
             <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-3xl p-8 shadow-2xl">
-              <h3 className="text-xl font-semibold text-white mb-6">How to Get Started</h3>
+              <h3 className="text-xl font-semibold text-white mb-6">How to Get Started?</h3>
               <div className="space-y-5">
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white font-semibold text-sm">1</div>

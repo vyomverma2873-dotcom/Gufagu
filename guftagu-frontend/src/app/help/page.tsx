@@ -112,7 +112,7 @@ export default function HelpPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-white mb-4">Help Center</h1>
-          <p className="text-xl text-zinc-400">
+          <p className="text-xl text-neutral-400">
             Find answers to common questions or contact our support team
           </p>
         </div>
@@ -120,9 +120,9 @@ export default function HelpPage() {
         {/* FAQ Sections */}
         <div className="space-y-8 mb-16">
           {faqs.map((section) => (
-            <div key={section.category}>
+            <div key={section.category} className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
-                <section.icon className="w-6 h-6 text-violet-400" />
+                <section.icon className="w-6 h-6 text-white" />
                 <h2 className="text-xl font-semibold text-white">{section.category}</h2>
               </div>
               <div className="space-y-2">
@@ -132,22 +132,22 @@ export default function HelpPage() {
                   return (
                     <div
                       key={key}
-                      className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden"
+                      className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl overflow-hidden"
                     >
                       <button
                         onClick={() => toggleItem(key)}
-                        className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-800/50 transition-colors"
+                        className="w-full flex items-center justify-between p-4 text-left hover:bg-neutral-800 transition-colors"
                       >
                         <span className="font-medium text-white">{item.q}</span>
                         {isOpen ? (
-                          <ChevronUp className="w-5 h-5 text-zinc-400 flex-shrink-0" />
+                          <ChevronUp className="w-5 h-5 text-neutral-400 flex-shrink-0" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-zinc-400 flex-shrink-0" />
+                          <ChevronDown className="w-5 h-5 text-neutral-400 flex-shrink-0" />
                         )}
                       </button>
                       {isOpen && (
                         <div className="px-4 pb-4">
-                          <p className="text-zinc-300">{item.a}</p>
+                          <p className="text-neutral-300">{item.a}</p>
                         </div>
                       )}
                     </div>
@@ -159,14 +159,14 @@ export default function HelpPage() {
         </div>
 
         {/* Contact Section */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 text-center">
-          <MessageSquare className="w-12 h-12 text-violet-400 mx-auto mb-4" />
+        <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 text-center shadow-lg">
+          <MessageSquare className="w-12 h-12 text-white mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">Still need help?</h2>
-          <p className="text-zinc-400 mb-6">
+          <p className="text-neutral-400 mb-6">
             Our support team is here to assist you with any questions or issues
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <a href="mailto:support@guftagu.com">
+            <a href="mailto:vyomverma2873@gmail.com">
               <Button>
                 <Mail className="w-4 h-4 mr-2" />
                 Contact Support
