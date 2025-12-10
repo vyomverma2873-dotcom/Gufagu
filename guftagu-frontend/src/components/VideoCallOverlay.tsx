@@ -1887,7 +1887,7 @@ export default function VideoCallOverlay() {
             {/* Local Video PiP */}
             {callType === 'video' && (
               <div 
-                className={`absolute ${pipPositionClasses[pipPosition]} ${isMobile ? 'w-[90px] h-[120px]' : 'w-[120px] h-[160px]'} rounded-xl overflow-hidden bg-neutral-800 shadow-xl border-2 border-white/20 transition-all duration-200 ${isFlippingCamera ? 'opacity-50 scale-95' : 'opacity-100 scale-100'} ${showControls ? 'opacity-100' : 'opacity-70'}`}
+                className={`absolute z-20 ${pipPositionClasses[pipPosition]} ${isMobile ? 'w-[90px] h-[120px]' : 'w-[120px] h-[160px]'} rounded-xl overflow-hidden bg-neutral-800 shadow-xl border-2 border-white/20 transition-all duration-200 ${isFlippingCamera ? 'opacity-50 scale-95' : 'opacity-100 scale-100'} ${showControls ? 'opacity-100' : 'opacity-70'}`}
               >
                 {localStream && isVideoEnabled ? (
                   <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'mirror' : ''}`} />
