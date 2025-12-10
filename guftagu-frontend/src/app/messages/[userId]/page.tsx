@@ -372,7 +372,7 @@ export default function ConversationPage() {
     const isOutgoing = call.isOwn;
     let icon = isOutgoing ? <PhoneOutgoing className="w-4 h-4" /> : <PhoneIncoming className="w-4 h-4" />;
     let text = '';
-    let statusColor = 'text-zinc-400';
+    let statusColor = 'text-neutral-400';
     
     switch (call.status) {
       case 'answered':
@@ -430,7 +430,7 @@ export default function ConversationPage() {
   if (!chatUser) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center">
-        <p className="text-zinc-400 mb-4">User not found</p>
+        <p className="text-neutral-400 mb-4">User not found</p>
         <Link href="/messages">
           <Button>Back to Messages</Button>
         </Link>
@@ -443,11 +443,11 @@ export default function ConversationPage() {
       {/* Note: Call overlays are now rendered globally via IncomingCallOverlay and VideoCallOverlay components */}
 
       {/* Header */}
-      <div className="bg-zinc-900/50 border-b border-zinc-800 px-4 py-3">
+      <div className="bg-neutral-900/70 backdrop-blur-xl border-b border-neutral-800/80 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <button
             onClick={() => router.push('/messages')}
-            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -463,13 +463,13 @@ export default function ConversationPage() {
               <h2 className="font-medium text-white">
                 {chatUser.displayName || chatUser.username}
               </h2>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-neutral-400">
                 {isTyping ? (
-                  <span className="text-violet-400 flex items-center gap-1">
+                  <span className="text-white flex items-center gap-1">
                     <span className="flex gap-0.5">
-                      <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </span>
                     typing
                   </span>
@@ -486,7 +486,7 @@ export default function ConversationPage() {
           <button
             onClick={() => handleStartCall('voice')}
             disabled={!chatUser.isOnline}
-            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={chatUser.isOnline ? 'Voice call' : 'User is offline'}
           >
             <Phone className="w-5 h-5" />
@@ -494,13 +494,13 @@ export default function ConversationPage() {
           <button
             onClick={() => handleStartCall('video')}
             disabled={!chatUser.isOnline}
-            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={chatUser.isOnline ? 'Video call' : 'User is offline'}
           >
             <Video className="w-5 h-5" />
           </button>
 
-          <button className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+          <button className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors">
             <MoreVertical className="w-5 h-5" />
           </button>
         </div>
@@ -513,7 +513,7 @@ export default function ConversationPage() {
             <div key={date}>
               {/* Date separator */}
               <div className="flex items-center justify-center my-4">
-                <span className="px-3 py-1 bg-zinc-800 rounded-full text-xs text-zinc-400">
+                <span className="px-3 py-1.5 bg-neutral-800/60 border border-neutral-700/50 rounded-full text-xs text-neutral-400">
                   {date}
                 </span>
               </div>
@@ -527,7 +527,7 @@ export default function ConversationPage() {
                   
                   return (
                     <div key={call._id} className="flex justify-center my-3">
-                      <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-800/50 border border-zinc-700 rounded-full">
+                      <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-800/50 border border-neutral-700/50 rounded-full">
                         <div className={`p-1.5 rounded-full ${call.status === 'missed' || call.status === 'declined' ? 'bg-red-500/20' : 'bg-emerald-500/20'}`}>
                           <span className={statusColor}>
                             {call.callType === 'video' ? <Video className="w-4 h-4" /> : icon}
@@ -536,12 +536,12 @@ export default function ConversationPage() {
                         <div className="text-sm">
                           <span className={statusColor}>{text}</span>
                           {(call.status === 'answered' || call.status === 'ended') && call.duration > 0 && (
-                            <span className="text-zinc-500 ml-2">
+                            <span className="text-neutral-500 ml-2">
                               {formatDuration(call.duration)}
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-zinc-500">
+                        <span className="text-xs text-neutral-500">
                           {formatTime(call.timestamp)}
                         </span>
                       </div>
@@ -577,10 +577,10 @@ export default function ConversationPage() {
                       </div>
                     )}
                     <div
-                      className={`max-w-[70%] px-4 py-2 rounded-2xl transition-all duration-300 ${
+                      className={`max-w-[70%] px-4 py-2.5 rounded-2xl transition-all duration-300 ${
                         isOwn
-                          ? 'bg-violet-600 text-white rounded-br-md'
-                          : 'bg-zinc-800 text-white rounded-bl-md'
+                          ? 'bg-white text-neutral-900 rounded-br-md shadow-lg shadow-white/10'
+                          : 'bg-neutral-800/80 border border-neutral-700/50 text-white rounded-bl-md'
                       } ${
                         message.isNew ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
                       }`}
@@ -590,7 +590,7 @@ export default function ConversationPage() {
                     >
                       <p className="break-words">{message.content}</p>
                       <p className={`text-[10px] mt-1 ${
-                        isOwn ? 'text-violet-200' : 'text-zinc-500'
+                        isOwn ? 'text-neutral-500' : 'text-neutral-500'
                       }`}>
                         {formatTime(message.timestamp || message.createdAt || '')}
                       </p>
@@ -611,11 +611,11 @@ export default function ConversationPage() {
                   size="sm"
                 />
               </div>
-              <div className="bg-zinc-800 px-4 py-3 rounded-2xl rounded-bl-md">
+              <div className="bg-neutral-800/80 border border-neutral-700/50 px-4 py-3 rounded-2xl rounded-bl-md">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
-                  <span className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
-                  <span className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
+                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
                 </div>
               </div>
             </div>
@@ -626,8 +626,8 @@ export default function ConversationPage() {
       </div>
 
       {/* Input */}
-      <div className="bg-zinc-900/50 border-t border-zinc-800 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center gap-2">
+      <div className="bg-neutral-900/70 backdrop-blur-xl border-t border-neutral-800/80 px-4 py-3">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
           <input
             ref={inputRef}
             type="text"
@@ -635,12 +635,12 @@ export default function ConversationPage() {
             value={newMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-4 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className="flex-1 bg-neutral-800/60 border border-neutral-700/50 rounded-full px-4 py-2.5 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all"
           />
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || isSending}
-            className="p-3 bg-violet-600 rounded-full text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="p-3 bg-white rounded-full text-neutral-900 hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-white/10"
           >
             <Send className="w-5 h-5" />
           </button>

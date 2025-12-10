@@ -60,86 +60,89 @@ export default function FriendsPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-white">Friends</h1>
-          <Link href="/friends/find">
-            <Button>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Find Friends
-            </Button>
-          </Link>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex items-center gap-4 mb-6">
-          <Link href="/friends" className="px-4 py-2 bg-violet-600/20 text-violet-400 rounded-lg font-medium">
-            All Friends ({friends.length})
-          </Link>
-          <Link href="/friends/requests" className="px-4 py-2 text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg font-medium transition-colors">
-            Requests
-          </Link>
-        </div>
-
-        {/* Search */}
-        <div className="mb-6">
-          <Input
-            placeholder="Search friends..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            icon={<Search className="w-5 h-5" />}
-          />
-        </div>
-
-        {/* Friends List */}
-        {filteredFriends.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-zinc-400 mb-4">
-              {searchQuery ? 'No friends match your search' : 'You haven\'t added any friends yet'}
-            </p>
+        {/* Main Card Container */}
+        <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-white">Friends</h1>
             <Link href="/friends/find">
-              <Button>Find Friends</Button>
+              <Button>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Find Friends
+              </Button>
             </Link>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredFriends.map((friend) => (
-              <div
-                key={friend._id}
-                className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <Avatar
-                    src={friend.profilePicture}
-                    alt={friend.displayName || friend.username}
-                    size="lg"
-                    isOnline={friend.isOnline}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <Link href={`/profile/${friend.username}`} className="hover:underline">
-                      <h3 className="font-medium text-white truncate">
-                        {friend.displayName || friend.username}
-                      </h3>
-                    </Link>
-                    <p className="text-sm text-zinc-400">@{friend.username}</p>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      {friend.isOnline ? (
-                        <span className="text-emerald-400">Online now</span>
-                      ) : (
-                        `Last seen ${formatRelativeTime(friend.lastActive)}`
-                      )}
-                    </p>
-                  </div>
-                  <Link href={`/messages/${friend._id}`}>
-                    <Button variant="outline" size="sm">
-                      <MessageSquare className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
+
+          {/* Tabs */}
+          <div className="flex items-center gap-3 mb-6">
+            <Link href="/friends" className="px-4 py-2 bg-white/10 text-white rounded-lg font-medium border border-white/20">
+              All Friends ({friends.length})
+            </Link>
+            <Link href="/friends/requests" className="px-4 py-2 text-neutral-400 hover:text-white hover:bg-neutral-800/50 rounded-lg font-medium transition-colors">
+              Requests
+            </Link>
           </div>
-        )}
+
+          {/* Search */}
+          <div className="mb-6">
+            <Input
+              placeholder="Search friends..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              icon={<Search className="w-5 h-5" />}
+            />
+          </div>
+
+          {/* Friends List */}
+          {filteredFriends.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-neutral-400 mb-4">
+                {searchQuery ? 'No friends match your search' : 'You haven\'t added any friends yet'}
+              </p>
+              <Link href="/friends/find">
+                <Button>Find Friends</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredFriends.map((friend) => (
+                <div
+                  key={friend._id}
+                  className="bg-neutral-800/40 border border-neutral-700/50 rounded-xl p-4 hover:bg-neutral-800/60 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <Avatar
+                      src={friend.profilePicture}
+                      alt={friend.displayName || friend.username}
+                      size="lg"
+                      isOnline={friend.isOnline}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <Link href={`/profile/${friend.username}`} className="hover:underline">
+                        <h3 className="font-medium text-white truncate">
+                          {friend.displayName || friend.username}
+                        </h3>
+                      </Link>
+                      <p className="text-sm text-neutral-400">@{friend.username}</p>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        {friend.isOnline ? (
+                          <span className="text-emerald-400">Online now</span>
+                        ) : (
+                          `Last seen ${formatRelativeTime(friend.lastActive)}`
+                        )}
+                      </p>
+                    </div>
+                    <Link href={`/messages/${friend._id}`}>
+                      <Button variant="outline" size="sm">
+                        <MessageSquare className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

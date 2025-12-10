@@ -121,88 +121,93 @@ export default function MessagesPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-white">Messages</h1>
-        </div>
-
-        {/* Search */}
-        <div className="mb-6">
-          <Input
-            placeholder="Search conversations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            icon={<Search className="w-5 h-5" />}
-          />
-        </div>
-
-        {/* Conversations List */}
-        {filteredConversations.length === 0 ? (
-          <div className="text-center py-12">
-            <MessageSquare className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-            <p className="text-zinc-400 mb-2">
-              {searchQuery ? 'No conversations match your search' : 'No messages yet'}
-            </p>
-            <p className="text-sm text-zinc-500">
-              Start a conversation with a friend
-            </p>
+        {/* Main Card Container */}
+        <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-white">Messages</h1>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredConversations.map((conv) => {
-              if (!conv.friend) return null;
-              return (
-                <Link
-                  key={conv.friend._id}
-                  href={`/messages/${conv.friend._id}`}
-                  className="block"
-                >
-                  <div className={`flex items-center gap-4 p-4 rounded-xl transition-colors ${
-                    conv.unreadCount > 0 
-                      ? 'bg-violet-900/20 border border-violet-800/50 hover:bg-violet-900/30' 
-                      : 'bg-zinc-900/50 border border-zinc-800 hover:bg-zinc-800/50'
-                  }`}>
-                    <Avatar
-                      src={conv.friend.profilePicture}
-                      alt={conv.friend.displayName || conv.friend.username || 'User'}
-                      size="lg"
-                      isOnline={conv.friend.isOnline}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className={`font-medium truncate ${
-                          conv.unreadCount > 0 ? 'text-white' : 'text-zinc-200'
-                        }`}>
-                          {conv.friend.displayName || conv.friend.username || 'Unknown'}
-                        </h3>
-                        {conv.lastMessage?.timestamp && (
-                          <span className="text-xs text-zinc-500 whitespace-nowrap ml-2">
-                            {formatRelativeTime(conv.lastMessage.timestamp)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <p className={`text-sm truncate ${
-                          conv.unreadCount > 0 ? 'text-zinc-300' : 'text-zinc-500'
-                        }`}>
-                          {conv.lastMessage?.isOwn && (
-                            <span className="text-zinc-500">You: </span>
+
+          {/* Search */}
+          <div className="mb-6">
+            <Input
+              placeholder="Search conversations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              icon={<Search className="w-5 h-5" />}
+            />
+          </div>
+
+          {/* Conversations List */}
+          {filteredConversations.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neutral-800/50 flex items-center justify-center">
+                <MessageSquare className="w-8 h-8 text-neutral-500" />
+              </div>
+              <p className="text-neutral-400 mb-2">
+                {searchQuery ? 'No conversations match your search' : 'No messages yet'}
+              </p>
+              <p className="text-sm text-neutral-500">
+                Start a conversation with a friend
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredConversations.map((conv) => {
+                if (!conv.friend) return null;
+                return (
+                  <Link
+                    key={conv.friend._id}
+                    href={`/messages/${conv.friend._id}`}
+                    className="block"
+                  >
+                    <div className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-200 ${
+                      conv.unreadCount > 0 
+                        ? 'bg-white/5 border border-white/20 hover:bg-white/10' 
+                        : 'bg-neutral-800/40 border border-neutral-700/50 hover:bg-neutral-800/60'
+                    }`}>
+                      <Avatar
+                        src={conv.friend.profilePicture}
+                        alt={conv.friend.displayName || conv.friend.username || 'User'}
+                        size="lg"
+                        isOnline={conv.friend.isOnline}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className={`font-medium truncate ${
+                            conv.unreadCount > 0 ? 'text-white' : 'text-neutral-200'
+                          }`}>
+                            {conv.friend.displayName || conv.friend.username || 'Unknown'}
+                          </h3>
+                          {conv.lastMessage?.timestamp && (
+                            <span className="text-xs text-neutral-500 whitespace-nowrap ml-2">
+                              {formatRelativeTime(conv.lastMessage.timestamp)}
+                            </span>
                           )}
-                          {conv.lastMessage ? truncateText(conv.lastMessage.content, 50) : 'No messages yet'}
-                        </p>
-                        {conv.unreadCount > 0 && (
-                          <Badge variant="primary" className="ml-2">
-                            {conv.unreadCount}
-                          </Badge>
-                        )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-sm truncate ${
+                            conv.unreadCount > 0 ? 'text-neutral-300' : 'text-neutral-500'
+                          }`}>
+                            {conv.lastMessage?.isOwn && (
+                              <span className="text-neutral-500">You: </span>
+                            )}
+                            {conv.lastMessage ? truncateText(conv.lastMessage.content, 50) : 'No messages yet'}
+                          </p>
+                          {conv.unreadCount > 0 && (
+                            <span className="ml-2 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-white text-neutral-900 text-xs font-semibold rounded-full">
+                              {conv.unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

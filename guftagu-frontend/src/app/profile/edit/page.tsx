@@ -78,78 +78,83 @@ export default function EditProfilePage() {
   if (isLoading || !user) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-zinc-700 border-t-violet-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] py-12">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/profile" className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+        <div className="flex items-center gap-3 mb-6">
+          <Link href="/profile" className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-all">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
+          <h1 className="text-xl font-semibold text-white">Edit Profile</h1>
         </div>
 
-        {/* Form */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-6">
+        {/* Form Card */}
+        <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-6 space-y-6">
           {/* Profile Picture */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
             <div className="relative">
               <Avatar
                 src={user.profilePicture}
                 alt={user.displayName || user.username || ''}
                 size="xl"
+                className="w-16 h-16 rounded-xl"
               />
-              <button className="absolute bottom-0 right-0 p-2 bg-violet-600 rounded-full text-white hover:bg-violet-700 transition-colors">
-                <Camera className="w-4 h-4" />
+              <button className="absolute -bottom-1 -right-1 p-1.5 bg-white rounded-lg text-neutral-900 hover:bg-neutral-100 transition-colors">
+                <Camera className="w-3.5 h-3.5" />
               </button>
             </div>
             <div>
-              <h3 className="font-medium text-white">Profile Picture</h3>
-              <p className="text-sm text-zinc-400">JPG, PNG or WebP. Max 5MB.</p>
+              <h3 className="text-sm font-medium text-white">Profile Picture</h3>
+              <p className="text-xs text-neutral-500">JPG, PNG or WebP. Max 5MB.</p>
             </div>
           </div>
 
           {/* Display Name */}
-          <Input
-            label="Display Name"
-            placeholder="Your display name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={50}
-          />
+          <div>
+            <label className="block text-xs font-medium text-neutral-400 mb-1.5">Display Name</label>
+            <input
+              type="text"
+              placeholder="Your display name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={50}
+              className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 transition-colors"
+            />
+          </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Bio</label>
+            <label className="block text-xs font-medium text-neutral-400 mb-1.5">Bio</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell us about yourself..."
-              rows={4}
+              rows={3}
               maxLength={500}
-              className="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+              className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 resize-none transition-colors"
             />
-            <p className="text-xs text-zinc-500 mt-1">{bio.length}/500 characters</p>
+            <p className="text-[11px] text-neutral-500 mt-1">{bio.length}/500</p>
           </div>
 
           {/* Interests */}
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Interests</label>
-            <div className="flex flex-wrap gap-2 mb-3">
+            <label className="block text-xs font-medium text-neutral-400 mb-2">Interests</label>
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {interests.map((interest, index) => (
                 <span
                   key={index}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-zinc-800 rounded-full text-sm text-white"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-800/60 border border-neutral-700/50 rounded-lg text-xs text-neutral-300"
                 >
                   {interest}
                   <button
                     onClick={() => handleRemoveInterest(index)}
-                    className="p-0.5 hover:bg-zinc-700 rounded-full"
+                    className="p-0.5 hover:bg-neutral-700 rounded transition-colors"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -158,31 +163,36 @@ export default function EditProfilePage() {
             </div>
             {interests.length < 10 && (
               <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Add an interest"
+                <input
+                  type="text"
+                  placeholder="Add interest"
                   value={newInterest}
                   onChange={(e) => setNewInterest(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddInterest()}
                   maxLength={20}
+                  className="flex-1 bg-neutral-800/50 border border-neutral-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 transition-colors"
                 />
-                <Button variant="outline" onClick={handleAddInterest}>
+                <button 
+                  onClick={handleAddInterest}
+                  className="p-2 bg-neutral-800/60 border border-neutral-700/50 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all"
+                >
                   <Plus className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
             )}
-            <p className="text-xs text-zinc-500 mt-1">{interests.length}/10 interests</p>
+            <p className="text-[11px] text-neutral-500 mt-1">{interests.length}/10 interests</p>
           </div>
 
           {/* Error/Success messages */}
           {error && (
-            <p className="text-red-400 text-sm">{error}</p>
+            <p className="text-red-400 text-xs">{error}</p>
           )}
           {success && (
-            <p className="text-emerald-400 text-sm">{success}</p>
+            <p className="text-emerald-400 text-xs">{success}</p>
           )}
 
           {/* Save button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2">
             <Button onClick={handleSave} isLoading={isSaving}>
               Save Changes
             </Button>
