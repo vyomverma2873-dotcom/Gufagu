@@ -370,6 +370,42 @@ export default function VideoCallOverlay() {
     };
   }, [callStatus]);
 
+  // Helper function to wait for tracks to be truly active
+  const waitForTracksReady = useCallback(async (stream: MediaStream): Promise<boolean> => {
+    const videoTrack = stream.getVideoTracks()[0];
+    const audioTrack = stream.getAudioTracks()[0];
+    
+    console.log('[Media] Waiting for tracks to be ready...');
+    
+    // Wait for video track to produce frames (if present)
+    if (videoTrack) {
+      // Check if track is live and not muted
+      let attempts = 0;
+      while (attempts < 10 && (videoTrack.muted || videoTrack.readyState !== 'live')) {
+        console.log(`[Media] Video track not ready, attempt ${attempts + 1}, muted:`, videoTrack.muted, 'readyState:', videoTrack.readyState);
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+      }
+      
+      // Additional wait for video to actually produce frames
+      await new Promise(r => setTimeout(r, 300));
+      console.log('[Media] Video track ready check complete, muted:', videoTrack.muted, 'readyState:', videoTrack.readyState);
+    }
+    
+    // Same for audio
+    if (audioTrack) {
+      let attempts = 0;
+      while (attempts < 10 && (audioTrack.muted || audioTrack.readyState !== 'live')) {
+        console.log(`[Media] Audio track not ready, attempt ${attempts + 1}`);
+        await new Promise(r => setTimeout(r, 100));
+        attempts++;
+      }
+      console.log('[Media] Audio track ready check complete, muted:', audioTrack.muted, 'readyState:', audioTrack.readyState);
+    }
+    
+    return true;
+  }, []);
+
   // Initialize local media early (when call starts or connects)
   useEffect(() => {
     console.log('[VideoCallOverlay] Media effect triggered, callStatus:', callStatus, 'callType:', callType, 'localStream:', !!localStream);
@@ -421,6 +457,9 @@ export default function VideoCallOverlay() {
           console.log('[Media] Track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
         });
         
+        // Wait for tracks to be truly active before proceeding
+        await waitForTracksReady(stream);
+        
         // Log video track details
         const videoTrack = stream.getVideoTracks()[0];
         if (videoTrack) {
@@ -431,13 +470,16 @@ export default function VideoCallOverlay() {
           setIsVideoEnabled(true);
         }
         
-        setLocalStream(stream);
-        
-        // Set video element immediately
+        // Set video element BEFORE setting state to ensure it's ready
         if (localVideoRef.current && callType === 'video') {
           console.log('[Media] Setting local video element srcObject');
           localVideoRef.current.srcObject = stream;
-          localVideoRef.current.play().catch(e => console.log('[Media] Local video play error:', e));
+          try {
+            await localVideoRef.current.play();
+            console.log('[Media] Local video playing');
+          } catch (e) {
+            console.log('[Media] Local video play error:', e);
+          }
         }
         
         // Setup audio analyser for local stream
@@ -457,6 +499,9 @@ export default function VideoCallOverlay() {
         }
         setupAudioAnalyser(stream, true);
         
+        // NOW set the stream state - this triggers WebRTC init
+        setLocalStream(stream);
+        
         // Test microphone after a short delay
         setTimeout(() => {
           if (localAudioAnalyserRef.current) {
@@ -475,6 +520,7 @@ export default function VideoCallOverlay() {
           console.log('[Media] Retrying with audio only...');
           try {
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            await waitForTracksReady(audioStream);
             setLocalStream(audioStream);
             setIsVideoEnabled(false);
             setupAudioAnalyser(audioStream, true);
@@ -486,7 +532,7 @@ export default function VideoCallOverlay() {
     };
 
     initLocalMedia();
-  }, [callStatus, callType, localStream, setupAudioAnalyser]);
+  }, [callStatus, callType, localStream, setupAudioAnalyser, waitForTracksReady]);
 
   // Initialize WebRTC when connected and have peer socket
   useEffect(() => {
@@ -554,14 +600,74 @@ export default function VideoCallOverlay() {
           console.log('[WebRTC] Connection state:', pc.connectionState);
           setConnectionState(pc.connectionState);
           
-          // When connected, verify tracks are transmitting
+          // When connected, verify tracks are transmitting and refresh if needed
           if (pc.connectionState === 'connected') {
-            console.log('[WebRTC] Connected! Verifying senders...');
-            pc.getSenders().forEach(sender => {
+            console.log('[WebRTC] Connected! Verifying and refreshing senders...');
+            pc.getSenders().forEach(async (sender) => {
               if (sender.track) {
-                console.log('[WebRTC] Sender track:', sender.track.kind, 'enabled:', sender.track.enabled, 'readyState:', sender.track.readyState);
+                console.log('[WebRTC] Sender track:', sender.track.kind, 'enabled:', sender.track.enabled, 'readyState:', sender.track.readyState, 'muted:', sender.track.muted);
                 // Ensure track is enabled
                 sender.track.enabled = true;
+                
+                // If video track appears inactive, refresh it
+                if (sender.track.kind === 'video' && (sender.track.muted || sender.track.readyState !== 'live')) {
+                  console.log('[WebRTC] Video track appears inactive, attempting refresh...');
+                  try {
+                    const newStream = await navigator.mediaDevices.getUserMedia({
+                      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+                      audio: false
+                    });
+                    const newTrack = newStream.getVideoTracks()[0];
+                    if (newTrack) {
+                      newTrack.enabled = true;
+                      await sender.replaceTrack(newTrack);
+                      console.log('[WebRTC] Video track refreshed successfully');
+                      // Update local stream and video element
+                      if (localStream) {
+                        const oldTrack = localStream.getVideoTracks()[0];
+                        if (oldTrack) {
+                          localStream.removeTrack(oldTrack);
+                          oldTrack.stop();
+                        }
+                        localStream.addTrack(newTrack);
+                        if (localVideoRef.current) {
+                          localVideoRef.current.srcObject = localStream;
+                          localVideoRef.current.play().catch(() => {});
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.error('[WebRTC] Failed to refresh video track:', e);
+                  }
+                }
+                
+                // Same for audio
+                if (sender.track.kind === 'audio' && (sender.track.muted || sender.track.readyState !== 'live')) {
+                  console.log('[WebRTC] Audio track appears inactive, attempting refresh...');
+                  try {
+                    const newStream = await navigator.mediaDevices.getUserMedia({
+                      audio: { echoCancellation: true, noiseSuppression: true },
+                      video: false
+                    });
+                    const newTrack = newStream.getAudioTracks()[0];
+                    if (newTrack) {
+                      newTrack.enabled = true;
+                      await sender.replaceTrack(newTrack);
+                      console.log('[WebRTC] Audio track refreshed successfully');
+                      // Update local stream
+                      if (localStream) {
+                        const oldTrack = localStream.getAudioTracks()[0];
+                        if (oldTrack) {
+                          localStream.removeTrack(oldTrack);
+                          oldTrack.stop();
+                        }
+                        localStream.addTrack(newTrack);
+                      }
+                    }
+                  } catch (e) {
+                    console.error('[WebRTC] Failed to refresh audio track:', e);
+                  }
+                }
               }
             });
           }
@@ -616,6 +722,113 @@ export default function VideoCallOverlay() {
       }
     };
   }, [callStatus, socket, peerSocketId, currentCall, localStream, setupAudioAnalyser]);
+
+  // Track refresh flag to prevent multiple refreshes
+  const trackRefreshedRef = useRef(false);
+  
+  // Proactive track refresh after connection - fallback mechanism
+  useEffect(() => {
+    // Only run once when connected for the first time with a peer connection
+    if (connectionState !== 'connected' || !peerConnectionRef.current || !localStream || trackRefreshedRef.current) {
+      return;
+    }
+    
+    // Mark as refreshed to prevent running again
+    trackRefreshedRef.current = true;
+    
+    console.log('[WebRTC] Proactive track refresh - ensuring media is flowing');
+    
+    // Delay refresh slightly to ensure connection is stable
+    const refreshTimer = setTimeout(async () => {
+      const pc = peerConnectionRef.current;
+      if (!pc || pc.connectionState !== 'connected') return;
+      
+      console.log('[WebRTC] Executing proactive track refresh...');
+      
+      // Refresh video track regardless of state (force fresh stream)
+      if (callType === 'video') {
+        const videoSender = pc.getSenders().find(s => s.track?.kind === 'video');
+        if (videoSender) {
+          try {
+            console.log('[WebRTC] Refreshing video sender track...');
+            const newStream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+              audio: false
+            });
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            if (newVideoTrack) {
+              newVideoTrack.enabled = true;
+              
+              // Wait for track to be truly ready
+              await new Promise(r => setTimeout(r, 200));
+              
+              await videoSender.replaceTrack(newVideoTrack);
+              console.log('[WebRTC] Video sender track replaced');
+              
+              // Update local stream
+              const oldVideoTrack = localStream.getVideoTracks()[0];
+              if (oldVideoTrack) {
+                localStream.removeTrack(oldVideoTrack);
+                oldVideoTrack.stop();
+              }
+              localStream.addTrack(newVideoTrack);
+              
+              // Update video element
+              if (localVideoRef.current) {
+                localVideoRef.current.srcObject = localStream;
+                await localVideoRef.current.play().catch(() => {});
+              }
+            }
+          } catch (e) {
+            console.error('[WebRTC] Proactive video refresh error:', e);
+          }
+        }
+      }
+      
+      // Refresh audio track regardless of state
+      const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
+      if (audioSender) {
+        try {
+          console.log('[WebRTC] Refreshing audio sender track...');
+          const newStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false
+          });
+          const newAudioTrack = newStream.getAudioTracks()[0];
+          if (newAudioTrack) {
+            newAudioTrack.enabled = isAudioEnabled;
+            
+            await audioSender.replaceTrack(newAudioTrack);
+            console.log('[WebRTC] Audio sender track replaced');
+            
+            // Update local stream
+            const oldAudioTrack = localStream.getAudioTracks()[0];
+            if (oldAudioTrack) {
+              localStream.removeTrack(oldAudioTrack);
+              oldAudioTrack.stop();
+            }
+            localStream.addTrack(newAudioTrack);
+            
+            // Update audio analyser
+            setupAudioAnalyser(localStream, true);
+          }
+        } catch (e) {
+          console.error('[WebRTC] Proactive audio refresh error:', e);
+        }
+      }
+      
+      console.log('[WebRTC] Proactive track refresh complete');
+    }, 1000); // Wait 1 second after connection before refreshing
+    
+    return () => clearTimeout(refreshTimer);
+  }, [connectionState, localStream, callType, facingMode, isAudioEnabled, setupAudioAnalyser]);
+
+  // Reset refresh flag when call ends
+  useEffect(() => {
+    if (callStatus === 'idle' || callStatus === 'ended') {
+      trackRefreshedRef.current = false;
+    }
+  }, [callStatus]);
 
   // Process pending offer when PC is ready (separate effect to avoid race conditions)
   useEffect(() => {
