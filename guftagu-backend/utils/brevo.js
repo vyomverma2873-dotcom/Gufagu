@@ -17,6 +17,32 @@ const initBrevo = () => {
   return apiInstance;
 };
 
+// Email footer template
+const getEmailFooter = () => `
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+    <div style="text-align: center;">
+      <h3 style="color: #1a1a1a; font-size: 18px; margin: 0 0 10px 0;">Guftagu</h3>
+      <p style="color: #666; font-size: 13px; margin: 0 0 15px 0;">Connect with the world</p>
+      
+      <div style="margin: 15px 0;">
+        <p style="color: #666; font-size: 12px; margin: 5px 0;">
+          <strong>Email:</strong> vyomverma2873@gmail.com
+        </p>
+        <p style="color: #666; font-size: 12px; margin: 5px 0;">
+          <strong>Phone:</strong> +91 8766355495
+        </p>
+      </div>
+      
+      <p style="color: #999; font-size: 11px; margin: 15px 0 5px 0;">
+        Made by Vyom Verma, Full-Stack Developer
+      </p>
+      <p style="color: #999; font-size: 11px; margin: 0;">
+        &copy; ${new Date().getFullYear()} Guftagu. All rights reserved.
+      </p>
+    </div>
+  </div>
+`;
+
 /**
  * Send OTP email via Brevo
  */
@@ -82,7 +108,139 @@ const sendOTPEmail = async (email, otp) => {
   }
 };
 
+/**
+ * Send ban notification email
+ */
+const sendBanNotificationEmail = async (userEmail, username, banDetails) => {
+  if (!apiInstance) {
+    initBrevo();
+  }
+
+  if (!apiInstance) {
+    console.log(`[DEV MODE] Ban notification for ${userEmail}`);
+    return { success: true, messageId: 'dev-mode' };
+  }
+
+  const { reason, banType, banUntil, description } = banDetails;
+  
+  // Format ban reason for display
+  const reasonLabels = {
+    'inappropriate_content': 'Inappropriate Content',
+    'harassment': 'Harassment',
+    'spam': 'Spam',
+    'multiple_reports': 'Multiple Reports',
+    'admin_discretion': 'Admin Discretion',
+    'underage': 'Underage User',
+    'impersonation': 'Impersonation',
+    'terms_violation': 'Terms of Service Violation',
+    'other': 'Policy Violation'
+  };
+  
+  const formattedReason = reasonLabels[reason] || reason;
+  const banDuration = banType === 'permanent' 
+    ? 'Permanent' 
+    : `Until ${new Date(banUntil).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.to = [{ email: userEmail }];
+  sendSmtpEmail.sender = {
+    email: process.env.BREVO_SENDER_EMAIL || 'noreply@guftagu.com',
+    name: process.env.BREVO_SENDER_NAME || 'Guftagu',
+  };
+  sendSmtpEmail.subject = 'You Have Been Banned';
+  sendSmtpEmail.htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
+      <div style="max-width: 560px; margin: 0 auto; background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; font-size: 28px; margin: 0;">Guftagu</h1>
+          <p style="color: #666; margin-top: 8px;">Account Notification</p>
+        </div>
+        
+        <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+          <h2 style="color: #dc2626; font-size: 18px; margin: 0 0 8px 0;">⚠️ Account Banned</h2>
+          <p style="color: #991b1b; font-size: 14px; margin: 0;">Your Guftagu account has been suspended.</p>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Dear ${username || 'User'},
+        </p>
+        
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          We regret to inform you that your Guftagu account has been banned due to a violation of our community guidelines.
+        </p>
+        
+        <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="color: #666; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Reason:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${formattedReason}</td>
+            </tr>
+            <tr>
+              <td style="color: #666; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Ban Type:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${banType === 'permanent' ? 'Permanent' : 'Temporary'}</td>
+            </tr>
+            <tr>
+              <td style="color: #666; font-size: 14px; padding: 8px 0;">Duration:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; text-align: right;">${banDuration}</td>
+            </tr>
+          </table>
+          ${description ? `
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #666; font-size: 13px; margin: 0 0 8px 0;">Additional Details:</p>
+              <p style="color: #333; font-size: 14px; margin: 0;">${description}</p>
+            </div>
+          ` : ''}
+        </div>
+        
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          During this ban period, you will not be able to:
+        </p>
+        <ul style="color: #666; font-size: 14px; line-height: 1.8; padding-left: 20px;">
+          <li>Log in to your account</li>
+          <li>Send or receive messages</li>
+          <li>Make video or voice calls</li>
+          <li>Access any Guftagu features</li>
+        </ul>
+        
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          If you believe this ban was issued in error, you may contact our support team at <a href="mailto:vyomverma2873@gmail.com" style="color: #2563eb;">vyomverma2873@gmail.com</a> to appeal this decision.
+        </p>
+        
+        <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 24px;">
+          Please review our <a href="https://guftagu.vercel.app/terms" style="color: #2563eb;">Terms of Service</a> and <a href="https://guftagu.vercel.app/privacy" style="color: #2563eb;">Privacy Policy</a> for more information about our community guidelines.
+        </p>
+        
+        ${getEmailFooter()}
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log(`Ban notification sent to ${userEmail}`);
+    return { success: true, messageId: response.messageId };
+  } catch (error) {
+    console.error('Ban notification email error:', error);
+    // Don't throw - ban should still succeed even if email fails
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   initBrevo,
   sendOTPEmail,
+  sendBanNotificationEmail,
 };

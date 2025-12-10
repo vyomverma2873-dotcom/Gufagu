@@ -6,6 +6,7 @@ const Match = require('../models/Match');
 const OnlineUser = require('../models/OnlineUser');
 const Message = require('../models/Message');
 const mongoose = require('mongoose');
+const { sendBanNotificationEmail } = require('../utils/brevo');
 const logger = require('../utils/logger');
 
 // Get admin dashboard stats
@@ -161,45 +162,90 @@ exports.getUserDetails = async (req, res) => {
 exports.banUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { reason, duration, type = 'temporary' } = req.body;
+    const { reason, duration, type = 'temporary', description } = req.body;
+
+    // Validate required fields
+    if (!reason) {
+      return res.status(400).json({ error: 'Ban reason is required' });
+    }
 
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Create ban record
+    // Check if user is already banned
+    if (user.isBanned) {
+      return res.status(400).json({ error: 'User is already banned' });
+    }
+
+    // Calculate ban expiry date
+    const banUntil = type === 'permanent' 
+      ? null 
+      : new Date(Date.now() + (duration || 24) * 60 * 60 * 1000);
+
+    // Create ban record with correct field names matching Ban model
     const ban = new Ban({
-      user: userId,
-      reason,
-      duration: type === 'permanent' ? null : duration,
-      type,
+      userId: userId,
+      username: user.username,
+      userId7Digit: user.userId,
+      email: user.email,
+      reason: reason,
+      description: description || '',
+      banType: type,
+      bannedAt: new Date(),
       bannedBy: req.user._id,
-      expiresAt: type === 'permanent' ? null : new Date(Date.now() + duration * 60 * 60 * 1000),
+      bannedByUsername: req.user.username,
+      banUntil: banUntil,
+      isActive: true,
     });
     await ban.save();
 
     // Update user
     user.isBanned = true;
-    user.banInfo = {
-      reason,
-      expiresAt: ban.expiresAt,
-      bannedBy: req.user._id,
-    };
+    user.banReason = reason;
+    user.banUntil = banUntil;
     await user.save();
 
-    // Log action
-    await SystemLog.create({
-      action: 'user_banned',
-      performedBy: req.user._id,
-      targetUser: userId,
-      details: { reason, duration, type },
-    });
+    // Log action (non-blocking)
+    try {
+      await SystemLog.create({
+        action: 'user_banned',
+        performedBy: req.user._id,
+        targetUser: userId,
+        details: { reason, duration, type, description },
+      });
+    } catch (logError) {
+      logger.warn('Failed to log ban action:', logError.message);
+    }
 
-    res.json({ message: 'User banned successfully', ban });
+    // Send ban notification email (non-blocking)
+    try {
+      await sendBanNotificationEmail(user.email, user.username || user.displayName, {
+        reason,
+        banType: type,
+        banUntil,
+        description
+      });
+      logger.info(`Ban notification email sent to ${user.email}`);
+    } catch (emailError) {
+      logger.warn('Failed to send ban notification email:', emailError.message);
+    }
+
+    res.json({ 
+      message: 'User banned successfully', 
+      ban: {
+        _id: ban._id,
+        userId: ban.userId,
+        reason: ban.reason,
+        banType: ban.banType,
+        banUntil: ban.banUntil,
+        isActive: ban.isActive
+      }
+    });
   } catch (error) {
-    logger.error('Ban user error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Ban user error:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to ban user: ' + error.message });
   }
 };
 
@@ -213,22 +259,36 @@ exports.unbanUser = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    if (!user.isBanned) {
+      return res.status(400).json({ error: 'User is not banned' });
+    }
+
     user.isBanned = false;
-    user.banInfo = undefined;
+    user.banReason = undefined;
+    user.banUntil = undefined;
     await user.save();
 
-    // Update ban record
+    // Update ban record - use correct field name 'userId' instead of 'user'
     await Ban.updateMany(
-      { user: userId, isActive: true },
-      { isActive: false, liftedAt: new Date(), liftedBy: req.user._id }
+      { userId: userId, isActive: true },
+      { 
+        isActive: false, 
+        unbannedAt: new Date(), 
+        unbannedBy: req.user._id,
+        unbannedByUsername: req.user.username
+      }
     );
 
-    // Log action
-    await SystemLog.create({
-      action: 'user_unbanned',
-      performedBy: req.user._id,
-      targetUser: userId,
-    });
+    // Log action (non-blocking)
+    try {
+      await SystemLog.create({
+        action: 'user_unbanned',
+        performedBy: req.user._id,
+        targetUser: userId,
+      });
+    } catch (logError) {
+      logger.warn('Failed to log unban action:', logError.message);
+    }
 
     res.json({ message: 'User unbanned successfully' });
   } catch (error) {
