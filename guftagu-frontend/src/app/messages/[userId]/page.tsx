@@ -518,8 +518,8 @@ export default function ConversationPage() {
       </div>
 
       {/* Messages and Calls Timeline - Scrollable area */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 pt-4 pb-6 space-y-4">
           {Object.entries(groupedTimeline).map(([date, dateItems]) => (
             <div key={date}>
               {/* Date separator */}
@@ -614,7 +614,7 @@ export default function ConversationPage() {
           
           {/* Typing indicator bubble - with proper spacing */}
           {isTyping && (
-            <div className="flex items-end gap-2 justify-start pb-2">
+            <div className="flex items-end gap-2 justify-start mb-4">
               <div className="w-6 sm:w-8 flex-shrink-0">
                 <Avatar
                   src={chatUser.profilePicture}
@@ -623,17 +623,17 @@ export default function ConversationPage() {
                 />
               </div>
               <div className="bg-neutral-800/80 border border-neutral-700/50 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl rounded-bl-md">
-                <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
-                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+                <div className="flex gap-1.5 items-center h-4">
+                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
+                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
                 </div>
               </div>
             </div>
           )}
           
-          {/* Extra padding at bottom for typing indicator visibility */}
-          <div ref={messagesEndRef} className="h-2" />
+          {/* Bottom spacer for scroll clearance */}
+          <div ref={messagesEndRef} className="h-4" />
         </div>
       </div>
 
