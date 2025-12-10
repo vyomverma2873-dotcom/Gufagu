@@ -231,6 +231,13 @@ export default function VideoCallOverlay() {
     // Reset peer connection ready state when call ends or goes idle
     if (currentStatus === 'idle' || currentStatus === 'ended') {
       setIsPeerConnectionReady(false);
+      setConnectionState('connecting'); // Also reset connection state for next call
+    }
+    
+    // Reset connection state when a new call is initiated to ensure proper UI display
+    if (currentStatus === 'calling' && (prevStatus === 'idle' || prevStatus === 'ended' || prevStatus === null)) {
+      console.log('[Call] New call initiated, resetting connectionState to connecting');
+      setConnectionState('connecting');
     }
     
     if (prevStatus && prevStatus !== currentStatus) {
