@@ -29,9 +29,9 @@ export default function RootLayout({
           <GalaxyBackground />
           
           {/* Main Content Layer */}
-          <div className="relative z-10">
+          <div className="relative z-10 min-h-screen">
             <Header />
-            <main className="pt-16">
+            <main className="pt-[88px] sm:pt-24">
               {children}
             </main>
             <Footer />

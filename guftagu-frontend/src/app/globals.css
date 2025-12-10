@@ -40,13 +40,13 @@ body {
 
 /* Selection */
 ::selection {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
 }
 
 /* Focus outline */
 *:focus-visible {
-  outline: 2px solid #8b5cf6;
+  outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
 }
 
@@ -57,7 +57,7 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -123,4 +123,23 @@ body {
   30% {
     transform: translateY(-4px);
   }
+}
+
+/* Safe area for mobile devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Prevent body scroll when chat is open */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Chat specific - hide footer when in chat */
+.chat-active footer {
+  display: none;
 }

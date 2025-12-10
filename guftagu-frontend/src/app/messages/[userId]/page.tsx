@@ -421,7 +421,7 @@ export default function ConversationPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+      <div className="min-h-screen pt-24 sm:pt-28 flex items-center justify-center">
         <Spinner />
       </div>
     );
@@ -429,7 +429,7 @@ export default function ConversationPage() {
 
   if (!chatUser) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center">
+      <div className="min-h-screen pt-24 sm:pt-28 flex flex-col items-center justify-center">
         <p className="text-neutral-400 mb-4">User not found</p>
         <Link href="/messages">
           <Button>Back to Messages</Button>
@@ -439,76 +439,79 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col relative">
+    <div className="fixed inset-0 pt-[88px] sm:pt-24 flex flex-col">
       {/* Note: Call overlays are now rendered globally via IncomingCallOverlay and VideoCallOverlay components */}
 
-      {/* Header */}
-      <div className="bg-neutral-900/70 backdrop-blur-xl border-b border-neutral-800/80 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <button
-            onClick={() => router.push('/messages')}
-            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          
-          <Link href={`/profile/${chatUser.username}`} className="flex items-center gap-3 flex-1">
-            <Avatar
-              src={chatUser.profilePicture}
-              alt={chatUser.displayName || chatUser.username}
-              size="md"
-              isOnline={chatUser.isOnline}
-            />
-            <div>
-              <h2 className="font-medium text-white">
-                {chatUser.displayName || chatUser.username}
-              </h2>
-              <p className="text-xs text-neutral-400">
-                {isTyping ? (
-                  <span className="text-white flex items-center gap-1">
-                    <span className="flex gap-0.5">
-                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      {/* Chat Header - Fixed below navbar */}
+      <div className="flex-shrink-0 bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-800/80">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => router.push('/messages')}
+              className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors flex-shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            
+            <Link href={`/profile/${chatUser.username}`} className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <Avatar
+                src={chatUser.profilePicture}
+                alt={chatUser.displayName || chatUser.username}
+                size="md"
+                isOnline={chatUser.isOnline}
+              />
+              <div className="min-w-0">
+                <h2 className="font-medium text-white text-sm sm:text-base truncate">
+                  {chatUser.displayName || chatUser.username}
+                </h2>
+                <p className="text-xs text-neutral-400">
+                  {isTyping ? (
+                    <span className="text-white flex items-center gap-1">
+                      <span className="flex gap-0.5">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </span>
+                      typing
                     </span>
-                    typing
-                  </span>
-                ) : chatUser.isOnline ? (
-                  <span className="text-emerald-400">Online</span>
-                ) : (
-                  'Offline'
-                )}
-              </p>
+                  ) : chatUser.isOnline ? (
+                    <span className="text-emerald-400">Online</span>
+                  ) : (
+                    'Offline'
+                  )}
+                </p>
+              </div>
+            </Link>
+
+            {/* Call buttons - responsive */}
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              <button
+                onClick={() => handleStartCall('voice')}
+                disabled={!chatUser.isOnline}
+                className="p-2 sm:p-2.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={chatUser.isOnline ? 'Voice call' : 'User is offline'}
+              >
+                <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <button
+                onClick={() => handleStartCall('video')}
+                disabled={!chatUser.isOnline}
+                className="p-2 sm:p-2.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={chatUser.isOnline ? 'Video call' : 'User is offline'}
+              >
+                <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <button className="p-2 sm:p-2.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors">
+                <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
             </div>
-          </Link>
-
-          {/* Call buttons */}
-          <button
-            onClick={() => handleStartCall('voice')}
-            disabled={!chatUser.isOnline}
-            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={chatUser.isOnline ? 'Voice call' : 'User is offline'}
-          >
-            <Phone className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => handleStartCall('video')}
-            disabled={!chatUser.isOnline}
-            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={chatUser.isOnline ? 'Video call' : 'User is offline'}
-          >
-            <Video className="w-5 h-5" />
-          </button>
-
-          <button className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors">
-            <MoreVertical className="w-5 h-5" />
-          </button>
+          </div>
         </div>
       </div>
 
-      {/* Messages and Calls Timeline */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-4xl mx-auto space-y-4">
+      {/* Messages and Calls Timeline - Scrollable area */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 space-y-4">
           {Object.entries(groupedTimeline).map(([date, dateItems]) => (
             <div key={date}>
               {/* Date separator */}
@@ -560,7 +563,7 @@ export default function ConversationPage() {
                 return (
                   <div
                     key={message._id}
-                    className={`flex items-end gap-2 ${isOwn ? 'justify-end' : 'justify-start'} ${
+                    className={`flex items-end gap-1.5 sm:gap-2 ${isOwn ? 'justify-end' : 'justify-start'} ${
                       message.isNew ? 'animate-fade-in-up' : ''
                     }`}
                     style={message.isNew ? {
@@ -568,7 +571,7 @@ export default function ConversationPage() {
                     } : undefined}
                   >
                     {!isOwn && (
-                      <div className={`w-8 ${showAvatar ? '' : 'invisible'}`}>
+                      <div className={`w-6 sm:w-8 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
                         <Avatar
                           src={chatUser.profilePicture}
                           alt={chatUser.username}
@@ -577,7 +580,7 @@ export default function ConversationPage() {
                       </div>
                     )}
                     <div
-                      className={`max-w-[70%] px-4 py-2.5 rounded-2xl transition-all duration-300 ${
+                      className={`max-w-[80%] sm:max-w-[70%] px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl transition-all duration-300 ${
                         isOwn
                           ? 'bg-white text-neutral-900 rounded-br-md shadow-lg shadow-white/10'
                           : 'bg-neutral-800/80 border border-neutral-700/50 text-white rounded-bl-md'
@@ -588,8 +591,8 @@ export default function ConversationPage() {
                         animation: 'scaleIn 0.3s ease-out 0.1s forwards'
                       } : undefined}
                     >
-                      <p className="break-words">{message.content}</p>
-                      <p className={`text-[10px] mt-1 ${
+                      <p className="break-words text-sm sm:text-base">{message.content}</p>
+                      <p className={`text-[9px] sm:text-[10px] mt-0.5 sm:mt-1 ${
                         isOwn ? 'text-neutral-500' : 'text-neutral-500'
                       }`}>
                         {formatTime(message.timestamp || message.createdAt || '')}
@@ -601,49 +604,52 @@ export default function ConversationPage() {
             </div>
           ))}
           
-          {/* Typing indicator bubble */}
+          {/* Typing indicator bubble - with proper spacing */}
           {isTyping && (
-            <div className="flex items-end gap-2 justify-start">
-              <div className="w-8">
+            <div className="flex items-end gap-2 justify-start pb-2">
+              <div className="w-6 sm:w-8 flex-shrink-0">
                 <Avatar
                   src={chatUser.profilePicture}
                   alt={chatUser.username}
                   size="sm"
                 />
               </div>
-              <div className="bg-neutral-800/80 border border-neutral-700/50 px-4 py-3 rounded-2xl rounded-bl-md">
+              <div className="bg-neutral-800/80 border border-neutral-700/50 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl rounded-bl-md">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
-                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
-                  <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
+                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
                 </div>
               </div>
             </div>
           )}
           
-          <div ref={messagesEndRef} />
+          {/* Extra padding at bottom for typing indicator visibility */}
+          <div ref={messagesEndRef} className="h-2" />
         </div>
       </div>
 
-      {/* Input */}
-      <div className="bg-neutral-900/70 backdrop-blur-xl border-t border-neutral-800/80 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            className="flex-1 bg-neutral-800/60 border border-neutral-700/50 rounded-full px-4 py-2.5 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!newMessage.trim() || isSending}
-            className="p-3 bg-white rounded-full text-neutral-900 hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-white/10"
-          >
-            <Send className="w-5 h-5" />
-          </button>
+      {/* Input Area - Fixed at bottom with proper spacing */}
+      <div className="flex-shrink-0 bg-neutral-900/80 backdrop-blur-xl border-t border-neutral-800/80 safe-area-bottom">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Type a message..."
+              value={newMessage}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              className="flex-1 min-w-0 bg-neutral-800/60 border border-neutral-700/50 rounded-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!newMessage.trim() || isSending}
+              className="p-2.5 sm:p-3 bg-white rounded-full text-neutral-900 hover:bg-neutral-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-white/10 flex-shrink-0"
+            >
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
