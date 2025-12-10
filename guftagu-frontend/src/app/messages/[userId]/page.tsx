@@ -661,9 +661,9 @@ export default function ConversationPage() {
                           animation: 'fadeInUp 0.3s ease-out forwards'
                         } : undefined}
                       >
-                        {/* Other user's avatar */}
+                        {/* Other user's avatar - always visible */}
                         {!isOwn && (
-                          <div className={`w-6 sm:w-8 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
+                          <div className="w-6 sm:w-8 flex-shrink-0">
                             <Avatar
                               src={chatUser.profilePicture}
                               alt={chatUser.username}
@@ -721,9 +721,9 @@ export default function ConversationPage() {
                           </div>
                         </div>
                         
-                        {/* Own user's avatar */}
+                        {/* Own user's avatar - always visible */}
                         {isOwn && (
-                          <div className={`w-6 sm:w-8 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
+                          <div className="w-6 sm:w-8 flex-shrink-0">
                             <Avatar
                               src={user?.profilePicture}
                               alt={user?.username || 'You'}
@@ -736,26 +736,6 @@ export default function ConversationPage() {
                   })}
                 </div>
               ))}
-              
-              {/* Typing indicator bubble - with proper spacing */}
-              {isTyping && (
-                <div className="flex items-end gap-2 justify-start mb-4">
-                  <div className="w-6 sm:w-8 flex-shrink-0">
-                    <Avatar
-                      src={chatUser.profilePicture}
-                      alt={chatUser.username}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="bg-neutral-800/60 border border-neutral-700/40 px-4 py-2.5 rounded-2xl rounded-bl-md">
-                    <div className="flex gap-1.5 items-center">
-                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-dot" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-dot" style={{ animationDelay: '200ms' }} />
-                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-dot" style={{ animationDelay: '400ms' }} />
-                    </div>
-                  </div>
-                </div>
-              )}
               
               {/* Bottom spacer for scroll clearance */}
               <div ref={messagesEndRef} className="h-4" />
