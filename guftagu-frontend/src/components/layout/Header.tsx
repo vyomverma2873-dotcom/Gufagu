@@ -26,22 +26,22 @@ export default function Header() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/50">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-cyan-900/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-shadow">
               <Video className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">Guftagu</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">Guftagu</span>
           </Link>
 
           {/* Online Count */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-zinc-800/50 rounded-full">
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'}`} />
-            <span className="text-sm text-zinc-300">
-              <span className="font-semibold text-white">{onlineCount.toLocaleString()}</span> online
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800/60 border border-cyan-900/30 rounded-full">
+            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-cyan-400 animate-pulse shadow-sm shadow-cyan-400' : 'bg-slate-500'}`} />
+            <span className="text-sm text-slate-300">
+              <span className="font-semibold text-cyan-400">{onlineCount.toLocaleString()}</span> online
             </span>
           </div>
 
@@ -54,10 +54,10 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-violet-600/20 text-violet-400'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+                      ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/10'
+                      : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -74,11 +74,11 @@ export default function Header() {
                 {/* Notifications */}
                 <Link
                   href="/notifications"
-                  className="relative p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors"
+                  className="relative p-2 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800/60 transition-colors"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-cyan-500 rounded-full text-[10px] font-bold flex items-center justify-center text-slate-900">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -88,7 +88,7 @@ export default function Header() {
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-zinc-800/50 transition-colors"
+                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-800/60 transition-colors ring-1 ring-transparent hover:ring-cyan-500/30"
                   >
                     <Avatar
                       src={user?.profilePicture}
@@ -99,16 +99,16 @@ export default function Header() {
                   </button>
 
                   {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden">
-                      <div className="px-4 py-3 border-b border-zinc-800">
+                    <div className="absolute right-0 mt-2 w-56 bg-slate-900/95 backdrop-blur-xl border border-cyan-900/30 rounded-xl shadow-xl shadow-cyan-900/10 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-slate-800">
                         <p className="font-medium text-white">{user?.displayName || user?.username}</p>
-                        <p className="text-sm text-zinc-400">@{user?.username}</p>
+                        <p className="text-sm text-slate-400">@{user?.username}</p>
                       </div>
                       <div className="py-1">
                         <Link
                           href="/profile"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-zinc-300 hover:text-white hover:bg-zinc-800/50"
+                          className="flex items-center gap-3 px-4 py-2.5 text-slate-300 hover:text-cyan-400 hover:bg-slate-800/60"
                         >
                           <User className="w-4 h-4" />
                           <span>Profile</span>
@@ -116,7 +116,7 @@ export default function Header() {
                         <Link
                           href="/profile/edit"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-zinc-300 hover:text-white hover:bg-zinc-800/50"
+                          className="flex items-center gap-3 px-4 py-2.5 text-slate-300 hover:text-cyan-400 hover:bg-slate-800/60"
                         >
                           <Settings className="w-4 h-4" />
                           <span>Settings</span>
@@ -125,20 +125,20 @@ export default function Header() {
                           <Link
                             href="/admin"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-zinc-300 hover:text-white hover:bg-zinc-800/50"
+                            className="flex items-center gap-3 px-4 py-2.5 text-slate-300 hover:text-cyan-400 hover:bg-slate-800/60"
                           >
                             <Settings className="w-4 h-4" />
                             <span>Admin Panel</span>
                           </Link>
                         )}
                       </div>
-                      <div className="border-t border-zinc-800 py-1">
+                      <div className="border-t border-slate-800 py-1">
                         <button
                           onClick={() => {
                             setUserMenuOpen(false);
                             logout();
                           }}
-                          className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-zinc-800/50 w-full"
+                          className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-slate-800/60 w-full"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Logout</span>
@@ -166,7 +166,7 @@ export default function Header() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+              className="md:hidden p-2 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800/60"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -176,12 +176,12 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-zinc-800 bg-zinc-950">
+        <div className="md:hidden border-t border-cyan-900/30 bg-slate-950/95 backdrop-blur-xl">
           <div className="px-4 py-3">
-            <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/50 rounded-lg mb-4">
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'}`} />
-              <span className="text-sm text-zinc-300">
-                <span className="font-semibold text-white">{onlineCount.toLocaleString()}</span> online
+            <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/60 border border-cyan-900/30 rounded-lg mb-4">
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-cyan-400 animate-pulse' : 'bg-slate-500'}`} />
+              <span className="text-sm text-slate-300">
+                <span className="font-semibold text-cyan-400">{onlineCount.toLocaleString()}</span> online
               </span>
             </div>
             <nav className="space-y-1">
@@ -193,10 +193,10 @@ export default function Header() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                       isActive
-                        ? 'bg-violet-600/20 text-violet-400'
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+                        ? 'bg-cyan-500/20 text-cyan-400'
+                        : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
