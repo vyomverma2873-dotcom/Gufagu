@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, MoreVertical, Phone, Video, PhoneOff, X, PhoneCall, PhoneIncoming, PhoneOutgoing, PhoneMissed } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Phone, Video, PhoneOff, X, PhoneCall, PhoneIncoming, PhoneOutgoing, PhoneMissed, Check, CheckCheck } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
@@ -18,11 +18,13 @@ interface Message {
   receiverId?: string;
   content: string;
   isRead?: boolean;
+  isDelivered?: boolean;
   isOwn?: boolean;
   createdAt?: string;
   timestamp?: string;
   isNew?: boolean; // For animation
   type?: 'message' | 'call';
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
 }
 
 interface CallEntry {
@@ -118,7 +120,7 @@ export default function ConversationPage() {
         setMessages(messagesResponse.data.messages);
         setTimeline(messagesResponse.data.timeline || messagesResponse.data.messages);
 
-        // Mark messages as read
+        // Mark messages as read via REST and socket
         await messagesApi.markAsRead(undefined, userId);
       } catch (error) {
         console.error('Failed to fetch conversation:', error);
@@ -159,6 +161,13 @@ export default function ConversationPage() {
       return () => clearTimeout(timer);
     }
   }, [isLoading]); // Only run when loading state changes
+
+  // Emit read receipts when conversation is opened and socket is ready
+  useEffect(() => {
+    if (socket && !isLoading && userId) {
+      socket.emit('dm_mark_read', { fromUserId: userId });
+    }
+  }, [socket, isLoading, userId]);
 
   // Socket event listeners
   useEffect(() => {
@@ -212,9 +221,10 @@ export default function ConversationPage() {
           );
         }, 500);
         
-        // Mark as read
+        // Mark as read via REST and socket for real-time read receipts
         if (data.messageId) {
           messagesApi.markAsRead([data.messageId]);
+          socket?.emit('dm_mark_read', { messageIds: [data.messageId], fromUserId: data.from?.userId });
         }
       }
     };
@@ -251,6 +261,38 @@ export default function ConversationPage() {
       }
     };
 
+    // Listen for message delivered status
+    const handleMessageDelivered = (data: any) => {
+      console.log('[Chat Socket] Message delivered:', data);
+      if (data.toUserId === userId) {
+        setMessages((prev) => 
+          prev.map(m => m._id === data.messageId ? { ...m, isDelivered: true, status: 'delivered' } : m)
+        );
+        setTimeline((prev) => 
+          prev.map(item => item._id === data.messageId ? { ...item, isDelivered: true, status: 'delivered' } as TimelineItem : item)
+        );
+      }
+    };
+
+    // Listen for message read status
+    const handleMessageRead = (data: any) => {
+      console.log('[Chat Socket] Messages read:', data);
+      if (data.readBy === userId) {
+        // Update all messages from this user as read
+        setMessages((prev) => 
+          prev.map(m => m.isOwn ? { ...m, isRead: true, status: 'read' } : m)
+        );
+        setTimeline((prev) => 
+          prev.map(item => {
+            if (item.type !== 'call' && (item as Message).isOwn) {
+              return { ...item, isRead: true, status: 'read' } as TimelineItem;
+            }
+            return item;
+          })
+        );
+      }
+    };
+
     // Register all event listeners
     console.log('[Chat Socket] Registering event listeners for socket:', socket.id);
     socket.on('dm_receive', handleNewMessage);
@@ -261,6 +303,8 @@ export default function ConversationPage() {
     socket.on('stop_typing', handleTypingStop); // fallback
     socket.on('friend_online', handleFriendOnline);
     socket.on('friend_offline', handleFriendOffline);
+    socket.on('dm_delivered', handleMessageDelivered);
+    socket.on('dm_read', handleMessageRead);
 
     // Note: Call events are now handled globally in SocketContext
 
@@ -273,6 +317,8 @@ export default function ConversationPage() {
       socket.off('stop_typing', handleTypingStop);
       socket.off('friend_online', handleFriendOnline);
       socket.off('friend_offline', handleFriendOffline);
+      socket.off('dm_delivered', handleMessageDelivered);
+      socket.off('dm_read', handleMessageRead);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
@@ -326,7 +372,9 @@ export default function ConversationPage() {
       content: newMessage.trim(),
       isOwn: true,
       isRead: false,
+      isDelivered: false,
       isNew: true,
+      status: 'sending',
       timestamp: new Date().toISOString(),
     };
 
@@ -341,18 +389,18 @@ export default function ConversationPage() {
     try {
       const response = await messagesApi.sendMessage(userId, tempMessage.content);
       
-      // Replace temp message with actual message and remove animation flag
+      // Replace temp message with actual message, set status to 'sent'
       setMessages((prev) => 
         prev.map((msg) => 
           msg._id === tempMessage._id 
-            ? { ...msg, _id: response.data.message._id, isNew: false }
+            ? { ...msg, _id: response.data.message._id, isNew: false, status: 'sent' }
             : msg
         )
       );
       setTimeline((prev) => 
         prev.map((item) => 
           item._id === tempMessage._id 
-            ? { ...item, _id: response.data.message._id, isNew: false } as TimelineItem
+            ? { ...item, _id: response.data.message._id, isNew: false, status: 'sent' } as TimelineItem
             : item
         )
       );
@@ -633,11 +681,29 @@ export default function ConversationPage() {
                         } : undefined}
                       >
                         <p className="break-words text-sm sm:text-base">{message.content}</p>
-                        <p className={`text-[9px] sm:text-[10px] mt-0.5 sm:mt-1 ${
-                          isOwn ? 'text-neutral-500' : 'text-neutral-500'
+                        <div className={`flex items-center gap-1 mt-0.5 sm:mt-1 ${
+                          isOwn ? 'justify-end' : 'justify-start'
                         }`}>
-                          {formatTime(message.timestamp || message.createdAt || '')}
-                        </p>
+                          <span className={`text-[9px] sm:text-[10px] ${
+                            isOwn ? 'text-neutral-500' : 'text-neutral-500'
+                          }`}>
+                            {formatTime(message.timestamp || message.createdAt || '')}
+                          </span>
+                          {/* Delivery status indicators for own messages */}
+                          {isOwn && (
+                            <span className="flex items-center">
+                              {message.status === 'sending' ? (
+                                <span className="w-3 h-3 border border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                              ) : message.isRead || message.status === 'read' ? (
+                                <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                              ) : message.isDelivered || message.status === 'delivered' ? (
+                                <CheckCheck className="w-3.5 h-3.5 text-neutral-400" />
+                              ) : (
+                                <Check className="w-3.5 h-3.5 text-neutral-400" />
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     

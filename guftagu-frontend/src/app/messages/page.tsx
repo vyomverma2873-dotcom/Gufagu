@@ -63,14 +63,19 @@ export default function MessagesPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // Listen for new messages
+  // Listen for new messages and online/offline status updates
   useEffect(() => {
     if (!socket) return;
 
     const handleNewMessage = (data: any) => {
+      // Handle both dm_receive and new_dm events
+      const senderId = data.from?.userId || data.senderId;
+      const content = data.message || data.content;
+      const timestamp = data.timestamp || data.createdAt || new Date().toISOString();
+
       setConversations((prev) => {
         const existingIndex = prev.findIndex(
-          (c) => c.friend?._id === data.senderId
+          (c) => c.friend?._id === senderId
         );
 
         if (existingIndex >= 0) {
@@ -78,8 +83,8 @@ export default function MessagesPage() {
           updated[existingIndex] = {
             ...updated[existingIndex],
             lastMessage: {
-              content: data.content,
-              timestamp: data.createdAt || new Date().toISOString(),
+              content: content,
+              timestamp: timestamp,
               isOwn: false,
               isRead: false,
             },
@@ -95,10 +100,38 @@ export default function MessagesPage() {
       });
     };
 
+    // Handle friend online status
+    const handleFriendOnline = (data: any) => {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.friend?._id === data.friendId
+            ? { ...conv, friend: { ...conv.friend, isOnline: true } }
+            : conv
+        )
+      );
+    };
+
+    // Handle friend offline status
+    const handleFriendOffline = (data: any) => {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.friend?._id === data.friendId
+            ? { ...conv, friend: { ...conv.friend, isOnline: false } }
+            : conv
+        )
+      );
+    };
+
+    socket.on('dm_receive', handleNewMessage);
     socket.on('new_dm', handleNewMessage);
+    socket.on('friend_online', handleFriendOnline);
+    socket.on('friend_offline', handleFriendOffline);
 
     return () => {
+      socket.off('dm_receive', handleNewMessage);
       socket.off('new_dm', handleNewMessage);
+      socket.off('friend_online', handleFriendOnline);
+      socket.off('friend_offline', handleFriendOffline);
     };
   }, [socket]);
 

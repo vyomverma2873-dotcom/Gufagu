@@ -10,12 +10,14 @@ import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSocket } from '@/contexts/SocketContext';
 import { friendsApi } from '@/lib/api';
 import { Friend } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
 
 export default function FriendsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { socket } = useSocket();
   const router = useRouter();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +44,39 @@ export default function FriendsPage() {
       fetchFriends();
     }
   }, [isAuthenticated, authLoading, router]);
+
+  // Listen for real-time online/offline status updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleFriendOnline = (data: any) => {
+      setFriends((prev) =>
+        prev.map((friend) =>
+          friend._id === data.friendId
+            ? { ...friend, isOnline: true }
+            : friend
+        )
+      );
+    };
+
+    const handleFriendOffline = (data: any) => {
+      setFriends((prev) =>
+        prev.map((friend) =>
+          friend._id === data.friendId
+            ? { ...friend, isOnline: false, lastActive: new Date().toISOString() }
+            : friend
+        )
+      );
+    };
+
+    socket.on('friend_online', handleFriendOnline);
+    socket.on('friend_offline', handleFriendOffline);
+
+    return () => {
+      socket.off('friend_online', handleFriendOnline);
+      socket.off('friend_offline', handleFriendOffline);
+    };
+  }, [socket]);
 
   const filteredFriends = friends.filter(
     (friend) =>
