@@ -4,6 +4,7 @@ const Ban = require('../models/Ban');
 const SystemLog = require('../models/SystemLog');
 const Match = require('../models/Match');
 const OnlineUser = require('../models/OnlineUser');
+const Message = require('../models/Message');
 const logger = require('../utils/logger');
 
 // Get admin dashboard stats
@@ -363,6 +364,257 @@ exports.getActiveBans = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get bans error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get all conversations list for export
+exports.getConversationsList = async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    // Get all unique user pairs from messages
+    const conversations = await Message.aggregate([
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $lt: ['$senderId', '$receiverId'] },
+              { sender: '$senderId', receiver: '$receiverId' },
+              { sender: '$receiverId', receiver: '$senderId' }
+            ]
+          },
+          messageCount: { $sum: 1 },
+          lastMessage: { $last: '$timestamp' },
+          firstMessage: { $first: '$timestamp' }
+        }
+      },
+      { $sort: { lastMessage: -1 } },
+      { $limit: 100 }
+    ]);
+
+    // Get user details for each conversation
+    const populatedConversations = await Promise.all(
+      conversations.map(async (conv) => {
+        const user1 = await User.findById(conv._id.sender).select('username displayName userId email');
+        const user2 = await User.findById(conv._id.receiver).select('username displayName userId email');
+        
+        return {
+          user1: user1 ? {
+            _id: user1._id,
+            username: user1.username,
+            displayName: user1.displayName,
+            userId: user1.userId,
+            email: user1.email
+          } : null,
+          user2: user2 ? {
+            _id: user2._id,
+            username: user2.username,
+            displayName: user2.displayName,
+            userId: user2.userId,
+            email: user2.email
+          } : null,
+          messageCount: conv.messageCount,
+          lastMessage: conv.lastMessage,
+          firstMessage: conv.firstMessage
+        };
+      })
+    );
+
+    // Filter if search query provided
+    let filteredConversations = populatedConversations.filter(c => c.user1 && c.user2);
+    
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredConversations = filteredConversations.filter(c => 
+        c.user1.username?.toLowerCase().includes(searchLower) ||
+        c.user2.username?.toLowerCase().includes(searchLower) ||
+        c.user1.email?.toLowerCase().includes(searchLower) ||
+        c.user2.email?.toLowerCase().includes(searchLower) ||
+        c.user1.userId?.includes(search) ||
+        c.user2.userId?.includes(search)
+      );
+    }
+
+    res.json({ conversations: filteredConversations });
+  } catch (error) {
+    logger.error('Get conversations list error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Export chat messages as CSV
+exports.exportChatMessages = async (req, res) => {
+  try {
+    const { user1Id, user2Id, startDate, endDate, format = 'csv' } = req.query;
+
+    // Build query
+    const query = {};
+    
+    if (user1Id && user2Id) {
+      // Export conversation between two specific users
+      query.$or = [
+        { senderId: user1Id, receiverId: user2Id },
+        { senderId: user2Id, receiverId: user1Id }
+      ];
+    } else if (user1Id) {
+      // Export all messages involving one user
+      query.$or = [
+        { senderId: user1Id },
+        { receiverId: user1Id }
+      ];
+    }
+
+    // Date filtering
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = new Date(startDate);
+      if (endDate) query.timestamp.$lte = new Date(endDate);
+    }
+
+    // Fetch messages with user details
+    const messages = await Message.find(query)
+      .populate('senderId', 'username displayName userId email')
+      .populate('receiverId', 'username displayName userId email')
+      .sort('timestamp')
+      .lean();
+
+    if (messages.length === 0) {
+      return res.status(404).json({ error: 'No messages found for the specified criteria' });
+    }
+
+    // Generate CSV content
+    const csvHeaders = [
+      'Message ID',
+      'Sender ID (ObjectId)',
+      'Sender User ID (7-digit)',
+      'Sender Username',
+      'Sender Display Name',
+      'Sender Email',
+      'Receiver ID (ObjectId)',
+      'Receiver User ID (7-digit)',
+      'Receiver Username',
+      'Receiver Display Name',
+      'Receiver Email',
+      'Message Content',
+      'Message Type',
+      'Is Delivered',
+      'Delivered At',
+      'Is Read',
+      'Read At',
+      'Timestamp',
+      'Created At',
+      'Updated At',
+      'Edited At',
+      'Deleted At'
+    ];
+
+    const escapeCSV = (value) => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvRows = messages.map(msg => [
+      escapeCSV(msg._id),
+      escapeCSV(msg.senderId?._id || msg.senderId),
+      escapeCSV(msg.senderId?.userId),
+      escapeCSV(msg.senderId?.username),
+      escapeCSV(msg.senderId?.displayName),
+      escapeCSV(msg.senderId?.email),
+      escapeCSV(msg.receiverId?._id || msg.receiverId),
+      escapeCSV(msg.receiverId?.userId),
+      escapeCSV(msg.receiverId?.username),
+      escapeCSV(msg.receiverId?.displayName),
+      escapeCSV(msg.receiverId?.email),
+      escapeCSV(msg.content),
+      escapeCSV(msg.messageType),
+      escapeCSV(msg.isDelivered),
+      escapeCSV(msg.deliveredAt),
+      escapeCSV(msg.isRead),
+      escapeCSV(msg.readAt),
+      escapeCSV(msg.timestamp),
+      escapeCSV(msg.createdAt),
+      escapeCSV(msg.updatedAt),
+      escapeCSV(msg.editedAt),
+      escapeCSV(msg.deletedAt)
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    // Log export action
+    await SystemLog.create({
+      action: 'chat_export',
+      performedBy: req.user._id,
+      details: {
+        user1Id,
+        user2Id,
+        startDate,
+        endDate,
+        messageCount: messages.length
+      }
+    });
+
+    // Set headers for file download
+    const filename = user1Id && user2Id 
+      ? `chat_export_${user1Id}_${user2Id}_${Date.now()}.csv`
+      : user1Id 
+        ? `chat_export_user_${user1Id}_${Date.now()}.csv`
+        : `chat_export_all_${Date.now()}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csvContent);
+
+  } catch (error) {
+    logger.error('Export chat messages error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get chat statistics for admin dashboard
+exports.getChatStats = async (req, res) => {
+  try {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const totalMessages = await Message.countDocuments();
+    const messagesToday = await Message.countDocuments({ timestamp: { $gte: today } });
+    const messagesThisMonth = await Message.countDocuments({ timestamp: { $gte: thisMonth } });
+
+    // Get unique conversations count
+    const uniqueConversations = await Message.aggregate([
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $lt: ['$senderId', '$receiverId'] },
+              { sender: '$senderId', receiver: '$receiverId' },
+              { sender: '$receiverId', receiver: '$senderId' }
+            ]
+          }
+        }
+      },
+      { $count: 'total' }
+    ]);
+
+    res.json({
+      stats: {
+        totalMessages,
+        messagesToday,
+        messagesThisMonth,
+        uniqueConversations: uniqueConversations[0]?.total || 0
+      }
+    });
+  } catch (error) {
+    logger.error('Get chat stats error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

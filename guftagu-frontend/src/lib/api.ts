@@ -116,6 +116,11 @@ export const adminApi = {
     api.put(`/admin/reports/${reportId}`, data),
   getBans: (params?: any) => api.get('/admin/bans', { params }),
   getLogs: (params?: any) => api.get('/admin/logs', { params }),
+  // Chat Export
+  getChatStats: () => api.get('/admin/chats/stats'),
+  getConversations: (params?: { search?: string }) => api.get('/admin/chats/conversations', { params }),
+  exportChat: (params: { user1Id?: string; user2Id?: string; startDate?: string; endDate?: string }) => 
+    api.get('/admin/chats/export', { params, responseType: 'blob' }),
 };
 
 export default api;

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Users, Video, AlertTriangle, Shield, TrendingUp, Activity, 
-  BarChart3, Clock, UserCheck, UserX
+  BarChart3, Clock, UserCheck, UserX, MessageSquare
 } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -130,6 +130,10 @@ export default function AdminDashboardPage() {
                 {stats.pendingReports}
               </span>
             ) : null}
+          </Link>
+          <Link href="/admin/chats" className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors">
+            <MessageSquare className="w-4 h-4 inline mr-2" />
+            Export Chats
           </Link>
           <Link href="/admin/bans" className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors">
             <Shield className="w-4 h-4 inline mr-2" />

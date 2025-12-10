@@ -27,4 +27,9 @@ router.get('/bans', adminController.getActiveBans);
 // Logs
 router.get('/logs', adminController.getSystemLogs);
 
+// Chat Export
+router.get('/chats/stats', adminController.getChatStats);
+router.get('/chats/conversations', adminController.getConversationsList);
+router.get('/chats/export', adminController.exportChatMessages);
+
 module.exports = router;
