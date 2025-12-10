@@ -595,11 +595,14 @@ export default function ConversationPage() {
         </div>
       </div>
 
-      {/* Messages and Calls Timeline - Scrollable area with card container */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overscroll-contain px-2 sm:px-4 py-3">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-neutral-900/60 backdrop-blur-xl rounded-2xl border border-neutral-700/50 min-h-full shadow-lg">
-            <div className="px-3 sm:px-5 py-4 space-y-3">
+      {/* Chat Container Card - Messages + Input in unified container */}
+      <div className="flex-1 flex flex-col min-h-0 px-2 sm:px-4 py-2 sm:py-3 pb-2 sm:pb-3">
+        <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col min-h-0">
+          <div className="bg-neutral-900/60 backdrop-blur-xl rounded-2xl border border-neutral-700/50 flex-1 flex flex-col min-h-0 shadow-lg overflow-hidden">
+            
+            {/* Messages Scrollable Area */}
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overscroll-contain">
+              <div className="px-3 sm:px-5 py-4 space-y-3">
               {Object.entries(groupedTimeline).map(([date, dateItems]) => (
                 <div key={date}>
                   {/* Date separator */}
@@ -758,13 +761,9 @@ export default function ConversationPage() {
               <div ref={messagesEndRef} className="h-4" />
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Input Area Card - Fixed at bottom */}
-      <div className="flex-shrink-0 px-2 sm:px-4 pb-2 sm:pb-3 pt-0 safe-area-bottom">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-neutral-700/50 overflow-hidden shadow-lg">
+          {/* Input Area - Fixed at bottom inside card */}
+          <div className="flex-shrink-0 border-t border-neutral-700/50 bg-neutral-900/80 backdrop-blur-xl safe-area-bottom">
             <div className="px-3 sm:px-4 py-2.5 sm:py-3">
               <div className="flex items-center gap-2 sm:gap-3">
                 <input
@@ -785,6 +784,8 @@ export default function ConversationPage() {
                 </button>
               </div>
             </div>
+          </div>
+          
           </div>
         </div>
       </div>
