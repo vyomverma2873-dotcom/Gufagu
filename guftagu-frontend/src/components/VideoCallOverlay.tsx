@@ -141,12 +141,16 @@ export default function VideoCallOverlay() {
 
   const ICE_SERVERS = {
     iceServers: [
+      // Google STUN servers (reliable, fast)
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
       { urls: 'stun:stun4.l.google.com:19302' },
-      // Free TURN servers for NAT traversal
+      // Additional public STUN servers for redundancy
+      { urls: 'stun:stun.stunprotocol.org:3478' },
+      { urls: 'stun:stun.voip.blackberry.com:3478' },
+      // OpenRelay TURN servers (free, may have rate limits)
       {
         urls: 'turn:openrelay.metered.ca:80',
         username: 'openrelayproject',
@@ -161,6 +165,22 @@ export default function VideoCallOverlay() {
         urls: 'turn:openrelay.metered.ca:443?transport=tcp',
         username: 'openrelayproject',
         credential: 'openrelayproject',
+      },
+      // Metered.ca free tier TURN (more reliable)
+      {
+        urls: 'turn:a.relay.metered.ca:80',
+        username: 'e8dd65c92f6ec24f91fe6b37',
+        credential: 'XxOvP7wS0R/L+6Gt',
+      },
+      {
+        urls: 'turn:a.relay.metered.ca:443',
+        username: 'e8dd65c92f6ec24f91fe6b37',
+        credential: 'XxOvP7wS0R/L+6Gt',
+      },
+      {
+        urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+        username: 'e8dd65c92f6ec24f91fe6b37',
+        credential: 'XxOvP7wS0R/L+6Gt',
       },
     ],
     iceCandidatePoolSize: 10,
@@ -958,18 +978,44 @@ export default function VideoCallOverlay() {
         };
         
         // Monitor ICE connection state (critical for debugging)
+        let iceRestartAttempts = 0;
+        const MAX_ICE_RESTART_ATTEMPTS = 3;
+        let disconnectedTimeout: NodeJS.Timeout | null = null;
+        
         pc.oniceconnectionstatechange = () => {
           console.log('[WebRTC] ICE connection state:', pc.iceConnectionState);
+          
+          // Clear any pending timeout when state changes
+          if (disconnectedTimeout) {
+            clearTimeout(disconnectedTimeout);
+            disconnectedTimeout = null;
+          }
+          
           if (pc.iceConnectionState === 'failed') {
-            console.error('[WebRTC] ICE connection failed! Attempting ICE restart...');
-            // Try to restart ICE
-            pc.restartIce();
+            console.error('[WebRTC] ICE connection failed! Attempt:', iceRestartAttempts + 1);
+            if (iceRestartAttempts < MAX_ICE_RESTART_ATTEMPTS) {
+              iceRestartAttempts++;
+              console.log('[WebRTC] Attempting ICE restart...');
+              pc.restartIce();
+            } else {
+              console.error('[WebRTC] Max ICE restart attempts reached');
+            }
           }
+          
           if (pc.iceConnectionState === 'disconnected') {
-            console.warn('[WebRTC] ICE disconnected, may recover automatically');
+            console.warn('[WebRTC] ICE disconnected, waiting for recovery...');
+            // Give it 5 seconds to recover before attempting restart
+            disconnectedTimeout = setTimeout(() => {
+              if (pc.iceConnectionState === 'disconnected') {
+                console.log('[WebRTC] Still disconnected after 5s, attempting ICE restart...');
+                pc.restartIce();
+              }
+            }, 5000);
           }
+          
           if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
             console.log('[WebRTC] ICE connected! Media should flow now.');
+            iceRestartAttempts = 0; // Reset attempts on successful connection
           }
         };
         
