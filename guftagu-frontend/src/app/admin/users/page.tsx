@@ -108,6 +108,13 @@ export default function AdminUsersPage() {
 
   // Open ban modal
   const openBanModal = (targetUser: AdminUser) => {
+    // Prevent admin from banning themselves
+    if (targetUser._id === user?._id) {
+      alert('You cannot ban yourself!');
+      setActionMenuOpen(null);
+      return;
+    }
+    
     setBanTargetUser(targetUser);
     setBanReason('');
     setBanType('temporary');
@@ -298,6 +305,11 @@ export default function AdminUsersPage() {
                                   <Shield className="w-4 h-4" />
                                   Unban User
                                 </button>
+                              ) : u._id === user?._id ? (
+                                <div className="flex items-center gap-2 w-full px-4 py-2 text-sm text-zinc-500 cursor-not-allowed">
+                                  <Ban className="w-4 h-4" />
+                                  Cannot Ban Self
+                                </div>
                               ) : (
                                 <button
                                   onClick={() => openBanModal(u)}

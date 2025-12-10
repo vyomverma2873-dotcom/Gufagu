@@ -164,6 +164,11 @@ exports.banUser = async (req, res) => {
     const { userId } = req.params;
     const { reason, duration, type = 'temporary', description } = req.body;
 
+    // Prevent admin from banning themselves
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({ error: 'You cannot ban yourself' });
+    }
+
     // Validate required fields
     if (!reason) {
       return res.status(400).json({ error: 'Ban reason is required' });
