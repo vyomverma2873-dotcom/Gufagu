@@ -3,8 +3,8 @@
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 
-// Dynamically import Galaxy to avoid SSR issues with WebGL
-const Galaxy = dynamic(() => import('@/components/ui/Galaxy'), {
+// Dynamically import Hyperspeed to avoid SSR issues with WebGL
+const Hyperspeed = dynamic(() => import('@/components/ui/Hyperspeed'), {
   ssr: false,
   loading: () => null,
 });
@@ -21,21 +21,46 @@ export default function GalaxyBackground() {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
       <div className="absolute inset-0 pointer-events-auto">
-        <Galaxy
-          mouseRepulsion={true}
-          mouseInteraction={true}
-          density={1.5}
-          glowIntensity={0.5}
-          saturation={0.8}
-          hueShift={240}
-          transparent={false}
-          speed={0.8}
-          twinkleIntensity={0.4}
-          rotationSpeed={0.05}
+        <Hyperspeed
+          effectOptions={{
+            onSpeedUp: () => {},
+            onSlowDown: () => {},
+            distortion: 'turbulentDistortion',
+            length: 400,
+            roadWidth: 10,
+            islandWidth: 2,
+            lanesPerRoad: 4,
+            fov: 90,
+            fovSpeedUp: 150,
+            speedUp: 2,
+            carLightsFade: 0.4,
+            totalSideLightSticks: 20,
+            lightPairsPerRoadWay: 40,
+            shoulderLinesWidthPercentage: 0.05,
+            brokenLinesWidthPercentage: 0.1,
+            brokenLinesLengthPercentage: 0.5,
+            lightStickWidth: [0.12, 0.5],
+            lightStickHeight: [1.3, 1.7],
+            movingAwaySpeed: [60, 80],
+            movingCloserSpeed: [-120, -160],
+            carLightsLength: [400 * 0.03, 400 * 0.2],
+            carLightsRadius: [0.05, 0.14],
+            carWidthPercentage: [0.3, 0.5],
+            carShiftX: [-0.8, 0.8],
+            carFloorSeparation: [0, 5],
+            colors: {
+              roadColor: 0x080808,
+              islandColor: 0x0a0a0a,
+              background: 0x000000,
+              shoulderLines: 0xFFFFFF,
+              brokenLines: 0xFFFFFF,
+              leftCars: [0xD856BF, 0x6750A2, 0xC247AC],
+              rightCars: [0x03B3C3, 0x0E5EA5, 0x324555],
+              sticks: 0x03B3C3,
+            }
+          }}
         />
       </div>
-      {/* Subtle overlay to ensure text readability */}
-      <div className="absolute inset-0 bg-zinc-950/30 pointer-events-none" />
     </div>
   );
 }
