@@ -554,32 +554,38 @@ export default function VideoCallOverlay() {
   }, [callStatus, callType, localStream, setupAudioAnalyser, waitForTracksReady]);
 
   // Initialize WebRTC when connected and have peer socket
+  // KEY FIX: Create PC immediately when we have peerSocketId, don't wait for localStream
   useEffect(() => {
-    if (callStatus !== 'connected' || !socket || !peerSocketId || !localStream) return;
+    if (callStatus !== 'connected' || !socket || !peerSocketId) return;
     if (peerConnectionRef.current) return; // Already have connection
 
     const initWebRTC = async () => {
       try {
         console.log('[WebRTC] Initializing with peerSocketId:', peerSocketId);
+        console.log('[WebRTC] localStream available:', !!localStream);
+        console.log('[WebRTC] isInitiator:', currentCall?.isInitiator);
 
-        // Create peer connection
+        // Create peer connection IMMEDIATELY, don't wait for local stream
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnectionRef.current = pc;
+        
+        // If we have local stream, add tracks now
+        if (localStream) {
+          // Ensure all local tracks are enabled before adding
+          localStream.getTracks().forEach(track => {
+            track.enabled = true;
+            console.log('[WebRTC] Enabling track before add:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
+          });
 
-        // Ensure all local tracks are enabled before adding
-        localStream.getTracks().forEach(track => {
-          track.enabled = true;
-          console.log('[WebRTC] Enabling track before add:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
-        });
-
-        // Add local tracks to connection with proper sender handling
-        const senders: RTCRtpSender[] = [];
-        console.log('[WebRTC] Adding', localStream.getTracks().length, 'local tracks');
-        localStream.getTracks().forEach(track => {
-          console.log('[WebRTC] Adding track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
-          const sender = pc.addTrack(track, localStream);
-          senders.push(sender);
-        });
+          // Add local tracks to connection
+          console.log('[WebRTC] Adding', localStream.getTracks().length, 'local tracks');
+          localStream.getTracks().forEach(track => {
+            console.log('[WebRTC] Adding track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
+            pc.addTrack(track, localStream);
+          });
+        } else {
+          console.log('[WebRTC] No local stream yet, will add tracks when available');
+        }
 
         // Handle incoming tracks
         pc.ontrack = (event) => {
@@ -794,18 +800,22 @@ export default function VideoCallOverlay() {
           }
         };
 
-        // Only initiator sends offer immediately
+        // Only initiator sends offer - but wait until we have tracks
         if (currentCall?.isInitiator) {
-          console.log('[WebRTC] Creating offer...');
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit('friend_call_offer', {
-            to: peerSocketId,
-            offer: pc.localDescription,
-          });
-          console.log('[WebRTC] Sent offer to:', peerSocketId);
+          if (localStream && localStream.getTracks().length > 0) {
+            console.log('[WebRTC] Creating offer as initiator (stream ready)...');
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('friend_call_offer', {
+              to: peerSocketId,
+              offer: pc.localDescription,
+            });
+            console.log('[WebRTC] Sent offer to:', peerSocketId);
+          } else {
+            console.log('[WebRTC] Initiator waiting for local stream before sending offer...');
+          }
         } else {
-          console.log('[WebRTC] Non-initiator waiting for offer...');
+          console.log('[WebRTC] Non-initiator ready, waiting for offer...');
         }
 
       } catch (error) {
@@ -824,6 +834,47 @@ export default function VideoCallOverlay() {
       }
     };
   }, [callStatus, socket, peerSocketId, currentCall, localStream, setupAudioAnalyser]);
+
+  // Add tracks to existing peer connection when local stream becomes available
+  useEffect(() => {
+    if (!localStream || !peerConnectionRef.current) return;
+    
+    const pc = peerConnectionRef.current;
+    const existingSenders = pc.getSenders();
+    
+    // Check if we already have tracks added
+    if (existingSenders.some(s => s.track !== null)) {
+      console.log('[WebRTC] Tracks already added to PC');
+      return;
+    }
+    
+    console.log('[WebRTC] Adding late tracks to existing peer connection');
+    
+    // Add tracks
+    localStream.getTracks().forEach(track => {
+      track.enabled = true;
+      console.log('[WebRTC] Late adding track:', track.kind);
+      pc.addTrack(track, localStream);
+    });
+    
+    // If we're the initiator and haven't sent offer yet, send it now
+    if (currentCall?.isInitiator && pc.signalingState === 'stable' && !pc.localDescription) {
+      console.log('[WebRTC] Initiator sending delayed offer after tracks added');
+      (async () => {
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket?.emit('friend_call_offer', {
+            to: peerSocketId,
+            offer: pc.localDescription,
+          });
+          console.log('[WebRTC] Delayed offer sent');
+        } catch (e) {
+          console.error('[WebRTC] Error sending delayed offer:', e);
+        }
+      })();
+    }
+  }, [localStream, currentCall, peerSocketId, socket]);
 
   // Track refresh flag to prevent multiple refreshes
   const trackRefreshedRef = useRef(false);
@@ -945,6 +996,19 @@ export default function VideoCallOverlay() {
       setPendingOffer(null);
       
       try {
+        // Add local tracks if available and not already added
+        if (localStream) {
+          const existingSenders = pc.getSenders();
+          if (!existingSenders.some(s => s.track !== null)) {
+            console.log('[WebRTC] Adding tracks before processing offer');
+            localStream.getTracks().forEach(track => {
+              track.enabled = true;
+              pc.addTrack(track, localStream);
+            });
+          }
+        }
+        
+        console.log('[WebRTC] Setting remote description from pending offer...');
         await pc.setRemoteDescription(new RTCSessionDescription(offerData.offer));
         
         // Flush buffered ICE candidates
@@ -958,6 +1022,7 @@ export default function VideoCallOverlay() {
         }
         iceCandidateBuffer.current = [];
         
+        console.log('[WebRTC] Creating answer...');
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit('friend_call_answer', {
@@ -971,7 +1036,7 @@ export default function VideoCallOverlay() {
     };
     
     processPendingOffer();
-  }, [pendingOffer, socket]);
+  }, [pendingOffer, socket, localStream]);
 
   // Handle WebRTC signaling messages
   useEffect(() => {
@@ -1003,6 +1068,18 @@ export default function VideoCallOverlay() {
       }
 
       try {
+        // Add local tracks if available and not already added
+        if (localStream) {
+          const existingSenders = pc.getSenders();
+          if (!existingSenders.some(s => s.track !== null)) {
+            console.log('[WebRTC] Adding tracks before handling offer');
+            localStream.getTracks().forEach(track => {
+              track.enabled = true;
+              pc.addTrack(track, localStream);
+            });
+          }
+        }
+        
         console.log('[WebRTC] Setting remote description (offer)...');
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
         console.log('[WebRTC] Remote description set successfully');
@@ -1110,7 +1187,7 @@ export default function VideoCallOverlay() {
       socket.off('friend_call_answer', handleAnswer);
       socket.off('friend_call_ice_candidate', handleIceCandidate);
     };
-  }, [socket]);
+  }, [socket, localStream]);
 
   // Cleanup streams on unmount or call end
   useEffect(() => {
