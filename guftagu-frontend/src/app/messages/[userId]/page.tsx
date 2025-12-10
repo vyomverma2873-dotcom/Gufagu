@@ -541,13 +541,13 @@ export default function ConversationPage() {
                       {chatUser.displayName || chatUser.username}
                     </h2>
                     {/* Online status badge */}
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5 overflow-visible">
                       {isTyping ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-neutral-800/80 rounded-full">
-                          <span className="flex gap-0.5">
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-neutral-800/80 rounded-full overflow-visible">
+                          <span className="flex gap-0.5 items-center min-h-[8px]">
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
                           </span>
                           <span className="text-xs text-neutral-300 font-medium">typing</span>
                         </span>
@@ -747,8 +747,8 @@ export default function ConversationPage() {
                       size="sm"
                     />
                   </div>
-                  <div className="bg-neutral-800/80 border border-neutral-700/50 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl rounded-bl-md">
-                    <div className="flex gap-1.5 items-center h-4">
+                  <div className="bg-neutral-800/80 border border-neutral-700/50 px-3 sm:px-4 py-3 sm:py-3.5 rounded-2xl rounded-bl-md overflow-visible">
+                    <div className="flex gap-1.5 items-center min-h-[16px]">
                       <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
                       <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.6s' }} />
                       <span className="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
