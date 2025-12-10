@@ -1,42 +1,55 @@
-npx shadcn@latest add @react-bits/DotGrid-JS-CSS
-
-import DotGrid from './DotGrid';
-
-<div style={{ width: '100%', height: '600px', position: 'relative' }}>
-  <DotGrid
-    dotSize={10}
-    gap={15}
-    baseColor="#5227FF"
-    activeColor="#5227FF"
-    proximity={120}
-    shockRadius={250}
-    shockStrength={5}
-    resistance={750}
-    returnDuration={1.5}
-  />
-</div>
-
 'use client';
+
 import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { gsap } from 'gsap';
-import { InertiaPlugin } from 'gsap/InertiaPlugin';
 
-import './DotGrid.css';
+interface DotGridProps {
+  dotSize?: number;
+  gap?: number;
+  baseColor?: string;
+  activeColor?: string;
+  proximity?: number;
+  speedTrigger?: number;
+  shockRadius?: number;
+  shockStrength?: number;
+  maxSpeed?: number;
+  resistance?: number;
+  returnDuration?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}
 
-gsap.registerPlugin(InertiaPlugin);
+interface Dot {
+  cx: number;
+  cy: number;
+  xOffset: number;
+  yOffset: number;
+  _inertiaApplied: boolean;
+}
 
-const throttle = (func, limit) => {
+interface PointerState {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  speed: number;
+  lastTime: number;
+  lastX: number;
+  lastY: number;
+}
+
+const throttle = <T extends (...args: any[]) => void>(func: T, limit: number): T => {
   let lastCall = 0;
-  return function (...args) {
+  return function (this: any, ...args: Parameters<T>) {
     const now = performance.now();
     if (now - lastCall >= limit) {
       lastCall = now;
       func.apply(this, args);
     }
-  };
+  } as T;
 };
 
-function hexToRgb(hex) {
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
   if (!m) return { r: 0, g: 0, b: 0 };
   return {
@@ -47,11 +60,11 @@ function hexToRgb(hex) {
 }
 
 const DotGrid = ({
-  dotSize = 16,
-  gap = 32,
+  dotSize = 10,
+  gap = 15,
   baseColor = '#5227FF',
   activeColor = '#5227FF',
-  proximity = 150,
+  proximity = 120,
   speedTrigger = 100,
   shockRadius = 250,
   shockStrength = 5,
@@ -60,11 +73,11 @@ const DotGrid = ({
   returnDuration = 1.5,
   className = '',
   style
-}) => {
-  const wrapperRef = useRef(null);
-  const canvasRef = useRef(null);
-  const dotsRef = useRef([]);
-  const pointerRef = useRef({
+}: DotGridProps) => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dotsRef = useRef<Dot[]>([]);
+  const pointerRef = useRef<PointerState>({
     x: 0,
     y: 0,
     vx: 0,
@@ -114,7 +127,7 @@ const DotGrid = ({
     const startX = extraX / 2 + dotSize / 2;
     const startY = extraY / 2 + dotSize / 2;
 
-    const dots = [];
+    const dots: Dot[] = [];
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         const cx = startX + x * cell;
@@ -128,7 +141,7 @@ const DotGrid = ({
   useEffect(() => {
     if (!circlePath) return;
 
-    let rafId;
+    let rafId: number;
     const proxSq = proximity * proximity;
 
     const draw = () => {
@@ -147,19 +160,19 @@ const DotGrid = ({
         const dy = dot.cy - py;
         const dsq = dx * dx + dy * dy;
 
-        let style = baseColor;
+        let fillStyle = baseColor;
         if (dsq <= proxSq) {
           const dist = Math.sqrt(dsq);
           const t = 1 - dist / proximity;
           const r = Math.round(baseRgb.r + (activeRgb.r - baseRgb.r) * t);
           const g = Math.round(baseRgb.g + (activeRgb.g - baseRgb.g) * t);
           const b = Math.round(baseRgb.b + (activeRgb.b - baseRgb.b) * t);
-          style = `rgb(${r},${g},${b})`;
+          fillStyle = `rgb(${r},${g},${b})`;
         }
 
         ctx.save();
         ctx.translate(ox, oy);
-        ctx.fillStyle = style;
+        ctx.fillStyle = fillStyle;
         ctx.fill(circlePath);
         ctx.restore();
       }
@@ -173,21 +186,30 @@ const DotGrid = ({
 
   useEffect(() => {
     buildGrid();
-    let ro = null;
-    if ('ResizeObserver' in window) {
+    let ro: ResizeObserver | null = null;
+    const hasResizeObserver = typeof window !== 'undefined' && 'ResizeObserver' in window;
+    
+    if (hasResizeObserver) {
       ro = new ResizeObserver(buildGrid);
-      wrapperRef.current && ro.observe(wrapperRef.current);
-    } else {
+      if (wrapperRef.current) ro.observe(wrapperRef.current);
+    } else if (typeof window !== 'undefined') {
       window.addEventListener('resize', buildGrid);
     }
+    
     return () => {
-      if (ro) ro.disconnect();
-      else window.removeEventListener('resize', buildGrid);
+      if (ro) {
+        ro.disconnect();
+      } else if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', buildGrid);
+      }
     };
   }, [buildGrid]);
 
   useEffect(() => {
-    const onMove = e => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onMove = (e: MouseEvent) => {
       const now = performance.now();
       const pr = pointerRef.current;
       const dt = pr.lastTime ? now - pr.lastTime : 16;
@@ -209,55 +231,74 @@ const DotGrid = ({
       pr.vy = vy;
       pr.speed = speed;
 
-      const rect = canvasRef.current.getBoundingClientRect();
+      const rect = canvas.getBoundingClientRect();
       pr.x = e.clientX - rect.left;
       pr.y = e.clientY - rect.top;
 
+      // Apply inertia effect using standard GSAP
       for (const dot of dotsRef.current) {
         const dist = Math.hypot(dot.cx - pr.x, dot.cy - pr.y);
         if (speed > speedTrigger && dist < proximity && !dot._inertiaApplied) {
           dot._inertiaApplied = true;
           gsap.killTweensOf(dot);
-          const pushX = dot.cx - pr.x + vx * 0.005;
-          const pushY = dot.cy - pr.y + vy * 0.005;
+          
+          const pushX = (dot.cx - pr.x + vx * 0.005) * (1 - dist / proximity);
+          const pushY = (dot.cy - pr.y + vy * 0.005) * (1 - dist / proximity);
+          
+          // Simulate inertia with power ease and then elastic return
+          const inertiaTime = Math.min(0.5, resistance / 1000);
           gsap.to(dot, {
-            inertia: { xOffset: pushX, yOffset: pushY, resistance },
+            xOffset: pushX,
+            yOffset: pushY,
+            duration: inertiaTime,
+            ease: 'power2.out',
             onComplete: () => {
               gsap.to(dot, {
                 xOffset: 0,
                 yOffset: 0,
                 duration: returnDuration,
-                ease: 'elastic.out(1,0.75)'
+                ease: 'elastic.out(1,0.75)',
+                onComplete: () => {
+                  dot._inertiaApplied = false;
+                }
               });
-              dot._inertiaApplied = false;
             }
           });
         }
       }
     };
 
-    const onClick = e => {
-      const rect = canvasRef.current.getBoundingClientRect();
+    const onClick = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
+      
       for (const dot of dotsRef.current) {
         const dist = Math.hypot(dot.cx - cx, dot.cy - cy);
         if (dist < shockRadius && !dot._inertiaApplied) {
           dot._inertiaApplied = true;
           gsap.killTweensOf(dot);
+          
           const falloff = Math.max(0, 1 - dist / shockRadius);
           const pushX = (dot.cx - cx) * shockStrength * falloff;
           const pushY = (dot.cy - cy) * shockStrength * falloff;
+          
+          const inertiaTime = Math.min(0.5, resistance / 1000);
           gsap.to(dot, {
-            inertia: { xOffset: pushX, yOffset: pushY, resistance },
+            xOffset: pushX,
+            yOffset: pushY,
+            duration: inertiaTime,
+            ease: 'power2.out',
             onComplete: () => {
               gsap.to(dot, {
                 xOffset: 0,
                 yOffset: 0,
                 duration: returnDuration,
-                ease: 'elastic.out(1,0.75)'
+                ease: 'elastic.out(1,0.75)',
+                onComplete: () => {
+                  dot._inertiaApplied = false;
+                }
               });
-              dot._inertiaApplied = false;
             }
           });
         }
@@ -275,35 +316,39 @@ const DotGrid = ({
   }, [maxSpeed, speedTrigger, proximity, resistance, returnDuration, shockRadius, shockStrength]);
 
   return (
-    <section className={`dot-grid ${className}`} style={style}>
-      <div ref={wrapperRef} className="dot-grid__wrap">
-        <canvas ref={canvasRef} className="dot-grid__canvas" />
+    <section 
+      className={`dot-grid ${className}`} 
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+        ...style
+      }}
+    >
+      <div 
+        ref={wrapperRef} 
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative'
+        }}
+      >
+        <canvas 
+          ref={canvasRef} 
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none'
+          }}
+        />
       </div>
     </section>
   );
 };
 
 export default DotGrid;
-
-.dot-grid {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  position: relative;
-}
-
-.dot-grid__wrap {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.dot-grid__canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
