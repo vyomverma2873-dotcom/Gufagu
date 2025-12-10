@@ -615,11 +615,11 @@ export default function ConversationPage() {
       {/* Note: Call overlays are now rendered globally via IncomingCallOverlay and VideoCallOverlay components */}
 
       {/* Chat Header Card - Fixed below navbar */}
-      <div className="flex-shrink-0 px-2 sm:px-4 pt-2 sm:pt-3">
+      <div className="flex-shrink-0 px-2 sm:px-4 pt-2 sm:pt-3 relative z-40">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-neutral-700/50 shadow-lg">
+          <div className="bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-neutral-700/50 shadow-lg overflow-visible">
             <div className="px-3 sm:px-5 py-3 sm:py-4">
-              <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                 {/* Back button */}
                 <button
                   onClick={() => router.push('/messages')}
@@ -669,11 +669,11 @@ export default function ConversationPage() {
                 </Link>
 
                 {/* Call action buttons card */}
-                <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 bg-neutral-800/60 rounded-xl p-1">
+                <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 bg-neutral-800/60 rounded-xl p-1">
                   <button
                     onClick={() => handleStartCall('voice')}
                     disabled={!chatUser.isOnline}
-                    className="p-2.5 sm:p-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    className="p-2 sm:p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     title={chatUser.isOnline ? 'Voice call' : 'User is offline'}
                   >
                     <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -681,23 +681,24 @@ export default function ConversationPage() {
                   <button
                     onClick={() => handleStartCall('video')}
                     disabled={!chatUser.isOnline}
-                    className="p-2.5 sm:p-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    className="p-2 sm:p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     title={chatUser.isOnline ? 'Video call' : 'User is offline'}
                   >
                     <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
-                  <div className="w-px h-6 bg-neutral-700 mx-0.5" />
+                  <div className="w-px h-5 sm:h-6 bg-neutral-700 mx-0.5" />
                   <div className="relative" ref={actionMenuRef}>
                     <button 
                       onClick={() => setShowActionMenu(!showActionMenu)}
-                      className="p-2.5 sm:p-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all"
+                      className="p-2 sm:p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all"
+                      title="More options"
                     >
                       <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     
-                    {/* Dropdown Menu */}
+                    {/* Dropdown Menu - positioned absolutely outside overflow context */}
                     {showActionMenu && (
-                      <div className="absolute right-0 top-full mt-2 w-48 bg-neutral-800 border border-neutral-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                      <div className="fixed sm:absolute right-2 sm:right-0 top-[140px] sm:top-full mt-0 sm:mt-2 w-56 sm:w-48 bg-neutral-800 border border-neutral-700 rounded-xl shadow-2xl z-[100] overflow-hidden">
                         <button
                           onClick={() => {
                             setShowActionMenu(false);
