@@ -25,7 +25,18 @@ export default function LoginPage() {
       sessionStorage.setItem('otpEmail', email);
       router.push('/verify');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to send OTP. Please try again.');
+      const errorData = err.response?.data;
+      
+      // Check if user is banned
+      if (errorData?.error === 'account_banned' && errorData?.banDetails) {
+        // Store ban details and redirect to banned page
+        sessionStorage.setItem('banDetails', JSON.stringify(errorData.banDetails));
+        sessionStorage.setItem('bannedEmail', email);
+        router.push('/banned');
+        return;
+      }
+      
+      setError(errorData?.message || errorData?.error || 'Failed to send OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }

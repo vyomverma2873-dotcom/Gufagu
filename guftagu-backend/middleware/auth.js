@@ -1,5 +1,54 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Ban = require('../models/Ban');
+
+// Helper function to check and auto-unban expired bans
+const checkAndAutoUnban = async (user) => {
+  if (!user.isBanned) return { isBanned: false };
+  
+  // If no banUntil, it's a permanent ban
+  if (!user.banUntil) {
+    return {
+      isBanned: true,
+      banType: 'permanent',
+      banReason: user.banReason,
+      banUntil: null
+    };
+  }
+  
+  const now = new Date();
+  const banExpiry = new Date(user.banUntil);
+  
+  // Ban has expired - auto-unban
+  if (now >= banExpiry) {
+    user.isBanned = false;
+    user.banReason = undefined;
+    user.banUntil = undefined;
+    await user.save();
+    
+    // Update ban record
+    await Ban.updateMany(
+      { userId: user._id, isActive: true },
+      { 
+        isActive: false, 
+        unbannedAt: new Date(),
+        unbanReason: 'automatic_expiry'
+      }
+    );
+    
+    console.log(`[Auth] Auto-unban: User ${user.email} ban expired`);
+    return { isBanned: false, wasUnbanned: true };
+  }
+  
+  // Ban is still active
+  return {
+    isBanned: true,
+    banType: 'temporary',
+    banReason: user.banReason,
+    banUntil: user.banUntil,
+    remainingMs: banExpiry - now
+  };
+};
 
 /**
  * Authenticate JWT token middleware
@@ -20,11 +69,19 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    if (user.isBanActive()) {
+    // Check ban status and auto-unban if expired
+    const banStatus = await checkAndAutoUnban(user);
+    
+    if (banStatus.isBanned) {
       return res.status(403).json({
-        error: 'Account banned',
-        banReason: user.banReason,
-        banUntil: user.banUntil,
+        error: 'account_banned',
+        message: 'Your account has been banned',
+        banDetails: {
+          type: banStatus.banType,
+          reason: banStatus.banReason,
+          banUntil: banStatus.banUntil,
+          remainingMs: banStatus.remainingMs || null
+        }
       });
     }
 
@@ -52,8 +109,12 @@ const optionalAuth = async (req, res, next) => {
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.userId).select('-__v');
-      if (user && !user.isBanActive()) {
-        req.user = user;
+      if (user) {
+        // Check and auto-unban if expired
+        const banStatus = await checkAndAutoUnban(user);
+        if (!banStatus.isBanned) {
+          req.user = user;
+        }
       }
     }
     next();

@@ -1,10 +1,59 @@
 const User = require('../models/User');
+const Ban = require('../models/Ban');
 const { generateOTP, isValidOTP } = require('../utils/otp');
 const { sendOTPEmail } = require('../utils/brevo');
 const { storeOTP, getOTP, deleteOTP } = require('../config/redis');
 const { generateToken } = require('../middleware/auth');
 const { generateUniqueUserId } = require('../utils/userId');
 const logger = require('../utils/logger');
+
+// Helper function to check and auto-unban expired bans
+const checkAndAutoUnban = async (user) => {
+  if (!user.isBanned) return { isBanned: false };
+  
+  // If no banUntil, it's a permanent ban
+  if (!user.banUntil) {
+    return {
+      isBanned: true,
+      banType: 'permanent',
+      banReason: user.banReason,
+      banUntil: null
+    };
+  }
+  
+  const now = new Date();
+  const banExpiry = new Date(user.banUntil);
+  
+  // Ban has expired - auto-unban
+  if (now >= banExpiry) {
+    user.isBanned = false;
+    user.banReason = undefined;
+    user.banUntil = undefined;
+    await user.save();
+    
+    // Update ban record
+    await Ban.updateMany(
+      { userId: user._id, isActive: true },
+      { 
+        isActive: false, 
+        unbannedAt: new Date(),
+        unbanReason: 'automatic_expiry'
+      }
+    );
+    
+    logger.info(`Auto-unban: User ${user.email} ban expired`);
+    return { isBanned: false, wasUnbanned: true };
+  }
+  
+  // Ban is still active
+  return {
+    isBanned: true,
+    banType: 'temporary',
+    banReason: user.banReason,
+    banUntil: user.banUntil,
+    remainingMs: banExpiry - now
+  };
+};
 
 /**
  * Send OTP to email
@@ -20,14 +69,29 @@ const sendOTP = async (req, res, next) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if user is banned
+    // Check if user exists and is banned
     const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser && existingUser.isBanActive()) {
-      return res.status(403).json({
-        error: 'Account banned',
-        banReason: existingUser.banReason,
-        banUntil: existingUser.banUntil,
-      });
+    if (existingUser) {
+      const banStatus = await checkAndAutoUnban(existingUser);
+      
+      if (banStatus.isBanned) {
+        // Get ban details from Ban collection for more info
+        const banRecord = await Ban.findOne({ userId: existingUser._id, isActive: true })
+          .populate('bannedBy', 'username displayName');
+        
+        return res.status(403).json({
+          error: 'account_banned',
+          message: 'Your account has been banned',
+          banDetails: {
+            type: banStatus.banType,
+            reason: banStatus.banReason,
+            banUntil: banStatus.banUntil,
+            remainingMs: banStatus.remainingMs || null,
+            bannedBy: banRecord?.bannedBy?.displayName || banRecord?.bannedBy?.username || 'Admin',
+            description: banRecord?.description || null
+          }
+        });
+      }
     }
 
     // Generate and store OTP

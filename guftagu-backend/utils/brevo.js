@@ -121,7 +121,7 @@ const sendBanNotificationEmail = async (userEmail, username, banDetails) => {
     return { success: true, messageId: 'dev-mode' };
   }
 
-  const { reason, banType, banUntil, description } = banDetails;
+  const { reason, banType, banUntil, description, duration } = banDetails;
   
   // Format ban reason for display
   const reasonLabels = {
@@ -137,15 +137,36 @@ const sendBanNotificationEmail = async (userEmail, username, banDetails) => {
   };
   
   const formattedReason = reasonLabels[reason] || reason;
-  const banDuration = banType === 'permanent' 
-    ? 'Permanent' 
-    : `Until ${new Date(banUntil).toLocaleDateString('en-US', { 
+  
+  // Calculate human-readable duration
+  let banDurationText = 'Permanent';
+  if (banType !== 'permanent' && banUntil) {
+    const now = new Date();
+    const endDate = new Date(banUntil);
+    const diffMs = endDate - now;
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays >= 1) {
+      banDurationText = `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+    } else if (diffHours >= 1) {
+      banDurationText = `${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+    } else {
+      banDurationText = 'Less than 1 hour';
+    }
+  }
+  
+  const banExpiryFormatted = banType === 'permanent' 
+    ? 'Never (Permanent Ban)' 
+    : new Date(banUntil).toLocaleDateString('en-US', { 
+        weekday: 'long',
         year: 'numeric', 
         month: 'long', 
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
-      })}`;
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
 
   const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
   sendSmtpEmail.to = [{ email: userEmail }];
@@ -192,8 +213,12 @@ const sendBanNotificationEmail = async (userEmail, username, banDetails) => {
               <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${banType === 'permanent' ? 'Permanent' : 'Temporary'}</td>
             </tr>
             <tr>
-              <td style="color: #666; font-size: 14px; padding: 8px 0;">Duration:</td>
-              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; text-align: right;">${banDuration}</td>
+              <td style="color: #666; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Duration:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${banDurationText}</td>
+            </tr>
+            <tr>
+              <td style="color: #666; font-size: 14px; padding: 8px 0;">Expires:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; text-align: right;">${banExpiryFormatted}</td>
             </tr>
           </table>
           ${description ? `

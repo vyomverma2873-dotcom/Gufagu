@@ -225,7 +225,8 @@ exports.banUser = async (req, res) => {
         reason,
         banType: type,
         banUntil,
-        description
+        description,
+        duration: duration || 24
       });
       logger.info(`Ban notification email sent to ${user.email}`);
     } catch (emailError) {
