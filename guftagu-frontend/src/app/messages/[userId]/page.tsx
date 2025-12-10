@@ -543,13 +543,13 @@ export default function ConversationPage() {
                     {/* Online status badge */}
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {isTyping ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-neutral-800/80 rounded-full">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-800/60 border border-neutral-700/40 rounded-full">
                           <span className="flex gap-1 items-center">
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-typing-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-typing-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-typing-bounce" style={{ animationDelay: '300ms' }} />
+                            <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full animate-typing-dot" style={{ animationDelay: '0ms' }} />
+                            <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full animate-typing-dot" style={{ animationDelay: '200ms' }} />
+                            <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full animate-typing-dot" style={{ animationDelay: '400ms' }} />
                           </span>
-                          <span className="text-xs text-neutral-300 font-medium">typing</span>
+                          <span className="text-xs text-neutral-400 font-medium">typing</span>
                         </span>
                       ) : chatUser.isOnline ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/20 rounded-full">
@@ -747,11 +747,11 @@ export default function ConversationPage() {
                       size="sm"
                     />
                   </div>
-                  <div className="bg-neutral-800/80 border border-neutral-700/50 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl rounded-bl-md">
+                  <div className="bg-neutral-800/60 border border-neutral-700/40 px-4 py-2.5 rounded-2xl rounded-bl-md">
                     <div className="flex gap-1.5 items-center">
-                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-dot" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-dot" style={{ animationDelay: '200ms' }} />
+                      <span className="w-2 h-2 bg-neutral-400 rounded-full animate-typing-dot" style={{ animationDelay: '400ms' }} />
                     </div>
                   </div>
                 </div>
