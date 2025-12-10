@@ -1,38 +1,125 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
 import { Phone, PhoneOff, Video } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 
-export default function IncomingCallOverlay() {
-  const { incomingCall, acceptCall, declineCall, callStatus } = useSocket();
+// Generate ringtone using Web Audio API (works across all browsers)
+function createRingtone(audioContext: AudioContext): { start: () => void; stop: () => void } {
+  let oscillator: OscillatorNode | null = null;
+  let gainNode: GainNode | null = null;
+  let isPlaying = false;
+  let timeoutId: NodeJS.Timeout | null = null;
 
-  // Play ringtone when incoming call
-  useEffect(() => {
-    if (!incomingCall) return;
+  const playTone = (frequency: number, duration: number, startTime: number) => {
+    if (!audioContext || audioContext.state === 'closed') return;
     
-    // Try to play a notification sound
-    try {
-      const audio = new Audio('/sounds/ringtone.mp3');
-      audio.loop = true;
-      audio.volume = 0.5;
-      const playPromise = audio.play();
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    osc.frequency.value = frequency;
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
+    gain.gain.linearRampToValueAtTime(0.3, startTime + duration - 0.02);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+    
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  };
+
+  const playRingPattern = () => {
+    if (!isPlaying || !audioContext || audioContext.state === 'closed') return;
+    
+    const now = audioContext.currentTime;
+    
+    // Play two-tone ring pattern (similar to phone ringtone)
+    playTone(440, 0.4, now);        // A4
+    playTone(480, 0.4, now + 0.4);  // B4
+    playTone(440, 0.4, now + 0.8);  // A4
+    
+    // Repeat after pause
+    timeoutId = setTimeout(playRingPattern, 2500);
+  };
+
+  return {
+    start: () => {
+      if (isPlaying) return;
+      isPlaying = true;
       
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Autoplay was prevented - silent fail
-        });
+      // Resume audio context if suspended (required for autoplay policy)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
       }
       
-      return () => {
-        audio.pause();
-        audio.currentTime = 0;
-      };
-    } catch (e) {
-      // Audio not available - silent fail
+      playRingPattern();
+    },
+    stop: () => {
+      isPlaying = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
     }
+  };
+}
+
+export default function IncomingCallOverlay() {
+  const { incomingCall, acceptCall, declineCall, callStatus } = useSocket();
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const ringtoneRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+  // Initialize and play ringtone when incoming call
+  useEffect(() => {
+    if (!incomingCall) {
+      // Stop ringtone when call is no longer incoming
+      if (ringtoneRef.current) {
+        ringtoneRef.current.stop();
+      }
+      return;
+    }
+    
+    // Create audio context and ringtone
+    try {
+      // Use webkitAudioContext for Safari compatibility
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      audioContextRef.current = new AudioContextClass();
+      ringtoneRef.current = createRingtone(audioContextRef.current);
+      ringtoneRef.current.start();
+    } catch (e) {
+      console.warn('Web Audio API not supported:', e);
+    }
+    
+    return () => {
+      // Cleanup
+      if (ringtoneRef.current) {
+        ringtoneRef.current.stop();
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
   }, [incomingCall]);
+
+  // Handle accept/decline to stop ringtone
+  const handleAccept = useCallback(() => {
+    if (ringtoneRef.current) {
+      ringtoneRef.current.stop();
+    }
+    acceptCall();
+  }, [acceptCall]);
+
+  const handleDecline = useCallback(() => {
+    if (ringtoneRef.current) {
+      ringtoneRef.current.stop();
+    }
+    declineCall();
+  }, [declineCall]);
 
   if (!incomingCall) return null;
 
@@ -80,14 +167,14 @@ export default function IncomingCallOverlay() {
 
         <div className="flex justify-center gap-8">
           <button
-            onClick={declineCall}
+            onClick={handleDecline}
             className="p-4 bg-red-500 rounded-full text-white hover:bg-red-600 transition-all hover:scale-110 active:scale-95 shadow-lg shadow-red-500/30"
             title="Decline"
           >
             <PhoneOff className="w-6 h-6" />
           </button>
           <button
-            onClick={acceptCall}
+            onClick={handleAccept}
             className="p-4 bg-green-500 rounded-full text-white hover:bg-green-600 transition-all hover:scale-110 active:scale-95 shadow-lg shadow-green-500/30 animate-pulse"
             title="Accept"
           >

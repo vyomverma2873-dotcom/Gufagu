@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, SwitchCamera, X, MoreVertical, Wifi, WifiOff } from 'lucide-react';
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, SwitchCamera, X, MoreVertical, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 
 interface AudioLevels {
@@ -12,6 +12,66 @@ interface AudioLevels {
 
 type ConnectionQuality = 'excellent' | 'good' | 'poor' | 'reconnecting';
 type PipPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+// Generate ringback tone using Web Audio API (caller hears this while waiting)
+function createRingbackTone(audioContext: AudioContext): { start: () => void; stop: () => void } {
+  let isPlaying = false;
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  const playTone = (frequency: number, duration: number, startTime: number) => {
+    if (!audioContext || audioContext.state === 'closed') return;
+    
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    osc.frequency.value = frequency;
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.02);
+    gain.gain.linearRampToValueAtTime(0.15, startTime + duration - 0.02);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+    
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  };
+
+  const playRingbackPattern = () => {
+    if (!isPlaying || !audioContext || audioContext.state === 'closed') return;
+    
+    const now = audioContext.currentTime;
+    
+    // Standard ringback tone pattern (2s on, 4s off)
+    playTone(440, 1.0, now);  // 440Hz for 1 second
+    playTone(480, 1.0, now);  // Dual tone (440 + 480 Hz)
+    
+    // Repeat after pause
+    timeoutId = setTimeout(playRingbackPattern, 4000);
+  };
+
+  return {
+    start: () => {
+      if (isPlaying) return;
+      isPlaying = true;
+      
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      
+      playRingbackPattern();
+    },
+    stop: () => {
+      isPlaying = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    }
+  };
+}
 
 export default function VideoCallOverlay() {
   const { 
@@ -35,6 +95,7 @@ export default function VideoCallOverlay() {
   const [connectionState, setConnectionState] = useState<string>('connecting');
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [micStatus, setMicStatus] = useState<'checking' | 'working' | 'silent' | 'error'>('checking');
+  const [callingDuration, setCallingDuration] = useState(0); // Track how long we've been calling
   
   // New UI states
   const [showControls, setShowControls] = useState(true);
@@ -57,6 +118,10 @@ export default function VideoCallOverlay() {
   const iceCandidateBuffer = useRef<RTCIceCandidateInit[]>([]);
   // Buffer for offer received before peer connection is ready - use STATE to trigger re-render
   const [pendingOffer, setPendingOffer] = useState<{ from: string; offer: RTCSessionDescriptionInit } | null>(null);
+  
+  // Ringback tone refs
+  const ringbackAudioContextRef = useRef<AudioContext | null>(null);
+  const ringbackToneRef = useRef<{ start: () => void; stop: () => void } | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -110,6 +175,50 @@ export default function VideoCallOverlay() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Manage ringback tone when calling (caller hears this while waiting)
+  useEffect(() => {
+    if (callStatus === 'calling' && connectionState !== 'connected') {
+      // Start ringback tone
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        ringbackAudioContextRef.current = new AudioContextClass();
+        ringbackToneRef.current = createRingbackTone(ringbackAudioContextRef.current);
+        ringbackToneRef.current.start();
+      } catch (e) {
+        console.warn('Ringback tone not supported:', e);
+      }
+    } else {
+      // Stop ringback tone
+      if (ringbackToneRef.current) {
+        ringbackToneRef.current.stop();
+      }
+      if (ringbackAudioContextRef.current && ringbackAudioContextRef.current.state !== 'closed') {
+        ringbackAudioContextRef.current.close().catch(() => {});
+        ringbackAudioContextRef.current = null;
+      }
+    }
+
+    return () => {
+      if (ringbackToneRef.current) {
+        ringbackToneRef.current.stop();
+      }
+      if (ringbackAudioContextRef.current && ringbackAudioContextRef.current.state !== 'closed') {
+        ringbackAudioContextRef.current.close().catch(() => {});
+      }
+    };
+  }, [callStatus, connectionState]);
+
+  // Track calling duration (how long we've been waiting)
+  useEffect(() => {
+    if (callStatus === 'calling' && connectionState !== 'connected') {
+      setCallingDuration(0);
+      const interval = setInterval(() => {
+        setCallingDuration(prev => prev + 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [callStatus, connectionState]);
 
   // Handle state transitions with smooth animations
   useEffect(() => {
@@ -1493,15 +1602,29 @@ export default function VideoCallOverlay() {
                 </div>
               </div>
               <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2 truncate px-4">{peerUsername}</h2>
-              <div className="flex items-center justify-center gap-2 text-neutral-400 mb-2">
-                <div className="flex gap-1.5">
-                  <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-                <span className="text-sm sm:text-base">Calling</span>
+              
+              {/* Loading indicator with spinner */}
+              <div className="flex items-center justify-center gap-2 text-neutral-300 mb-3">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm sm:text-base font-medium">Calling...</span>
               </div>
-              <p className="text-xs sm:text-sm text-neutral-500">Waiting for response...</p>
+              
+              {/* Calling duration */}
+              <div className="flex items-center justify-center gap-2 text-neutral-500 mb-2">
+                <span className="text-xs sm:text-sm font-mono bg-neutral-800/50 px-3 py-1 rounded-full">
+                  {formatDuration(callingDuration)}
+                </span>
+              </div>
+              
+              {/* Connection status */}
+              <div className="flex items-center justify-center gap-1.5 text-neutral-500">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-xs">Ringing on their device</span>
+              </div>
             </div>
           </div>
           <div className="absolute bottom-6 sm:bottom-8 left-0 right-0 flex justify-center" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
