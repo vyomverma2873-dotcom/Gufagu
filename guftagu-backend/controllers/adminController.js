@@ -5,6 +5,7 @@ const SystemLog = require('../models/SystemLog');
 const Match = require('../models/Match');
 const OnlineUser = require('../models/OnlineUser');
 const Message = require('../models/Message');
+const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
 // Get admin dashboard stats
@@ -451,17 +452,39 @@ exports.exportChatMessages = async (req, res) => {
     // Build query
     const query = {};
     
+    // Convert string IDs to ObjectId
+    const toObjectId = (id) => {
+      try {
+        return new mongoose.Types.ObjectId(id);
+      } catch (e) {
+        return null;
+      }
+    };
+    
     if (user1Id && user2Id) {
+      const user1ObjectId = toObjectId(user1Id);
+      const user2ObjectId = toObjectId(user2Id);
+      
+      if (!user1ObjectId || !user2ObjectId) {
+        return res.status(400).json({ error: 'Invalid user ID format' });
+      }
+      
       // Export conversation between two specific users
       query.$or = [
-        { senderId: user1Id, receiverId: user2Id },
-        { senderId: user2Id, receiverId: user1Id }
+        { senderId: user1ObjectId, receiverId: user2ObjectId },
+        { senderId: user2ObjectId, receiverId: user1ObjectId }
       ];
     } else if (user1Id) {
+      const user1ObjectId = toObjectId(user1Id);
+      
+      if (!user1ObjectId) {
+        return res.status(400).json({ error: 'Invalid user ID format' });
+      }
+      
       // Export all messages involving one user
       query.$or = [
-        { senderId: user1Id },
-        { receiverId: user1Id }
+        { senderId: user1ObjectId },
+        { receiverId: user1ObjectId }
       ];
     }
 
@@ -548,18 +571,22 @@ exports.exportChatMessages = async (req, res) => {
       ...csvRows.map(row => row.join(','))
     ].join('\n');
 
-    // Log export action
-    await SystemLog.create({
-      action: 'chat_export',
-      performedBy: req.user._id,
-      details: {
-        user1Id,
-        user2Id,
-        startDate,
-        endDate,
-        messageCount: messages.length
-      }
-    });
+    // Log export action (non-blocking)
+    try {
+      await SystemLog.create({
+        action: 'chat_export',
+        performedBy: req.user._id,
+        details: {
+          user1Id,
+          user2Id,
+          startDate,
+          endDate,
+          messageCount: messages.length
+        }
+      });
+    } catch (logError) {
+      logger.warn('Failed to log chat export action:', logError.message);
+    }
 
     // Set headers for file download
     const filename = user1Id && user2Id 
@@ -573,8 +600,8 @@ exports.exportChatMessages = async (req, res) => {
     res.send(csvContent);
 
   } catch (error) {
-    logger.error('Export chat messages error:', error);
-    res.status(500).json({ error: 'Server error' });
+    logger.error('Export chat messages error:', error.message, error.stack);
+    res.status(500).json({ error: 'Export failed: ' + error.message });
   }
 };
 
