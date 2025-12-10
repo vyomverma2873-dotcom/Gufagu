@@ -1779,37 +1779,45 @@ export default function VideoCallOverlay() {
           <div className="flex-1 relative overflow-hidden animate-fade-in">
             {/* Video Call View */}
             {callType === 'video' ? (
-              <div className="w-full h-full bg-neutral-900 relative flex items-center justify-center">
-                {/* Always render video element, hide when no stream */}
-                <video 
-                  ref={remoteVideoRef} 
-                  autoPlay 
-                  playsInline
-                  muted={false}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  className={`absolute inset-0 ${remoteStream && !remoteCameraOff ? 'block z-10' : 'hidden'}`}
-                />
-                {/* Show placeholder when no remote stream or camera off */}
-                {(!remoteStream || remoteCameraOff) && (
-                  <div className="absolute inset-0 z-0 flex items-center justify-center bg-gradient-to-b from-neutral-800 to-neutral-900 px-4">
-                    <div className="text-center">
-                      <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 rounded-full overflow-hidden border-3 sm:border-4 border-neutral-700">
-                        <Avatar src={peerInfo?.profilePicture} alt={peerUsername} size="lg" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-semibold text-white truncate max-w-[200px] mx-auto">{peerUsername}</h3>
-                      {remoteCameraOff ? (
-                        <p className="text-neutral-400 text-xs sm:text-sm mt-2 flex items-center justify-center gap-2">
-                          <VideoOff className="w-3 h-3 sm:w-4 sm:h-4" /> Camera is off
-                        </p>
-                      ) : (
-                        <div className="mt-3 flex items-center justify-center gap-2">
-                          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                          <p className="text-neutral-400 text-xs sm:text-sm">Connecting video...</p>
+              <div className="w-full h-full bg-neutral-950 relative flex items-center justify-center p-4 sm:p-6 md:p-8">
+                {/* Centered video container with aspect ratio */}
+                <div className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden bg-neutral-900 shadow-2xl shadow-black/50 border border-neutral-800">
+                  {/* Remote video element */}
+                  <video 
+                    ref={remoteVideoRef} 
+                    autoPlay 
+                    playsInline
+                    muted={false}
+                    className={`w-full h-full object-cover ${remoteStream && !remoteCameraOff ? 'block' : 'hidden'}`}
+                  />
+                  {/* Show placeholder when no remote stream or camera off */}
+                  {(!remoteStream || remoteCameraOff) && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-neutral-800 to-neutral-900">
+                      <div className="text-center">
+                        <div className="w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 rounded-full overflow-hidden border-3 sm:border-4 border-neutral-700">
+                          <Avatar src={peerInfo?.profilePicture} alt={peerUsername} size="lg" />
                         </div>
-                      )}
+                        <h3 className="text-lg sm:text-xl font-semibold text-white truncate max-w-[200px] mx-auto">{peerUsername}</h3>
+                        {remoteCameraOff ? (
+                          <p className="text-neutral-400 text-xs sm:text-sm mt-2 flex items-center justify-center gap-2">
+                            <VideoOff className="w-3 h-3 sm:w-4 sm:h-4" /> Camera is off
+                          </p>
+                        ) : (
+                          <div className="mt-3 flex items-center justify-center gap-2">
+                            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                            <p className="text-neutral-400 text-xs sm:text-sm">Connecting video...</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                  {/* Peer name overlay on video */}
+                  {remoteStream && !remoteCameraOff && (
+                    <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg">
+                      <span className="text-white text-sm font-medium">{peerUsername}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               /* Voice Call View */
