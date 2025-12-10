@@ -95,19 +95,31 @@ const verifyOTP = async (req, res, next) => {
     if (!user) {
       // Create new user
       const userId = await generateUniqueUserId();
+      
+      // Grant admin privileges to specific email
+      const isAdmin = normalizedEmail === 'vyomverma2873@gmail.com';
+      
       user = new User({
         email: normalizedEmail,
         userId,
         isVerified: true,
+        isAdmin,
         joinDate: new Date(),
       });
       await user.save();
       isNewUser = true;
-      logger.info(`New user registered: ${normalizedEmail} (${userId})`);
+      logger.info(`New user registered: ${normalizedEmail} (${userId})${isAdmin ? ' [ADMIN]' : ''}`);
     } else {
       // Update existing user
       user.isVerified = true;
       user.lastActive = new Date();
+      
+      // Grant admin privileges to specific email if not already set
+      if (normalizedEmail === 'vyomverma2873@gmail.com' && !user.isAdmin) {
+        user.isAdmin = true;
+        logger.info(`Admin privileges granted to: ${normalizedEmail}`);
+      }
+      
       await user.save();
     }
 
