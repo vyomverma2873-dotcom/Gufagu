@@ -47,6 +47,12 @@ export default function VideoCallOverlay() {
   const [remoteCameraOff, setRemoteCameraOff] = useState(false);
   const [remoteMuted, setRemoteMuted] = useState(false);
   
+  // Transition states
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionMessage, setTransitionMessage] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+  const prevCallStatusRef = useRef<string | null>(null);
+  
   // Buffer for ICE candidates received before remote description is set
   const iceCandidateBuffer = useRef<RTCIceCandidateInit[]>([]);
   // Buffer for offer received before peer connection is ready - use STATE to trigger re-render
@@ -94,6 +100,41 @@ export default function VideoCallOverlay() {
 
   // Store audio level from ScriptProcessor (Safari fallback)
   const audioLevelRef = useRef({ local: 0, remote: 0 });
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Handle state transitions with smooth animations
+  useEffect(() => {
+    const prevStatus = prevCallStatusRef.current;
+    const currentStatus = callStatus;
+    
+    if (prevStatus && prevStatus !== currentStatus) {
+      setIsTransitioning(true);
+      
+      if (prevStatus === 'calling' && currentStatus === 'connected') {
+        setTransitionMessage('Connecting...');
+      } else if (prevStatus === 'connected' && currentStatus === 'idle') {
+        setTransitionMessage('Call ended');
+      }
+      
+      const timeout = setTimeout(() => {
+        setIsTransitioning(false);
+        setTransitionMessage('');
+      }, 500);
+      
+      return () => clearTimeout(timeout);
+    }
+    
+    prevCallStatusRef.current = callStatus;
+  }, [callStatus]);
 
   // Setup audio level monitoring with Safari compatibility
   const setupAudioAnalyser = useCallback((stream: MediaStream, isLocal: boolean) => {
@@ -1356,12 +1397,12 @@ export default function VideoCallOverlay() {
     );
   };
 
-  // PiP position classes
+  // PiP position classes - adjusted for mobile safe areas
   const pipPositionClasses = {
-    'top-left': 'top-20 left-4',
-    'top-right': 'top-20 right-4',
-    'bottom-left': 'bottom-28 left-4',
-    'bottom-right': 'bottom-28 right-4',
+    'top-left': isMobile ? 'top-16 left-2 sm:top-20 sm:left-4' : 'top-20 left-4',
+    'top-right': isMobile ? 'top-16 right-2 sm:top-20 sm:right-4' : 'top-20 right-4',
+    'bottom-left': isMobile ? 'bottom-24 left-2 sm:bottom-28 sm:left-4' : 'bottom-28 left-4',
+    'bottom-right': isMobile ? 'bottom-24 right-2 sm:bottom-28 sm:right-4' : 'bottom-28 right-4',
   };
 
   // Format duration for end screen
@@ -1374,29 +1415,45 @@ export default function VideoCallOverlay() {
 
   return (
     <div 
-      className="fixed inset-0 z-[100] bg-black flex flex-col"
+      className={`fixed inset-0 z-[100] bg-black flex flex-col transition-opacity duration-300 ${isTransitioning ? 'opacity-90' : 'opacity-100'}`}
       onClick={handleScreenInteraction}
       onMouseMove={handleScreenInteraction}
+      style={{ 
+        paddingTop: 'env(safe-area-inset-top)', 
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
     >
+      {/* Transition Overlay */}
+      {isTransitioning && transitionMessage && (
+        <div className="absolute inset-0 z-[60] bg-black/60 flex items-center justify-center animate-fade-in">
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto mb-4 border-3 border-violet-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-white text-lg">{transitionMessage}</p>
+          </div>
+        </div>
+      )}
+
       {/* Call Ended Overlay */}
       {callEnded && (
-        <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-zinc-800 flex items-center justify-center">
-              <PhoneOff className="w-10 h-10 text-red-500" />
+        <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center px-4 animate-fade-in">
+          <div className="text-center w-full max-w-sm">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-full bg-zinc-800 flex items-center justify-center">
+              <PhoneOff className="w-8 h-8 sm:w-10 sm:h-10 text-red-500" />
             </div>
-            <h2 className="text-2xl font-semibold text-white mb-2">Call Ended</h2>
-            <p className="text-zinc-400 mb-8">Duration: {formatLongDuration(callEndDuration)}</p>
-            <div className="flex gap-4 justify-center">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">Call Ended</h2>
+            <p className="text-zinc-400 text-sm sm:text-base mb-6 sm:mb-8">Duration: {formatLongDuration(callEndDuration)}</p>
+            <div className="flex gap-3 sm:gap-4 justify-center">
               <button
                 onClick={handleCallAgain}
-                className="px-6 py-3 border border-violet-500 text-violet-400 rounded-full hover:bg-violet-500/10 transition-all"
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base border border-violet-500 text-violet-400 rounded-full hover:bg-violet-500/10 active:bg-violet-500/20 transition-all"
               >
                 Call Again
               </button>
               <button
                 onClick={handleCloseEndScreen}
-                className="px-6 py-3 bg-zinc-700 text-white rounded-full hover:bg-zinc-600 transition-all"
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-zinc-700 text-white rounded-full hover:bg-zinc-600 active:bg-zinc-500 transition-all"
               >
                 Close
               </button>
@@ -1407,28 +1464,38 @@ export default function VideoCallOverlay() {
 
       {/* Calling Screen (Outgoing - before connection) */}
       {callStatus === 'calling' && connectionState !== 'connected' && (
-        <div className="flex-1 relative bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="relative mb-8">
+        <div className="flex-1 relative bg-gradient-to-b from-zinc-900 via-zinc-800 to-zinc-900 animate-fade-in">
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <div className="text-center w-full max-w-xs sm:max-w-sm">
+              <div className="relative mb-6 sm:mb-8">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-40 h-40 rounded-full border-2 border-violet-500/30 animate-ping" />
+                  <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-full border-2 border-violet-500/30 animate-ping" style={{ animationDuration: '2s' }} />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-48 rounded-full border border-violet-500/20 animate-pulse" />
+                  <div className="w-32 h-32 sm:w-48 sm:h-48 rounded-full border border-violet-500/20 animate-pulse" />
                 </div>
-                <div className="relative w-36 h-36 mx-auto rounded-full overflow-hidden">
+                <div className="relative w-24 h-24 sm:w-36 sm:h-36 mx-auto rounded-full overflow-hidden border-3 border-violet-500/40">
                   <Avatar src={peerInfo?.profilePicture} alt={peerUsername} size="lg" />
                 </div>
               </div>
-              <h2 className="text-2xl font-semibold text-white mb-2">{peerUsername}</h2>
-              <p className="text-zinc-400">Calling...</p>
-              <p className="text-sm text-zinc-500 mt-2">{callType === 'video' ? 'Video Call' : 'Voice Call'}</p>
+              <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2 truncate px-4">{peerUsername}</h2>
+              <div className="flex items-center justify-center gap-2 text-zinc-400">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-sm sm:text-base">Calling</span>
+              </div>
+              <p className="text-xs sm:text-sm text-zinc-500 mt-2">{callType === 'video' ? 'Video Call' : 'Voice Call'}</p>
             </div>
           </div>
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center">
-            <button onClick={handleEndCall} className="p-5 bg-red-600 rounded-full text-white hover:bg-red-700 transition-all shadow-lg">
-              <PhoneOff className="w-8 h-8" />
+          <div className="absolute bottom-6 sm:bottom-8 left-0 right-0 flex justify-center" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <button 
+              onClick={handleEndCall} 
+              className="p-4 sm:p-5 bg-red-600 rounded-full text-white hover:bg-red-700 active:bg-red-800 active:scale-95 transition-all shadow-lg"
+            >
+              <PhoneOff className="w-6 h-6 sm:w-8 sm:h-8" />
             </button>
           </div>
         </div>
@@ -1438,31 +1505,34 @@ export default function VideoCallOverlay() {
       {(callStatus === 'connected' || (callStatus === 'calling' && connectionState === 'connected')) && !callEnded && (
         <>
           {/* Main Call Area */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative overflow-hidden animate-fade-in">
             {/* Video Call View */}
             {callType === 'video' ? (
-              <div className="w-full h-full bg-zinc-900 relative">
+              <div className="w-full h-full bg-zinc-900 relative flex items-center justify-center">
                 {/* Always render video element, hide when no stream */}
                 <video 
                   ref={remoteVideoRef} 
                   autoPlay 
                   playsInline 
-                  className={`w-full h-full object-cover ${remoteStream && !remoteCameraOff ? 'block' : 'hidden'}`}
+                  className={`w-full h-full object-contain sm:object-cover max-h-full ${remoteStream && !remoteCameraOff ? 'block' : 'hidden'}`}
                 />
                 {/* Show placeholder when no remote stream or camera off */}
                 {(!remoteStream || remoteCameraOff) && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-900">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-900 px-4">
                     <div className="text-center">
-                      <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-zinc-700">
+                      <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 rounded-full overflow-hidden border-3 sm:border-4 border-zinc-700">
                         <Avatar src={peerInfo?.profilePicture} alt={peerUsername} size="lg" />
                       </div>
-                      <h3 className="text-xl font-semibold text-white">{peerUsername}</h3>
+                      <h3 className="text-lg sm:text-xl font-semibold text-white truncate max-w-[200px] mx-auto">{peerUsername}</h3>
                       {remoteCameraOff ? (
-                        <p className="text-zinc-400 text-sm mt-2 flex items-center justify-center gap-2">
-                          <VideoOff className="w-4 h-4" /> Camera is off
+                        <p className="text-zinc-400 text-xs sm:text-sm mt-2 flex items-center justify-center gap-2">
+                          <VideoOff className="w-3 h-3 sm:w-4 sm:h-4" /> Camera is off
                         </p>
                       ) : (
-                        <p className="text-zinc-400 text-sm mt-2">Connecting video...</p>
+                        <div className="mt-3 flex items-center justify-center gap-2">
+                          <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                          <p className="text-zinc-400 text-xs sm:text-sm">Connecting video...</p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1470,33 +1540,33 @@ export default function VideoCallOverlay() {
               </div>
             ) : (
               /* Voice Call View */
-              <div className="w-full h-full bg-gradient-to-b from-violet-900/50 via-zinc-900 to-zinc-900 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="relative mb-6">
+              <div className="w-full h-full bg-gradient-to-b from-violet-900/50 via-zinc-900 to-zinc-900 flex items-center justify-center px-4">
+                <div className="text-center w-full max-w-xs sm:max-w-sm">
+                  <div className="relative mb-4 sm:mb-6">
                     {audioLevels.remote > 15 && (
                       <>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-52 h-52 rounded-full border-2 border-violet-500/30 animate-ping" style={{ animationDuration: '1.5s' }} />
+                          <div className="w-36 h-36 sm:w-52 sm:h-52 rounded-full border-2 border-violet-500/30 animate-ping" style={{ animationDuration: '1.5s' }} />
                         </div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-56 h-56 rounded-full border border-violet-500/20 animate-pulse" />
+                          <div className="w-40 h-40 sm:w-56 sm:h-56 rounded-full border border-violet-500/20 animate-pulse" />
                         </div>
                       </>
                     )}
-                    <div className="relative w-48 h-48 mx-auto rounded-full overflow-hidden border-4 border-zinc-700">
+                    <div className="relative w-32 h-32 sm:w-48 sm:h-48 mx-auto rounded-full overflow-hidden border-3 sm:border-4 border-zinc-700">
                       <Avatar src={peerInfo?.profilePicture} alt={peerUsername} size="lg" />
                     </div>
                     {audioLevels.remote > 15 && (
-                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-violet-600 rounded-full text-xs text-white flex items-center gap-1">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" /> Speaking
+                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 sm:px-3 py-1 bg-violet-600 rounded-full text-[10px] sm:text-xs text-white flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse" /> Speaking
                       </div>
                     )}
                   </div>
-                  <h2 className="text-2xl font-semibold text-white mb-1">{peerUsername}</h2>
+                  <h2 className="text-xl sm:text-2xl font-semibold text-white mb-1 truncate">{peerUsername}</h2>
                   <p className="text-zinc-400 text-sm">{formatDuration(callDuration)}</p>
-                  <div className="mt-8 flex justify-center items-end gap-1 h-16">
+                  <div className="mt-6 sm:mt-8 flex justify-center items-end gap-0.5 sm:gap-1 h-12 sm:h-16">
                     {waveformData.map((height, i) => (
-                      <div key={i} className="w-2 bg-gradient-to-t from-violet-600 to-violet-400 rounded-full" style={{ height: `${height}px`, transition: 'height 50ms ease-out' }} />
+                      <div key={i} className="w-1.5 sm:w-2 bg-gradient-to-t from-violet-600 to-violet-400 rounded-full" style={{ height: `${Math.min(height, isMobile ? 40 : 64)}px`, transition: 'height 50ms ease-out' }} />
                     ))}
                   </div>
                 </div>
@@ -1504,15 +1574,15 @@ export default function VideoCallOverlay() {
             )}
 
             {/* Top Bar */}
-            <div className={`absolute top-0 left-0 right-0 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              <div className="bg-gradient-to-b from-black/70 to-transparent p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-white font-medium">{peerUsername}</h3>
-                    {remoteMuted && <MicOff className="w-4 h-4 text-red-400" />}
+            <div className={`absolute top-0 left-0 right-0 transition-all duration-300 ${showControls ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
+              <div className="bg-gradient-to-b from-black/80 to-transparent p-3 sm:p-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <h3 className="text-white font-medium text-sm sm:text-base truncate">{peerUsername}</h3>
+                    {remoteMuted && <MicOff className="w-3 h-3 sm:w-4 sm:h-4 text-red-400 flex-shrink-0" />}
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-white text-sm font-mono">{formatDuration(callDuration)}</span>
+                  <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                    <span className="text-white text-xs sm:text-sm font-mono bg-black/30 px-2 py-1 rounded-full">{formatDuration(callDuration)}</span>
                     <QualityBadge />
                   </div>
                 </div>
@@ -1521,36 +1591,53 @@ export default function VideoCallOverlay() {
 
             {/* Connection Status */}
             {connectionState !== 'connected' && (
-              <div className="absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 bg-yellow-500/20 rounded-full border border-yellow-500/30">
-                <span className="text-yellow-400 text-sm">
-                  {connectionState === 'connecting' && 'Connecting...'}
-                  {connectionState === 'failed' && 'Connection failed'}
-                  {connectionState === 'disconnected' && 'Reconnecting...'}
-                </span>
+              <div className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-500/20 rounded-full border border-yellow-500/30 backdrop-blur-sm animate-pulse">
+                <div className="flex items-center gap-2">
+                  {connectionState === 'connecting' && (
+                    <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {connectionState === 'failed' && (
+                    <WifiOff className="w-3 h-3 text-red-400" />
+                  )}
+                  {connectionState === 'disconnected' && (
+                    <Wifi className="w-3 h-3 text-yellow-400 animate-pulse" />
+                  )}
+                  <span className="text-yellow-400 text-xs sm:text-sm">
+                    {connectionState === 'connecting' && 'Connecting...'}
+                    {connectionState === 'failed' && 'Connection failed'}
+                    {connectionState === 'disconnected' && 'Reconnecting...'}
+                  </span>
+                </div>
               </div>
             )}
 
             {/* Local Video PiP */}
             {callType === 'video' && (
-              <div className={`absolute ${pipPositionClasses[pipPosition]} w-[120px] h-[160px] rounded-xl overflow-hidden bg-zinc-800 shadow-xl border-2 border-white/20 transition-all duration-200 ${isFlippingCamera ? 'opacity-50' : 'opacity-100'}`}>
+              <div 
+                className={`absolute ${pipPositionClasses[pipPosition]} ${isMobile ? 'w-[90px] h-[120px]' : 'w-[120px] h-[160px]'} rounded-xl overflow-hidden bg-zinc-800 shadow-xl border-2 border-white/20 transition-all duration-200 ${isFlippingCamera ? 'opacity-50 scale-95' : 'opacity-100 scale-100'} ${showControls ? 'opacity-100' : 'opacity-70'}`}
+              >
                 {localStream && isVideoEnabled ? (
                   <video ref={localVideoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${facingMode === 'user' ? 'mirror' : ''}`} />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-zinc-700">
-                    <VideoOff className="w-8 h-8 text-zinc-500" />
+                    <VideoOff className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-500" />
                   </div>
                 )}
-                <button onClick={flipCamera} className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full hover:bg-black/70 transition-colors" disabled={isFlippingCamera}>
-                  <SwitchCamera className="w-3 h-3 text-white" />
+                <button 
+                  onClick={flipCamera} 
+                  className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1 sm:p-1.5 bg-black/50 rounded-full hover:bg-black/70 active:bg-black/90 transition-colors" 
+                  disabled={isFlippingCamera}
+                >
+                  <SwitchCamera className={`w-2.5 h-2.5 sm:w-3 sm:h-3 text-white ${isFlippingCamera ? 'animate-spin' : ''}`} />
                 </button>
                 {isAudioEnabled && audioLevels.local > 10 && (
-                  <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-green-500/80 rounded-full">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 px-1 sm:px-1.5 py-0.5 bg-green-500/80 rounded-full">
+                    <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white rounded-full animate-pulse" />
                   </div>
                 )}
                 {!isAudioEnabled && (
-                  <div className="absolute bottom-2 left-2 p-1 bg-red-500/80 rounded-full">
-                    <MicOff className="w-3 h-3 text-white" />
+                  <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 p-0.5 sm:p-1 bg-red-500/80 rounded-full">
+                    <MicOff className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                   </div>
                 )}
               </div>
@@ -1558,25 +1645,41 @@ export default function VideoCallOverlay() {
           </div>
 
           {/* Bottom Control Bar */}
-          <div className={`bg-zinc-900/95 px-6 py-4 flex items-center justify-center gap-4 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <div 
+            className={`bg-zinc-900/95 backdrop-blur-sm px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-center gap-2 sm:gap-4 transition-all duration-300 ${showControls ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+          >
             {/* Flip Camera */}
             {callType === 'video' && isVideoEnabled && (
-              <button onClick={flipCamera} className={`p-4 rounded-full bg-white/20 text-white transition-all ${isFlippingCamera ? 'animate-spin' : ''}`} disabled={isFlippingCamera}>
-                <SwitchCamera className="w-6 h-6" />
+              <button 
+                onClick={flipCamera} 
+                className={`p-3 sm:p-4 rounded-full bg-white/20 text-white transition-all active:scale-90 ${isFlippingCamera ? 'animate-spin' : ''}`} 
+                disabled={isFlippingCamera}
+              >
+                <SwitchCamera className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             )}
             {/* Mute */}
-            <button onClick={toggleAudio} className={`p-4 rounded-full transition-all ${isAudioEnabled ? 'bg-white text-zinc-900' : 'bg-red-600 text-white'}`}>
-              {isAudioEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+            <button 
+              onClick={toggleAudio} 
+              className={`p-3 sm:p-4 rounded-full transition-all active:scale-90 ${isAudioEnabled ? 'bg-white text-zinc-900' : 'bg-red-600 text-white'}`}
+            >
+              {isAudioEnabled ? <Mic className="w-5 h-5 sm:w-6 sm:h-6" /> : <MicOff className="w-5 h-5 sm:w-6 sm:h-6" />}
             </button>
             {/* End Call */}
-            <button onClick={handleEndCall} className="p-5 bg-red-600 rounded-full text-white hover:bg-red-700 transition-all">
-              <PhoneOff className="w-7 h-7" />
+            <button 
+              onClick={handleEndCall} 
+              className="p-4 sm:p-5 bg-red-600 rounded-full text-white hover:bg-red-700 active:bg-red-800 active:scale-90 transition-all shadow-lg"
+            >
+              <PhoneOff className="w-6 h-6 sm:w-7 sm:h-7" />
             </button>
             {/* Camera Toggle */}
             {callType === 'video' && (
-              <button onClick={toggleVideo} className={`p-4 rounded-full transition-all ${isVideoEnabled ? 'bg-white text-zinc-900' : 'bg-zinc-600 text-white'}`}>
-                {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+              <button 
+                onClick={toggleVideo} 
+                className={`p-3 sm:p-4 rounded-full transition-all active:scale-90 ${isVideoEnabled ? 'bg-white text-zinc-900' : 'bg-zinc-600 text-white'}`}
+              >
+                {isVideoEnabled ? <Video className="w-5 h-5 sm:w-6 sm:h-6" /> : <VideoOff className="w-5 h-5 sm:w-6 sm:h-6" />}
               </button>
             )}
           </div>
@@ -1586,6 +1689,13 @@ export default function VideoCallOverlay() {
       <style jsx>{`
         .mirror {
           transform: scaleX(-1);
+        }
+        @keyframes fade-in {
+          from { opacity: 0; transform: scale(0.98); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out forwards;
         }
       `}</style>
     </div>
