@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Video, Github, Twitter, Instagram } from 'lucide-react';
+import { Video, Github, Twitter, Instagram, Phone, Mail } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -79,13 +79,54 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-zinc-800/50 mt-8 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-zinc-500 text-sm">
-            © {new Date().getFullYear()} Guftagu. All rights reserved.
-          </p>
-          <p className="text-zinc-500 text-sm">
-            Made by Anshita Chauhan
-          </p>
+        <div className="border-t border-zinc-800/50 mt-8 pt-8">
+          {/* Creator Attribution */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <p className="text-zinc-500 text-sm">
+              © {new Date().getFullYear()} Guftagu. All rights reserved.
+            </p>
+            
+            {/* Developer Info */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              {/* Contact Links */}
+              <div className="flex items-center gap-4">
+                <a
+                  href="tel:+918766355495"
+                  className="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors"
+                  title="Call"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">8766355495</span>
+                </a>
+                <a
+                  href="mailto:vyomverma2873@gmail.com"
+                  className="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors"
+                  title="Email"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">vyomverma2873@gmail.com</span>
+                </a>
+                <a
+                  href="https://instagram.com/imvyomverma"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors"
+                  title="Instagram"
+                >
+                  <Instagram className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">@imvyomverma</span>
+                </a>
+              </div>
+              
+              {/* Attribution */}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-zinc-500">Made by</span>
+                <span className="text-zinc-300 font-medium">Vyom Verma</span>
+                <span className="text-zinc-600">•</span>
+                <span className="text-zinc-500">Full Stack Developer</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
