@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Users, MessageSquare, Bell, User, Settings, LogOut, Menu, X, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -14,10 +14,18 @@ import Button from '@/components/ui/Button';
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
   const { onlineCount, isConnected } = useSocket();
   const { unreadCount } = useNotifications();
+
+  // Track page loading state
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   const navLinks = [
     { href: '/chat', label: 'Chat', icon: MessageSquare },
@@ -27,6 +35,13 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
+      {/* Loading bar */}
+      {isLoading && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent overflow-hidden">
+          <div className="h-full w-1/3 bg-white animate-[loading_1s_ease-in-out_infinite]" />
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-2xl shadow-2xl shadow-black/20 px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
