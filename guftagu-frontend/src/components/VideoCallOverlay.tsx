@@ -416,38 +416,68 @@ export default function VideoCallOverlay() {
 
   // Separate effect for remote video with retry mechanism
   useEffect(() => {
-    if (remoteStream && remoteVideoRef.current) {
-      console.log('[Video] Setting remote video srcObject, tracks:', remoteStream.getVideoTracks().length);
+    if (!remoteStream) return;
+    
+    console.log('[Video] Remote stream changed, video tracks:', remoteStream.getVideoTracks().length, 'audio tracks:', remoteStream.getAudioTracks().length);
+    
+    // Ensure all remote tracks are enabled
+    remoteStream.getTracks().forEach(track => {
+      track.enabled = true;
+      console.log('[Video] Remote track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState, 'muted:', track.muted);
+    });
+    
+    // Check if we have video tracks
+    const videoTracks = remoteStream.getVideoTracks();
+    if (videoTracks.length === 0) {
+      console.warn('[Video] Remote stream has no video tracks!');
+      setRemoteCameraOff(true);
+    } else {
+      setRemoteCameraOff(false);
+      console.log('[Video] Remote video track settings:', videoTracks[0].getSettings());
+    }
+    
+    // Set video element srcObject with delay to ensure element is ready
+    const setVideoSource = async () => {
+      // Wait a bit for React to finish rendering
+      await new Promise(r => setTimeout(r, 100));
       
-      // Ensure all remote tracks are enabled
-      remoteStream.getTracks().forEach(track => {
-        track.enabled = true;
-        console.log('[Video] Remote track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
-      });
+      if (!remoteVideoRef.current) {
+        console.warn('[Video] Remote video ref not available, retrying...');
+        setTimeout(setVideoSource, 200);
+        return;
+      }
       
+      console.log('[Video] Setting remote video srcObject');
       remoteVideoRef.current.srcObject = remoteStream;
       
-      // Retry play multiple times to handle browser restrictions
-      const tryPlay = async (attempts = 3) => {
-        for (let i = 0; i < attempts; i++) {
-          try {
-            await remoteVideoRef.current?.play();
-            console.log('[Video] Remote video playing successfully');
-            break;
-          } catch (e) {
-            console.log(`[Video] Remote play attempt ${i + 1} failed:`, e);
-            await new Promise(r => setTimeout(r, 500));
+      // Multiple play attempts with longer intervals
+      for (let i = 0; i < 5; i++) {
+        try {
+          // Wait for loadedmetadata event or try to play directly
+          if (remoteVideoRef.current.readyState < 2) {
+            console.log('[Video] Waiting for video metadata...');
+            await new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Timeout')), 2000);
+              remoteVideoRef.current!.onloadedmetadata = () => {
+                clearTimeout(timeout);
+                resolve(undefined);
+              };
+            }).catch(() => console.log('[Video] Metadata timeout, trying play anyway'));
           }
+          
+          await remoteVideoRef.current.play();
+          console.log('[Video] Remote video playing successfully!');
+          console.log('[Video] Video dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+          return;
+        } catch (e: any) {
+          console.log(`[Video] Remote play attempt ${i + 1} failed:`, e.message || e);
+          await new Promise(r => setTimeout(r, 500));
         }
-      };
-      
-      tryPlay();
-      
-      // Clear remoteCameraOff if we have video tracks
-      if (remoteStream.getVideoTracks().length > 0) {
-        setRemoteCameraOff(false);
       }
-    }
+      console.error('[Video] All play attempts failed for remote video');
+    };
+    
+    setVideoSource();
   }, [remoteStream, callStatus, connectionState]);
 
   // Sync remote audio element for voice calls
@@ -792,31 +822,66 @@ export default function VideoCallOverlay() {
             console.log('[WebRTC] Enabled remote track:', track.kind);
           });
           
-          // Set remote stream state
-          setRemoteStream(stream);
-          setRemoteCameraOff(false);
+          // Check if we received video tracks
+          const hasVideoTracks = stream.getVideoTracks().length > 0;
+          const hasAudioTracks = stream.getAudioTracks().length > 0;
+          console.log('[WebRTC] Stream has video:', hasVideoTracks, 'audio:', hasAudioTracks);
           
-          // Immediately set video element with retry
+          // Set remote stream state - this will trigger the effects to handle video/audio elements
+          setRemoteStream(stream);
+          
+          // Only set camera off if we have NO video tracks
+          if (!hasVideoTracks) {
+            console.warn('[WebRTC] No video tracks in remote stream, setting camera off');
+            setRemoteCameraOff(true);
+          } else {
+            console.log('[WebRTC] Video tracks available, enabling video display');
+            setRemoteCameraOff(false);
+            
+            // Log video track details
+            const videoTrack = stream.getVideoTracks()[0];
+            console.log('[WebRTC] Video track settings:', videoTrack.getSettings());
+          }
+          
+          // Immediately set video element with retry (as backup to the effect)
           const setRemoteVideo = async () => {
+            // Small delay to let React render
+            await new Promise(r => setTimeout(r, 150));
+            
             if (remoteVideoRef.current) {
-              console.log('[WebRTC] Setting remote video srcObject');
+              console.log('[WebRTC] Setting remote video srcObject directly');
               remoteVideoRef.current.srcObject = stream;
               
+              // Wait for metadata before playing
+              if (remoteVideoRef.current.readyState < 2) {
+                console.log('[WebRTC] Waiting for video loadedmetadata...');
+                await new Promise<void>((resolve) => {
+                  const timeout = setTimeout(() => resolve(), 3000);
+                  if (remoteVideoRef.current) {
+                    remoteVideoRef.current.onloadedmetadata = () => {
+                      clearTimeout(timeout);
+                      console.log('[WebRTC] Video metadata loaded');
+                      resolve();
+                    };
+                  }
+                });
+              }
+              
               // Multiple play attempts
-              for (let i = 0; i < 3; i++) {
+              for (let i = 0; i < 5; i++) {
                 try {
                   await remoteVideoRef.current.play();
                   console.log('[WebRTC] Remote video playing successfully!');
+                  console.log('[WebRTC] Video dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
                   break;
-                } catch (e) {
-                  console.log(`[WebRTC] Remote play attempt ${i + 1} failed:`, e);
-                  await new Promise(r => setTimeout(r, 300));
+                } catch (e: any) {
+                  console.log(`[WebRTC] Remote play attempt ${i + 1} failed:`, e.message || e);
+                  await new Promise(r => setTimeout(r, 400));
                 }
               }
             } else {
               console.warn('[WebRTC] Remote video ref not available yet, will retry...');
-              // Retry after a short delay
-              setTimeout(setRemoteVideo, 200);
+              setTimeout(setRemoteVideo, 300);
             }
           };
           
@@ -1709,12 +1774,14 @@ export default function VideoCallOverlay() {
                 <video 
                   ref={remoteVideoRef} 
                   autoPlay 
-                  playsInline 
-                  className={`w-full h-full object-contain sm:object-cover max-h-full ${remoteStream && !remoteCameraOff ? 'block' : 'hidden'}`}
+                  playsInline
+                  muted={false}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  className={`absolute inset-0 ${remoteStream && !remoteCameraOff ? 'block z-10' : 'hidden'}`}
                 />
                 {/* Show placeholder when no remote stream or camera off */}
                 {(!remoteStream || remoteCameraOff) && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-neutral-800 to-neutral-900 px-4">
+                  <div className="absolute inset-0 z-0 flex items-center justify-center bg-gradient-to-b from-neutral-800 to-neutral-900 px-4">
                     <div className="text-center">
                       <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 rounded-full overflow-hidden border-3 sm:border-4 border-neutral-700">
                         <Avatar src={peerInfo?.profilePicture} alt={peerUsername} size="lg" />
