@@ -101,10 +101,26 @@ const sendOTPEmail = async (email, otp) => {
 
   try {
     const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log(`[Brevo] OTP email sent successfully to ${email}. Message ID: ${response.messageId}`);
     return { success: true, messageId: response.messageId };
   } catch (error) {
-    console.error('Brevo email error:', error);
-    throw new Error('Failed to send OTP email');
+    console.error('[Brevo] Email error:', {
+      message: error.message,
+      statusCode: error.response?.statusCode,
+      body: error.response?.body,
+      recipient: email
+    });
+    
+    // Provide more specific error messages
+    if (error.response?.statusCode === 429) {
+      throw new Error('Email service rate limit exceeded. Please try again in a few minutes.');
+    } else if (error.response?.statusCode === 401) {
+      throw new Error('Email service authentication failed. Please contact support.');
+    } else if (error.response?.statusCode === 400) {
+      throw new Error('Invalid email address or request.');
+    }
+    
+    throw new Error('Failed to send OTP email. Please try again later.');
   }
 };
 
@@ -255,11 +271,21 @@ const sendBanNotificationEmail = async (userEmail, username, banDetails) => {
 
   try {
     const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log(`Ban notification sent to ${userEmail}`);
+    console.log(`[Brevo] Ban notification sent successfully to ${userEmail}. Message ID: ${response.messageId}`);
     return { success: true, messageId: response.messageId };
   } catch (error) {
-    console.error('Ban notification email error:', error);
+    console.error('[Brevo] Ban notification email error:', {
+      message: error.message,
+      statusCode: error.response?.statusCode,
+      body: error.response?.body,
+      recipient: userEmail
+    });
+    
     // Don't throw - ban should still succeed even if email fails
+    if (error.response?.statusCode === 429) {
+      console.warn('[Brevo] Rate limit exceeded for ban notification');
+    }
+    
     return { success: false, error: error.message };
   }
 };
