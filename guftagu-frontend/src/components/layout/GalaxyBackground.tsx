@@ -22,14 +22,14 @@ export default function GalaxyBackground() {
     <div className="fixed inset-0 z-0" style={{ backgroundColor: '#000000' }}>
       <LightRays
         raysOrigin="top-center"
-        raysColor="#00ffff"
-        raysSpeed={1.5}
-        lightSpread={0.8}
-        rayLength={1.2}
+        raysColor="#ffffff"
+        raysSpeed={1.2}
+        lightSpread={0.9}
+        rayLength={1.4}
         followMouse={true}
-        mouseInfluence={0.1}
-        noiseAmount={0.1}
-        distortion={0.05}
+        mouseInfluence={0.08}
+        noiseAmount={0.05}
+        distortion={0.03}
       />
     </div>
   );

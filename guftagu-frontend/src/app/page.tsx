@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Video, Users, Shield, Zap, MessageSquare, Globe } from 'lucide-react';
-import Button from '@/components/ui/Button';
+import { Users, Shield, Zap, MessageSquare, Globe, ArrowRight, Sparkles } from 'lucide-react';
 import { useSocket } from '@/contexts/SocketContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,111 +11,141 @@ export default function Home() {
 
   const features = [
     {
-      icon: Video,
+      icon: Sparkles,
       title: 'HD Video Chat',
-      description: 'Crystal clear video and audio for seamless conversations with people worldwide.',
+      description: 'Crystal clear video and audio for seamless conversations.',
     },
     {
       icon: Users,
       title: 'Random Matching',
-      description: 'Connect instantly with strangers who share your interests.',
+      description: 'Connect instantly with people who share your interests.',
     },
     {
       icon: Shield,
       title: 'Safe & Secure',
-      description: 'Your privacy is our priority. Report and block features keep you safe.',
+      description: 'Your privacy is our priority with advanced security.',
     },
     {
       icon: Zap,
-      title: 'Instant Connections',
-      description: 'No waiting, no signup required. Start chatting in seconds.',
+      title: 'Instant Connect',
+      description: 'No waiting. Start chatting in seconds.',
     },
     {
       icon: MessageSquare,
       title: 'Text & Video',
-      description: 'Chat via text alongside video, or use either independently.',
+      description: 'Chat via text alongside video or independently.',
     },
     {
       icon: Globe,
       title: 'Global Community',
-      description: 'Meet people from every corner of the world, 24/7.',
+      description: 'Meet people from every corner of the world.',
     },
   ];
 
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-violet-600/20 via-transparent to-transparent" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/30 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl" />
+      <section className="relative py-20 md:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div>
+              {/* Online count badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900/80 border border-neutral-700/50 rounded-full mb-8 backdrop-blur-xl">
+                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
+                <span className="text-sm text-neutral-400">
+                  <span className="font-medium text-white">{onlineCount.toLocaleString()}</span> online
+                </span>
+              </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
-          <div className="text-center">
-            {/* Online count badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800/50 border border-zinc-700 rounded-full mb-8">
-              <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'}`} />
-              <span className="text-sm text-zinc-300">
-                <span className="font-bold text-white">{onlineCount.toLocaleString()}</span> users online now
-              </span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                Connect.
+                <br />
+                <span className="text-neutral-400">Discover.</span>
+                <br />
+                <span className="text-neutral-500">Explore.</span>
+              </h1>
+
+              <p className="text-lg text-neutral-400 max-w-lg mb-10 leading-relaxed">
+                Meet people from around the world through random video chats. 
+                Make meaningful connections, anytime.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link href={isAuthenticated ? '/chat' : '/login'}>
+                  <button className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl font-medium shadow-lg shadow-white/10 hover:shadow-white/20 transition-all hover:scale-[1.02]">
+                    Start Chatting
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+                <Link href="/chat">
+                  <button className="px-6 py-3 bg-neutral-800/60 text-neutral-300 hover:text-white rounded-xl font-medium border border-neutral-700/50 hover:bg-neutral-800 transition-all">
+                    Try as Guest
+                  </button>
+                </Link>
+              </div>
             </div>
 
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6">
-              Meet New People
-              <br />
-              <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-                Anywhere, Anytime
-              </span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10">
-              Connect with strangers from around the world through random video chats. 
-              Make new friends, have conversations, and explore different cultures.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href={isAuthenticated ? '/chat' : '/login'}>
-                <Button size="lg" className="w-full sm:w-auto px-8">
-                  <Video className="w-5 h-5 mr-2" />
-                  Start Video Chat
-                </Button>
-              </Link>
-              <Link href="/chat">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto px-8">
-                  Try as Guest
-                </Button>
-              </Link>
+            {/* Right Content - Stats Card */}
+            <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-3xl p-8 shadow-2xl">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
+                  <div className="text-3xl font-bold text-white mb-1">{onlineCount.toLocaleString()}</div>
+                  <div className="text-sm text-neutral-400">Users Online</div>
+                </div>
+                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
+                  <div className="text-3xl font-bold text-white mb-1">150+</div>
+                  <div className="text-sm text-neutral-400">Countries</div>
+                </div>
+                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
+                  <div className="text-3xl font-bold text-white mb-1">1M+</div>
+                  <div className="text-sm text-neutral-400">Connections</div>
+                </div>
+                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
+                  <div className="text-3xl font-bold text-white mb-1">4.9</div>
+                  <div className="text-sm text-neutral-400">User Rating</div>
+                </div>
+              </div>
+              <div className="mt-6 pt-6 border-t border-neutral-800">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-2">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="w-8 h-8 rounded-full bg-neutral-700 border-2 border-neutral-900"></div>
+                    ))}
+                  </div>
+                  <span className="text-sm text-neutral-400">Join 10k+ active users</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-zinc-900/50">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Why Choose Guftagu?
+              Why Guftagu?
             </h2>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-              Experience the best in random video chat with features designed for seamless connections.
+            <p className="text-neutral-400 max-w-xl mx-auto">
+              Features designed for seamless, meaningful connections.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
                 <div
                   key={index}
-                  className="p-6 bg-zinc-800/50 border border-zinc-700/50 rounded-2xl hover:border-violet-500/50 transition-colors"
+                  className="group p-6 bg-neutral-900/60 backdrop-blur-xl border border-neutral-800/50 rounded-2xl hover:bg-neutral-900/80 hover:border-neutral-700/50 transition-all"
                 >
-                  <div className="w-12 h-12 bg-violet-600/20 rounded-xl flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-violet-400" />
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-white/20 transition-colors">
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-                  <p className="text-zinc-400">{feature.description}</p>
+                  <h3 className="text-lg font-medium text-white mb-2">{feature.title}</h3>
+                  <p className="text-sm text-neutral-400 leading-relaxed">{feature.description}</p>
                 </div>
               );
             })}
@@ -125,24 +154,21 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 to-purple-600 p-12 md:p-16">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            
-            <div className="relative text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Ready to Start Chatting?
-              </h2>
-              <p className="text-lg text-violet-100 max-w-xl mx-auto mb-8">
-                Join thousands of users already making meaningful connections on Guftagu.
-              </p>
-              <Link href={isAuthenticated ? '/chat' : '/login'}>
-                <Button variant="secondary" size="lg" className="bg-white text-violet-600 hover:bg-zinc-100">
-                  Get Started for Free
-                </Button>
-              </Link>
-            </div>
+      <section className="py-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-3xl p-10 md:p-14 shadow-2xl text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              Ready to Connect?
+            </h2>
+            <p className="text-neutral-400 max-w-md mx-auto mb-8">
+              Join thousands making meaningful connections every day.
+            </p>
+            <Link href={isAuthenticated ? '/chat' : '/login'}>
+              <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-neutral-900 rounded-xl font-medium shadow-lg shadow-white/10 hover:shadow-white/20 transition-all hover:scale-[1.02]">
+                Get Started Free
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </Link>
           </div>
         </div>
       </section>

@@ -9,13 +9,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseStyles = 'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed';
     
     const variants = {
-      primary: 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25 focus:ring-violet-500',
-      secondary: 'bg-zinc-800 hover:bg-zinc-700 text-white focus:ring-zinc-500',
-      outline: 'border-2 border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/50 text-zinc-300 focus:ring-zinc-500',
-      ghost: 'hover:bg-zinc-800/50 text-zinc-400 hover:text-white focus:ring-zinc-500',
+      primary: 'bg-white hover:bg-neutral-100 text-neutral-900 shadow-lg shadow-white/10 focus:ring-white',
+      secondary: 'bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 focus:ring-neutral-500',
+      outline: 'border border-neutral-700 hover:border-neutral-600 hover:bg-neutral-800/60 text-neutral-300 focus:ring-neutral-500',
+      ghost: 'hover:bg-neutral-800/60 text-neutral-400 hover:text-white focus:ring-neutral-500',
       danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
     };
 
