@@ -118,6 +118,8 @@ export default function VideoCallOverlay() {
   const iceCandidateBuffer = useRef<RTCIceCandidateInit[]>([]);
   // Buffer for offer received before peer connection is ready - use STATE to trigger re-render
   const [pendingOffer, setPendingOffer] = useState<{ from: string; offer: RTCSessionDescriptionInit } | null>(null);
+  // Track when peer connection is ready (state variable to trigger effects)
+  const [isPeerConnectionReady, setIsPeerConnectionReady] = useState(false);
   
   // Ringback tone refs
   const ringbackAudioContextRef = useRef<AudioContext | null>(null);
@@ -225,6 +227,11 @@ export default function VideoCallOverlay() {
   useEffect(() => {
     const prevStatus = prevCallStatusRef.current;
     const currentStatus = callStatus;
+    
+    // Reset peer connection ready state when call ends or goes idle
+    if (currentStatus === 'idle' || currentStatus === 'ended') {
+      setIsPeerConnectionReady(false);
+    }
     
     if (prevStatus && prevStatus !== currentStatus) {
       setIsTransitioning(true);
@@ -1082,6 +1089,8 @@ export default function VideoCallOverlay() {
           }
         } else {
           console.log('[WebRTC] Non-initiator ready, waiting for offer...');
+          // Mark PC as ready so pending offer effect can process buffered offers
+          setIsPeerConnectionReady(true);
         }
 
       } catch (error) {
@@ -1098,6 +1107,7 @@ export default function VideoCallOverlay() {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
       }
+      setIsPeerConnectionReady(false);
     };
   }, [callStatus, socket, peerSocketId, currentCall, localStream, setupAudioAnalyser]);
 
@@ -1251,7 +1261,7 @@ export default function VideoCallOverlay() {
 
   // Process pending offer when PC is ready (separate effect to avoid race conditions)
   useEffect(() => {
-    if (!pendingOffer || !peerConnectionRef.current || !socket) return;
+    if (!pendingOffer || !peerConnectionRef.current || !socket || !isPeerConnectionReady) return;
     
     const processPendingOffer = async () => {
       const pc = peerConnectionRef.current;
@@ -1302,7 +1312,7 @@ export default function VideoCallOverlay() {
     };
     
     processPendingOffer();
-  }, [pendingOffer, socket, localStream]);
+  }, [pendingOffer, socket, localStream, isPeerConnectionReady]);
 
   // Handle WebRTC signaling messages
   useEffect(() => {
