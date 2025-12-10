@@ -40,6 +40,7 @@ interface SocketContextType {
   acceptCall: () => void;
   declineCall: () => void;
   endCall: () => void;
+  startCall: (friendId: string, friendInfo: { username: string; profilePicture?: string }, type: 'voice' | 'video') => void;
   callStatus: 'idle' | 'calling' | 'ringing' | 'connected' | 'ended';
 }
 
@@ -277,6 +278,36 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     setCallType(null);
   }, [socket, currentCallId, currentCall]);
 
+  // Start a call - immediately shows calling screen
+  const startCall = useCallback((friendId: string, friendInfo: { username: string; profilePicture?: string }, type: 'voice' | 'video') => {
+    if (!socket) {
+      console.log('[Socket] Cannot start call - no socket');
+      return;
+    }
+    
+    console.log('[Socket] Starting', type, 'call to', friendInfo.username);
+    
+    // Set calling state IMMEDIATELY for instant UI feedback
+    setCallType(type);
+    setCurrentCall({
+      callId: `temp-${Date.now()}`, // Temporary ID until server responds
+      peer: {
+        userId: friendId,
+        username: friendInfo.username,
+        profilePicture: friendInfo.profilePicture,
+      },
+      callType: type,
+      isInitiator: true,
+    });
+    setCallStatus('calling');
+    
+    // Emit to server
+    socket.emit('call_friend', {
+      friendId,
+      callType: type,
+    });
+  }, [socket]);
+
   return (
     <SocketContext.Provider value={{ 
       socket, 
@@ -289,6 +320,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       acceptCall,
       declineCall,
       endCall,
+      startCall,
       callStatus,
     }}>
       {children}

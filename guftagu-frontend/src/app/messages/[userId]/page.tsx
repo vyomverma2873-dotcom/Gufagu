@@ -54,7 +54,7 @@ export default function ConversationPage() {
   const params = useParams();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { socket, callStatus: globalCallStatus, endCall: globalEndCall } = useSocket();
+  const { socket, callStatus: globalCallStatus, endCall: globalEndCall, startCall } = useSocket();
   
   const userId = params.userId as string;
   const [chatUser, setChatUser] = useState<ChatUser | null>(null);
@@ -326,8 +326,8 @@ export default function ConversationPage() {
   }, [socket, user, userId]);
 
   const handleStartCall = (type: 'voice' | 'video') => {
-    if (!socket || !chatUser) {
-      console.log('[Call] Cannot start - socket:', !!socket, 'chatUser:', !!chatUser);
+    if (!chatUser) {
+      console.log('[Call] Cannot start - no chat user');
       return;
     }
     if (!chatUser.isOnline) {
@@ -335,25 +335,14 @@ export default function ConversationPage() {
       return;
     }
     
-    console.log('[Call] Starting', type, 'call to', chatUser.username, 'friendId:', chatUser._id);
-    setLocalCallType(type);
-    setIsInitiatingCall(true);
+    console.log('[Call] Starting', type, 'call to', chatUser.username);
     
-    // Emit call request to friend
-    console.log('[Call] Emitting call_friend event...');
-    socket.emit('call_friend', {
-      friendId: chatUser._id,
-      callType: type,
-    });
-    
-    // Add one-time listener for debugging
-    socket.once('call_initiated', (data: any) => {
-      console.log('[Call] Received call_initiated:', data);
-    });
-    socket.once('call_error', (data: any) => {
-      console.log('[Call] Received call_error:', data);
-      setIsInitiatingCall(false);
-    });
+    // Use the new startCall from SocketContext - shows calling screen immediately
+    startCall(
+      chatUser._id,
+      { username: chatUser.displayName || chatUser.username, profilePicture: chatUser.profilePicture },
+      type
+    );
   };
 
   const handleEndCallLocal = () => {
