@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, MoreVertical, Phone, Video, PhoneOff, X, PhoneCall, PhoneIncoming, PhoneOutgoing, PhoneMissed, Check, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Phone, Video, PhoneOff, X, PhoneCall, PhoneIncoming, PhoneOutgoing, PhoneMissed, Check, CheckCheck, Flag, UserX, UserMinus, Shield, AlertTriangle } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
-import { messagesApi, userApi } from '@/lib/api';
+import { messagesApi, userApi, friendsApi } from '@/lib/api';
 import { formatDate, formatTime } from '@/lib/utils';
 
 interface Message {
@@ -76,6 +76,16 @@ export default function ConversationPage() {
   // Local call state for this conversation
   const [localCallType, setLocalCallType] = useState<'voice' | 'video' | null>(null);
   const [isInitiatingCall, setIsInitiatingCall] = useState(false);
+  
+  // Action menu state
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
+  const actionMenuRef = useRef<HTMLDivElement>(null);
     
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -350,6 +360,98 @@ export default function ConversationPage() {
     setIsInitiatingCall(false);
     globalEndCall();
   };
+
+  // Close action menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+        setShowActionMenu(false);
+      }
+    };
+    if (showActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActionMenu]);
+
+  // Handle block user
+  const handleBlockUser = async () => {
+    if (!chatUser) return;
+    
+    if (!confirm(`Are you sure you want to block ${chatUser.displayName || chatUser.username}? This will also unfriend them.`)) {
+      return;
+    }
+
+    setIsSubmittingAction(true);
+    setActionError('');
+    try {
+      await userApi.blockUser(chatUser._id);
+      setActionSuccess('User blocked successfully');
+      setShowActionMenu(false);
+      // Redirect back to messages list
+      setTimeout(() => router.push('/messages'), 1500);
+    } catch (error: any) {
+      setActionError(error.response?.data?.error || 'Failed to block user');
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
+  // Handle unfriend user
+  const handleUnfriend = async () => {
+    if (!chatUser) return;
+    
+    if (!confirm(`Are you sure you want to unfriend ${chatUser.displayName || chatUser.username}?`)) {
+      return;
+    }
+
+    setIsSubmittingAction(true);
+    setActionError('');
+    try {
+      await friendsApi.unfriend(chatUser._id);
+      setActionSuccess('Friend removed successfully');
+      setShowActionMenu(false);
+      // Redirect back to messages list
+      setTimeout(() => router.push('/messages'), 1500);
+    } catch (error: any) {
+      setActionError(error.response?.data?.error || 'Failed to unfriend user');
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
+  // Handle report user submission
+  const handleReportSubmit = async () => {
+    if (!chatUser || !reportReason) return;
+
+    setIsSubmittingAction(true);
+    setActionError('');
+    try {
+      await userApi.reportUser(chatUser._id, reportReason, reportDescription);
+      setActionSuccess('Report submitted successfully');
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDescription('');
+      setTimeout(() => setActionSuccess(''), 3000);
+    } catch (error: any) {
+      setActionError(error.response?.data?.error || 'Failed to submit report');
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
+  // Report reason options
+  const REPORT_REASONS = [
+    { value: 'harassment', label: 'Harassment' },
+    { value: 'spam', label: 'Spam' },
+    { value: 'inappropriate_content', label: 'Inappropriate Content' },
+    { value: 'hate_speech', label: 'Hate Speech' },
+    { value: 'violence', label: 'Violence or Threats' },
+    { value: 'scam', label: 'Scam or Fraud' },
+    { value: 'impersonation', label: 'Impersonation' },
+    { value: 'underage', label: 'Underage User' },
+    { value: 'other', label: 'Other' },
+  ];
   
     const handleSend = async () => {
     if (!newMessage.trim() || isSending) return;
@@ -585,9 +687,46 @@ export default function ConversationPage() {
                     <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   <div className="w-px h-6 bg-neutral-700 mx-0.5" />
-                  <button className="p-2.5 sm:p-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all">
-                    <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
+                  <div className="relative" ref={actionMenuRef}>
+                    <button 
+                      onClick={() => setShowActionMenu(!showActionMenu)}
+                      className="p-2.5 sm:p-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all"
+                    >
+                      <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {showActionMenu && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-neutral-800 border border-neutral-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <button
+                          onClick={() => {
+                            setShowActionMenu(false);
+                            setShowReportModal(true);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors"
+                        >
+                          <Flag className="w-4 h-4" />
+                          Report User
+                        </button>
+                        <button
+                          onClick={handleBlockUser}
+                          disabled={isSubmittingAction}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors disabled:opacity-50"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Block User
+                        </button>
+                        <button
+                          onClick={handleUnfriend}
+                          disabled={isSubmittingAction}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors disabled:opacity-50"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                          Unfriend
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -769,6 +908,117 @@ export default function ConversationPage() {
           </div>
         </div>
       </div>
+
+      {/* Action Success/Error Toast */}
+      {actionSuccess && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-emerald-500/90 text-white rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-4">
+          {actionSuccess}
+        </div>
+      )}
+      {actionError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-red-500/90 text-white rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-4">
+          {actionError}
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-md shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-neutral-700">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Flag className="w-5 h-5 text-red-400" />
+                Report User
+              </h2>
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportDescription('');
+                  setActionError('');
+                }}
+                className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl">
+                <Avatar src={chatUser?.profilePicture} alt={chatUser?.username || ''} size="md" />
+                <div>
+                  <p className="text-white font-medium">{chatUser?.displayName || chatUser?.username}</p>
+                  <p className="text-sm text-neutral-400">@{chatUser?.username}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-400 mb-2">Reason for Report *</label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                >
+                  <option value="">Select a reason...</option>
+                  {REPORT_REASONS.map((reason) => (
+                    <option key={reason.value} value={reason.value}>
+                      {reason.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-400 mb-2">Additional Details (optional)</label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Provide more context about what happened..."
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {actionError && (
+                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">
+                  {actionError}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-neutral-700">
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportDescription('');
+                  setActionError('');
+                }}
+                className="px-4 py-2 text-neutral-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReportSubmit}
+                disabled={!reportReason || isSubmittingAction}
+                className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {isSubmittingAction ? (
+                  <>
+                    <Spinner className="w-4 h-4" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Report'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Report = require('../models/Report');
+const Friend = require('../models/Friend');
 const logger = require('../utils/logger');
 
 /**
@@ -347,6 +349,177 @@ const setUsername = async (req, res, next) => {
   }
 };
 
+/**
+ * Report a user
+ * POST /api/user/report
+ */
+const reportUser = async (req, res, next) => {
+  try {
+    const { userId, reason, description, messageId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    if (!reason) {
+      return res.status(400).json({ error: 'Report reason is required' });
+    }
+
+    // Valid reasons
+    const validReasons = [
+      'inappropriate_content',
+      'harassment',
+      'spam',
+      'nudity',
+      'violence',
+      'hate_speech',
+      'underage',
+      'scam',
+      'impersonation',
+      'other',
+    ];
+
+    if (!validReasons.includes(reason)) {
+      return res.status(400).json({ error: 'Invalid report reason' });
+    }
+
+    // Can't report yourself
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({ error: 'You cannot report yourself' });
+    }
+
+    // Find the reported user
+    const reportedUser = await User.findById(userId);
+    if (!reportedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Create the report
+    const report = new Report({
+      reporterId: req.user._id,
+      reporterUsername: req.user.username,
+      reporterUserId7Digit: req.user.userId,
+      reportedUserId: userId,
+      reportedUsername: reportedUser.username,
+      reportedUserId7Digit: reportedUser.userId,
+      reason,
+      description: description || '',
+      messageId: messageId || null,
+      status: 'pending',
+      priority: reason === 'underage' || reason === 'violence' ? 'high' : 'medium',
+    });
+
+    await report.save();
+
+    logger.info(`Report created: ${req.user.username} reported ${reportedUser.username} for ${reason}`);
+
+    res.json({
+      message: 'Report submitted successfully',
+      reportId: report._id,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Block a user
+ * POST /api/user/block
+ */
+const blockUser = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Can't block yourself
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({ error: 'You cannot block yourself' });
+    }
+
+    // Check if user exists
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if already blocked
+    if (req.user.blockedUsers && req.user.blockedUsers.includes(userId)) {
+      return res.status(400).json({ error: 'User is already blocked' });
+    }
+
+    // Add to blocked users list
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: { blockedUsers: userId },
+    });
+
+    // Remove any existing friendship
+    await Friend.deleteMany({
+      $or: [
+        { user1: req.user._id, user2: userId },
+        { user1: userId, user2: req.user._id },
+      ],
+    });
+
+    // Update friends count for both users
+    await User.findByIdAndUpdate(req.user._id, { $inc: { friendsCount: -1 } });
+    await User.findByIdAndUpdate(userId, { $inc: { friendsCount: -1 } });
+
+    logger.info(`User blocked: ${req.user.username} blocked ${targetUser.username}`);
+
+    res.json({ message: 'User blocked successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Unblock a user
+ * POST /api/user/unblock
+ */
+const unblockUser = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Check if user is blocked
+    if (!req.user.blockedUsers || !req.user.blockedUsers.includes(userId)) {
+      return res.status(400).json({ error: 'User is not blocked' });
+    }
+
+    // Remove from blocked users list
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { blockedUsers: userId },
+    });
+
+    res.json({ message: 'User unblocked successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get blocked users list
+ * GET /api/user/blocked
+ */
+const getBlockedUsers = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate('blockedUsers', 'username displayName profilePicture userId');
+
+    res.json({
+      blockedUsers: user.blockedUsers || [],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -356,4 +529,8 @@ module.exports = {
   checkUsername,
   uploadProfilePicture,
   setUsername,
+  reportUser,
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
 };

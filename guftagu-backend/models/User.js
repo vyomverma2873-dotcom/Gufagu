@@ -132,6 +132,12 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Blocked Users
+    blockedUsers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+
     // Privacy Settings
     privacy: {
       showOnlineStatus: {

@@ -9,6 +9,10 @@ const {
   checkUsername,
   uploadProfilePicture,
   setUsername,
+  reportUser,
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
 } = require('../controllers/userController');
 const { authenticateToken, optionalAuth } = require('../middleware/auth');
 
@@ -26,6 +30,18 @@ router.post('/profile-picture', authenticateToken, uploadProfilePicture);
 
 // POST /api/user/set-username - Set username (onboarding)
 router.post('/set-username', authenticateToken, setUsername);
+
+// POST /api/user/report - Report a user
+router.post('/report', authenticateToken, reportUser);
+
+// POST /api/user/block - Block a user
+router.post('/block', authenticateToken, blockUser);
+
+// POST /api/user/unblock - Unblock a user
+router.post('/unblock', authenticateToken, unblockUser);
+
+// GET /api/user/blocked - Get blocked users list
+router.get('/blocked', authenticateToken, getBlockedUsers);
 
 // GET /api/user/id/:userId - Get user by 7-digit ID
 router.get('/id/:userId', optionalAuth, getUserById);

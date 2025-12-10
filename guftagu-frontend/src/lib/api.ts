@@ -59,6 +59,13 @@ export const userApi = {
     api.post('/user/set-username', { username, displayName }),
   uploadProfilePicture: (imageUrl: string) => 
     api.post('/user/profile-picture', { imageUrl }),
+  // Report user
+  reportUser: (userId: string, reason: string, description?: string, messageId?: string) =>
+    api.post('/user/report', { userId, reason, description, messageId }),
+  // Block/Unblock
+  blockUser: (userId: string) => api.post('/user/block', { userId }),
+  unblockUser: (userId: string) => api.post('/user/unblock', { userId }),
+  getBlockedUsers: () => api.get('/user/blocked'),
 };
 
 // Friends API

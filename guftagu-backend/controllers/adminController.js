@@ -310,11 +310,11 @@ exports.getReports = async (req, res) => {
 
     const query = {};
     if (status) query.status = status;
-    if (type) query.type = type;
+    if (type) query.reason = type;
 
     const reports = await Report.find(query)
-      .populate('reporter', 'username displayName profilePicture userId')
-      .populate('reportedUser', 'username displayName profilePicture userId')
+      .populate('reporterId', 'username displayName profilePicture userId')
+      .populate('reportedUserId', 'username displayName profilePicture userId')
       .populate('reviewedBy', 'username displayName')
       .sort('-createdAt')
       .skip((page - 1) * limit)
@@ -322,8 +322,43 @@ exports.getReports = async (req, res) => {
 
     const total = await Report.countDocuments(query);
 
+    // Transform to match frontend expectations
+    const transformedReports = reports.map(report => ({
+      _id: report._id,
+      reporter: report.reporterId ? {
+        _id: report.reporterId._id,
+        username: report.reporterId.username,
+        displayName: report.reporterId.displayName,
+        profilePicture: report.reporterId.profilePicture,
+        userId: report.reporterId.userId,
+      } : {
+        username: report.reporterUsername || 'Unknown',
+        userId: report.reporterUserId7Digit,
+      },
+      reportedUser: report.reportedUserId ? {
+        _id: report.reportedUserId._id,
+        username: report.reportedUserId.username,
+        displayName: report.reportedUserId.displayName,
+        profilePicture: report.reportedUserId.profilePicture,
+        userId: report.reportedUserId.userId,
+      } : {
+        username: report.reportedUsername || 'Unknown',
+        userId: report.reportedUserId7Digit,
+      },
+      reason: report.reason,
+      description: report.description,
+      status: report.status,
+      priority: report.priority,
+      reviewedBy: report.reviewedBy,
+      reviewedAt: report.reviewedAt,
+      actionTaken: report.actionTaken,
+      moderatorNotes: report.moderatorNotes,
+      createdAt: report.createdAt,
+      timestamp: report.timestamp,
+    }));
+
     res.json({
-      reports,
+      reports: transformedReports,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -412,16 +447,48 @@ exports.getActiveBans = async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
 
     const bans = await Ban.find({ isActive: true })
-      .populate('user', 'username displayName profilePicture userId email')
+      .populate('userId', 'username displayName profilePicture userId email')
       .populate('bannedBy', 'username displayName')
-      .sort('-createdAt')
+      .sort('-bannedAt')
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
     const total = await Ban.countDocuments({ isActive: true });
 
+    // Transform the data to match frontend expectations
+    const transformedBans = bans.map(ban => ({
+      _id: ban._id,
+      user: ban.userId ? {
+        _id: ban.userId._id,
+        username: ban.userId.username,
+        displayName: ban.userId.displayName,
+        profilePicture: ban.userId.profilePicture,
+        userId: ban.userId.userId,
+        email: ban.userId.email,
+      } : {
+        _id: ban.userId,
+        username: ban.username || 'Unknown',
+        displayName: ban.username,
+        userId: ban.userId7Digit,
+        email: ban.email,
+      },
+      reason: ban.reason,
+      description: ban.description,
+      type: ban.banType,
+      expiresAt: ban.banUntil,
+      bannedBy: ban.bannedBy ? {
+        username: ban.bannedBy.username,
+        displayName: ban.bannedBy.displayName,
+      } : {
+        username: ban.bannedByUsername || 'System',
+        displayName: ban.bannedByUsername,
+      },
+      createdAt: ban.bannedAt,
+      isActive: ban.isActive,
+    }));
+
     res.json({
-      bans,
+      bans: transformedBans,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
