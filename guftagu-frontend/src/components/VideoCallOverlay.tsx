@@ -70,7 +70,26 @@ export default function VideoCallOverlay() {
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      // Free TURN servers for NAT traversal
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
     ],
+    iceCandidatePoolSize: 10,
   };
 
   // Store audio level from ScriptProcessor (Safari fallback)
@@ -564,35 +583,118 @@ export default function VideoCallOverlay() {
 
         // Handle incoming tracks
         pc.ontrack = (event) => {
-          console.log('[WebRTC] Received remote track:', event.track.kind, 'enabled:', event.track.enabled);
-          const [stream] = event.streams;
+          console.log('[WebRTC] ====== RECEIVED REMOTE TRACK ======');
+          console.log('[WebRTC] Track kind:', event.track.kind);
+          console.log('[WebRTC] Track enabled:', event.track.enabled);
+          console.log('[WebRTC] Track readyState:', event.track.readyState);
+          console.log('[WebRTC] Track muted:', event.track.muted);
+          console.log('[WebRTC] Streams count:', event.streams.length);
           
-          // Ensure the track is enabled
-          event.track.enabled = true;
-          
-          console.log('[WebRTC] Remote stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })));
-          
-          setRemoteStream(stream);
-          
-          // Immediately set video element
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = stream;
-            remoteVideoRef.current.play().catch(e => console.log('[WebRTC] Remote play error:', e));
+          if (event.streams.length === 0) {
+            console.error('[WebRTC] No streams in ontrack event!');
+            return;
           }
+          
+          const [stream] = event.streams;
+          console.log('[WebRTC] Remote stream ID:', stream.id);
+          console.log('[WebRTC] Remote stream tracks:', stream.getTracks().map(t => ({ 
+            kind: t.kind, 
+            enabled: t.enabled, 
+            readyState: t.readyState,
+            muted: t.muted,
+            id: t.id
+          })));
+          
+          // Ensure all tracks in the stream are enabled
+          stream.getTracks().forEach(track => {
+            track.enabled = true;
+            console.log('[WebRTC] Enabled remote track:', track.kind);
+          });
+          
+          // Set remote stream state
+          setRemoteStream(stream);
+          setRemoteCameraOff(false);
+          
+          // Immediately set video element with retry
+          const setRemoteVideo = async () => {
+            if (remoteVideoRef.current) {
+              console.log('[WebRTC] Setting remote video srcObject');
+              remoteVideoRef.current.srcObject = stream;
+              
+              // Multiple play attempts
+              for (let i = 0; i < 3; i++) {
+                try {
+                  await remoteVideoRef.current.play();
+                  console.log('[WebRTC] Remote video playing successfully!');
+                  break;
+                } catch (e) {
+                  console.log(`[WebRTC] Remote play attempt ${i + 1} failed:`, e);
+                  await new Promise(r => setTimeout(r, 300));
+                }
+              }
+            } else {
+              console.warn('[WebRTC] Remote video ref not available yet, will retry...');
+              // Retry after a short delay
+              setTimeout(setRemoteVideo, 200);
+            }
+          };
+          
+          setRemoteVideo();
           
           // Setup audio analyser for remote stream
           setupAudioAnalyser(stream, false);
+          
+          // Listen for track ended
+          event.track.onended = () => {
+            console.log('[WebRTC] Remote track ended:', event.track.kind);
+          };
+          
+          event.track.onmute = () => {
+            console.log('[WebRTC] Remote track muted:', event.track.kind);
+          };
+          
+          event.track.onunmute = () => {
+            console.log('[WebRTC] Remote track unmuted:', event.track.kind);
+          };
         };
 
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
           if (event.candidate) {
-            console.log('[WebRTC] Sending ICE candidate');
+            console.log('[WebRTC] Sending ICE candidate:', event.candidate.candidate?.substring(0, 50));
             socket.emit('friend_call_ice_candidate', {
               to: peerSocketId,
               candidate: event.candidate,
             });
+          } else {
+            console.log('[WebRTC] ICE gathering complete');
           }
+        };
+        
+        // Monitor ICE connection state (critical for debugging)
+        pc.oniceconnectionstatechange = () => {
+          console.log('[WebRTC] ICE connection state:', pc.iceConnectionState);
+          if (pc.iceConnectionState === 'failed') {
+            console.error('[WebRTC] ICE connection failed! Attempting ICE restart...');
+            // Try to restart ICE
+            pc.restartIce();
+          }
+          if (pc.iceConnectionState === 'disconnected') {
+            console.warn('[WebRTC] ICE disconnected, may recover automatically');
+          }
+          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            console.log('[WebRTC] ICE connected! Media should flow now.');
+          }
+        };
+        
+        // Monitor ICE gathering state
+        pc.onicegatheringstatechange = () => {
+          console.log('[WebRTC] ICE gathering state:', pc.iceGatheringState);
+        };
+        
+        // Monitor signaling state
+        pc.onsignalingstatechange = () => {
+          console.log('[WebRTC] Signaling state:', pc.signalingState);
         };
 
         // Monitor connection state
@@ -888,7 +990,11 @@ export default function VideoCallOverlay() {
     };
 
     const handleOffer = async (data: { from: string; offer: RTCSessionDescriptionInit }) => {
-      console.log('[WebRTC] Received offer from:', data.from);
+      console.log('[WebRTC] ====== RECEIVED OFFER ======');
+      console.log('[WebRTC] From socket:', data.from);
+      console.log('[WebRTC] Offer type:', data.offer?.type);
+      console.log('[WebRTC] PC exists:', !!peerConnectionRef.current);
+      
       const pc = peerConnectionRef.current;
       if (!pc) {
         console.log('[WebRTC] No peer connection yet, buffering offer');
@@ -897,20 +1003,26 @@ export default function VideoCallOverlay() {
       }
 
       try {
+        console.log('[WebRTC] Setting remote description (offer)...');
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        console.log('[WebRTC] Remote description set successfully');
+        
         await flushIceCandidates(pc);
         
         // Verify local tracks are added and enabled before answering
         console.log('[WebRTC] Senders before answer:', pc.getSenders().map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled })));
         
+        console.log('[WebRTC] Creating answer...');
         const answer = await pc.createAnswer();
+        console.log('[WebRTC] Answer created, setting local description...');
         await pc.setLocalDescription(answer);
         
+        console.log('[WebRTC] Sending answer to:', data.from);
         socket.emit('friend_call_answer', {
           to: data.from,
           answer: pc.localDescription,
         });
-        console.log('[WebRTC] Sent answer to:', data.from);
+        console.log('[WebRTC] Answer sent successfully');
         
         // Re-enable tracks after answer is sent
         pc.getSenders().forEach(sender => {
@@ -925,7 +1037,10 @@ export default function VideoCallOverlay() {
     };
 
     const handleAnswer = async (data: { from: string; answer: RTCSessionDescriptionInit }) => {
-      console.log('[WebRTC] Received answer from:', data.from);
+      console.log('[WebRTC] ====== RECEIVED ANSWER ======');
+      console.log('[WebRTC] From socket:', data.from);
+      console.log('[WebRTC] Answer type:', data.answer?.type);
+      
       const pc = peerConnectionRef.current;
       if (!pc) {
         console.error('[WebRTC] No peer connection for answer!');
@@ -933,7 +1048,11 @@ export default function VideoCallOverlay() {
       }
       
       try {
+        console.log('[WebRTC] Current signaling state:', pc.signalingState);
+        console.log('[WebRTC] Setting remote description (answer)...');
         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        console.log('[WebRTC] Remote description (answer) set successfully');
+        
         await flushIceCandidates(pc);
         console.log('[WebRTC] Answer processed successfully');
         
@@ -948,13 +1067,18 @@ export default function VideoCallOverlay() {
         // Log connection details
         console.log('[WebRTC] Senders:', pc.getSenders().map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled, readyState: s.track?.readyState })));
         console.log('[WebRTC] Receivers:', pc.getReceivers().map(r => ({ kind: r.track?.kind, enabled: r.track?.enabled, readyState: r.track?.readyState })));
+        console.log('[WebRTC] ICE connection state:', pc.iceConnectionState);
+        console.log('[WebRTC] Connection state:', pc.connectionState);
       } catch (error) {
         console.error('[WebRTC] Error handling answer:', error);
       }
     };
 
     const handleIceCandidate = async (data: { from: string; candidate: RTCIceCandidateInit }) => {
-      console.log('[WebRTC] Received ICE candidate');
+      console.log('[WebRTC] ====== RECEIVED ICE CANDIDATE ======');
+      console.log('[WebRTC] From:', data.from);
+      console.log('[WebRTC] Candidate:', data.candidate?.candidate?.substring(0, 60));
+      
       const pc = peerConnectionRef.current;
       if (!pc) {
         console.log('[WebRTC] No peer connection, buffering ICE candidate');
