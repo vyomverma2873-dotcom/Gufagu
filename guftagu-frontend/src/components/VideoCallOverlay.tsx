@@ -231,25 +231,48 @@ export default function VideoCallOverlay() {
     };
   }, [callStatus, localStream, remoteStream]);
 
-  // Sync video elements with streams
+  // Sync video elements with streams - aggressive approach
   useEffect(() => {
     if (localStream && localVideoRef.current) {
       console.log('[Video] Setting local video srcObject, tracks:', localStream.getVideoTracks().length);
       localVideoRef.current.srcObject = localStream;
-      // Ensure play is called
+      // Force play and ensure tracks are enabled
+      localStream.getVideoTracks().forEach(track => {
+        track.enabled = true;
+      });
       localVideoRef.current.play().catch(e => console.log('[Video] Local play error:', e));
     }
   }, [localStream, callStatus, isVideoEnabled]);
 
+  // Separate effect for remote video with retry mechanism
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
       console.log('[Video] Setting remote video srcObject, tracks:', remoteStream.getVideoTracks().length);
-      remoteVideoRef.current.srcObject = remoteStream;
-      // Ensure tracks are enabled
-      remoteStream.getVideoTracks().forEach(track => {
-        console.log('[Video] Remote video track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
+      
+      // Ensure all remote tracks are enabled
+      remoteStream.getTracks().forEach(track => {
+        track.enabled = true;
+        console.log('[Video] Remote track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
       });
-      remoteVideoRef.current.play().catch(e => console.log('[Video] Remote play error:', e));
+      
+      remoteVideoRef.current.srcObject = remoteStream;
+      
+      // Retry play multiple times to handle browser restrictions
+      const tryPlay = async (attempts = 3) => {
+        for (let i = 0; i < attempts; i++) {
+          try {
+            await remoteVideoRef.current?.play();
+            console.log('[Video] Remote video playing successfully');
+            break;
+          } catch (e) {
+            console.log(`[Video] Remote play attempt ${i + 1} failed:`, e);
+            await new Promise(r => setTimeout(r, 500));
+          }
+        }
+      };
+      
+      tryPlay();
+      
       // Clear remoteCameraOff if we have video tracks
       if (remoteStream.getVideoTracks().length > 0) {
         setRemoteCameraOff(false);
@@ -478,23 +501,41 @@ export default function VideoCallOverlay() {
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnectionRef.current = pc;
 
-        // Add local tracks to connection
+        // Ensure all local tracks are enabled before adding
+        localStream.getTracks().forEach(track => {
+          track.enabled = true;
+          console.log('[WebRTC] Enabling track before add:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
+        });
+
+        // Add local tracks to connection with proper sender handling
+        const senders: RTCRtpSender[] = [];
         console.log('[WebRTC] Adding', localStream.getTracks().length, 'local tracks');
         localStream.getTracks().forEach(track => {
-          console.log('[WebRTC] Adding track:', track.kind, 'enabled:', track.enabled);
-          pc.addTrack(track, localStream);
+          console.log('[WebRTC] Adding track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
+          const sender = pc.addTrack(track, localStream);
+          senders.push(sender);
         });
 
         // Handle incoming tracks
         pc.ontrack = (event) => {
-          console.log('[WebRTC] Received remote track:', event.track.kind);
-          const [remoteStream] = event.streams;
-          setRemoteStream(remoteStream);
+          console.log('[WebRTC] Received remote track:', event.track.kind, 'enabled:', event.track.enabled);
+          const [stream] = event.streams;
+          
+          // Ensure the track is enabled
+          event.track.enabled = true;
+          
+          console.log('[WebRTC] Remote stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, enabled: t.enabled, readyState: t.readyState })));
+          
+          setRemoteStream(stream);
+          
+          // Immediately set video element
           if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.srcObject = stream;
+            remoteVideoRef.current.play().catch(e => console.log('[WebRTC] Remote play error:', e));
           }
+          
           // Setup audio analyser for remote stream
-          setupAudioAnalyser(remoteStream, false);
+          setupAudioAnalyser(stream, false);
         };
 
         // Handle ICE candidates
@@ -512,6 +553,37 @@ export default function VideoCallOverlay() {
         pc.onconnectionstatechange = () => {
           console.log('[WebRTC] Connection state:', pc.connectionState);
           setConnectionState(pc.connectionState);
+          
+          // When connected, verify tracks are transmitting
+          if (pc.connectionState === 'connected') {
+            console.log('[WebRTC] Connected! Verifying senders...');
+            pc.getSenders().forEach(sender => {
+              if (sender.track) {
+                console.log('[WebRTC] Sender track:', sender.track.kind, 'enabled:', sender.track.enabled, 'readyState:', sender.track.readyState);
+                // Ensure track is enabled
+                sender.track.enabled = true;
+              }
+            });
+          }
+        };
+        
+        // Monitor negotiation needed
+        pc.onnegotiationneeded = async () => {
+          console.log('[WebRTC] Negotiation needed');
+          // Only initiator handles renegotiation
+          if (currentCall?.isInitiator && pc.signalingState === 'stable') {
+            try {
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              socket.emit('friend_call_offer', {
+                to: peerSocketId,
+                offer: pc.localDescription,
+              });
+              console.log('[WebRTC] Sent renegotiation offer');
+            } catch (e) {
+              console.error('[WebRTC] Renegotiation error:', e);
+            }
+          }
         };
 
         // Only initiator sends offer immediately
@@ -615,6 +687,9 @@ export default function VideoCallOverlay() {
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
         await flushIceCandidates(pc);
         
+        // Verify local tracks are added and enabled before answering
+        console.log('[WebRTC] Senders before answer:', pc.getSenders().map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled })));
+        
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         
@@ -623,6 +698,14 @@ export default function VideoCallOverlay() {
           answer: pc.localDescription,
         });
         console.log('[WebRTC] Sent answer to:', data.from);
+        
+        // Re-enable tracks after answer is sent
+        pc.getSenders().forEach(sender => {
+          if (sender.track) {
+            sender.track.enabled = true;
+            console.log('[WebRTC] Re-enabled sender track:', sender.track.kind);
+          }
+        });
       } catch (error) {
         console.error('[WebRTC] Error handling offer:', error);
       }
@@ -640,6 +723,18 @@ export default function VideoCallOverlay() {
         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         await flushIceCandidates(pc);
         console.log('[WebRTC] Answer processed successfully');
+        
+        // Ensure all sender tracks are enabled after answer
+        pc.getSenders().forEach(sender => {
+          if (sender.track) {
+            sender.track.enabled = true;
+            console.log('[WebRTC] Enabled sender track after answer:', sender.track.kind);
+          }
+        });
+        
+        // Log connection details
+        console.log('[WebRTC] Senders:', pc.getSenders().map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled, readyState: s.track?.readyState })));
+        console.log('[WebRTC] Receivers:', pc.getReceivers().map(r => ({ kind: r.track?.kind, enabled: r.track?.enabled, readyState: r.track?.readyState })));
       } catch (error) {
         console.error('[WebRTC] Error handling answer:', error);
       }
