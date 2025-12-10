@@ -1,0 +1,91 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Mail, ArrowRight, Video } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { authApi } from '@/lib/api';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await authApi.sendOTP(email);
+      // Store email for verify page
+      sessionStorage.setItem('otpEmail', email);
+      router.push('/verify');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center">
+              <Video className="w-7 h-7 text-white" />
+            </div>
+          </Link>
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome to Guftagu</h1>
+          <p className="text-zinc-400">Enter your email to get started</p>
+        </div>
+
+        {/* Form */}
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              type="email"
+              label="Email address"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              icon={<Mail className="w-5 h-5" />}
+              error={error}
+              required
+            />
+
+            <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
+              Continue with Email
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-zinc-500">
+              We'll send you a one-time code to verify your email.
+              <br />
+              No password needed.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-sm text-zinc-500 mt-8">
+          By continuing, you agree to our{' '}
+          <Link href="/terms" className="text-violet-400 hover:text-violet-300">
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="text-violet-400 hover:text-violet-300">
+            Privacy Policy
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
