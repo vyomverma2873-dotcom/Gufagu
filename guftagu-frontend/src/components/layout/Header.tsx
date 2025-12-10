@@ -14,16 +14,16 @@ import Button from '@/components/ui/Button';
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const pathname = usePathname();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
   const { onlineCount, isConnected } = useSocket();
   const { unreadCount } = useNotifications();
 
   // Track page loading state
   useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 500);
+    setIsPageLoading(true);
+    const timer = setTimeout(() => setIsPageLoading(false), 500);
     return () => clearTimeout(timer);
   }, [pathname]);
 
@@ -36,7 +36,7 @@ export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       {/* Loading bar */}
-      {isLoading && (
+      {(isPageLoading || authLoading) && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent overflow-hidden">
           <div className="h-full w-1/3 bg-white animate-[loading_1s_ease-in-out_infinite]" />
         </div>
@@ -91,7 +91,13 @@ export default function Header() {
 
             {/* Right Side */}
             <div className="flex items-center gap-2">
-              {isAuthenticated ? (
+              {authLoading ? (
+                // Loading skeleton - prevents flash of logged-out state
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-neutral-800/60 animate-pulse" />
+                  <div className="w-9 h-9 rounded-xl bg-neutral-800/60 animate-pulse" />
+                </div>
+              ) : isAuthenticated ? (
                 <>
                   {/* Notifications */}
                   <Link
