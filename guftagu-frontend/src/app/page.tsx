@@ -78,42 +78,40 @@ export default function Home() {
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </Link>
-                <Link href="/chat">
-                  <button className="px-6 py-3 bg-neutral-800/60 text-neutral-300 hover:text-white rounded-xl font-medium border border-neutral-700/50 hover:bg-neutral-800 transition-all">
-                    Try as Guest
-                  </button>
-                </Link>
               </div>
             </div>
 
-            {/* Right Content - Stats Card */}
+            {/* Right Content - How to Use */}
             <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-3xl p-8 shadow-2xl">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
-                  <div className="text-3xl font-bold text-white mb-1">{onlineCount.toLocaleString()}</div>
-                  <div className="text-sm text-neutral-400">Users Online</div>
-                </div>
-                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
-                  <div className="text-3xl font-bold text-white mb-1">150+</div>
-                  <div className="text-sm text-neutral-400">Countries</div>
-                </div>
-                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
-                  <div className="text-3xl font-bold text-white mb-1">1M+</div>
-                  <div className="text-sm text-neutral-400">Connections</div>
-                </div>
-                <div className="bg-neutral-800/60 rounded-2xl p-6 border border-neutral-700/50">
-                  <div className="text-3xl font-bold text-white mb-1">4.9</div>
-                  <div className="text-sm text-neutral-400">User Rating</div>
-                </div>
-              </div>
-              <div className="mt-6 pt-6 border-t border-neutral-800">
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="w-8 h-8 rounded-full bg-neutral-700 border-2 border-neutral-900"></div>
-                    ))}
+              <h3 className="text-xl font-semibold text-white mb-6">How to Get Started</h3>
+              <div className="space-y-5">
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white font-semibold text-sm">1</div>
+                  <div>
+                    <h4 className="text-white font-medium mb-1">Create Your Account</h4>
+                    <p className="text-sm text-neutral-400">Sign up with your email to get started. It takes less than a minute.</p>
                   </div>
-                  <span className="text-sm text-neutral-400">Join 10k+ active users</span>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white font-semibold text-sm">2</div>
+                  <div>
+                    <h4 className="text-white font-medium mb-1">Find Friends</h4>
+                    <p className="text-sm text-neutral-400">Discover and connect with people who share your interests.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white font-semibold text-sm">3</div>
+                  <div>
+                    <h4 className="text-white font-medium mb-1">Start Conversations</h4>
+                    <p className="text-sm text-neutral-400">Chat via text, voice, or video with your new connections.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white font-semibold text-sm">4</div>
+                  <div>
+                    <h4 className="text-white font-medium mb-1">Build Your Network</h4>
+                    <p className="text-sm text-neutral-400">Maintain meaningful relationships and expand your social circle.</p>
+                  </div>
                 </div>
               </div>
             </div>
