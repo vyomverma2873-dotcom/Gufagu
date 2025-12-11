@@ -68,7 +68,7 @@ export default function Header() {
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-neutral-900"></div>
               </div>
-              <span className="text-xl font-bold text-white tracking-tight group-hover:text-neutral-100 transition-colors font-[family-name:var(--font-outfit)]" style={{ letterSpacing: '-0.01em' }}>
+              <span className="text-xl font-bold text-white tracking-tight group-hover:text-neutral-100 transition-colors font-[family-name:var(--font-poppins)]">
                 Guftagu
               </span>
             </Link>

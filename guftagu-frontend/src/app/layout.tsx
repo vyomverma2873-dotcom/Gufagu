@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import Header from "@/components/layout/Header";
@@ -11,10 +11,10 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const outfit = Outfit({
+const poppins = Poppins({
   subsets: ["latin"],
-  variable: "--font-outfit",
-  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} ${outfit.variable} font-sans antialiased bg-zinc-950 text-white min-h-screen`}>
+      <body className={`${inter.variable} ${poppins.variable} font-sans antialiased bg-zinc-950 text-white min-h-screen`}>
         <Providers>
           {/* Galaxy Background */}
           <GalaxyBackground />
