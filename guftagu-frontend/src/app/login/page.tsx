@@ -99,22 +99,11 @@ export default function LoginPage() {
         {/* Footer */}
         <p className="text-center text-sm text-zinc-500 mt-8">
           By continuing, you agree to our{' '}
-          <Link href="/terms" className="text-violet-400 hover:text-violet-300">
+          <Link href="/terms" className="text-zinc-400 hover:text-zinc-300">
             Terms of Service
           </Link>{' '}
           and{' '}
-          <Link href="/privacy" className="text-violet-400 hover:text-violet-300">
-            Privacy Policy
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
-}
-            Terms of Service
-          </Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="text-violet-400 hover:text-violet-300">
+          <Link href="/privacy" className="text-zinc-400 hover:text-zinc-300">
             Privacy Policy
           </Link>
         </p>
