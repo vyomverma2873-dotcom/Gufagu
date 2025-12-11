@@ -82,6 +82,8 @@ export default function VideoCallOverlay() {
     peerSocketId,
     endCall,
     callType,
+    callEndReason,
+    startCall,
   } = useSocket();
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -1586,10 +1588,24 @@ export default function VideoCallOverlay() {
   };
 
   const handleCallAgain = () => {
+    if (!currentCall?.peer) return;
+    
     setCallEnded(false);
-    // Trigger a new call - this would need socket integration
-    // For now, just close and user can initiate new call
-    endCall();
+    endCall(); // Close current overlay
+    
+    // Re-initiate call to the same user
+    setTimeout(() => {
+      if (currentCall.peer) {
+        startCall(
+          currentCall.peer.userId,
+          {
+            username: currentCall.peer.displayName || currentCall.peer.username || 'Unknown',
+            profilePicture: currentCall.peer.profilePicture
+          },
+          currentCall.callType
+        );
+      }
+    }, 500); // Small delay to ensure clean state
   };
 
   const handleCloseEndScreen = () => {
@@ -1606,8 +1622,8 @@ export default function VideoCallOverlay() {
   // Debug logging
   console.log('[VideoCallOverlay] Render check - callStatus:', callStatus, 'currentCall:', !!currentCall, 'incomingCall:', !!incomingCall);
 
-  // Only show when in calling or connected state (or call ended screen)
-  if (callStatus !== 'connected' && callStatus !== 'calling' && !callEnded) {
+  // Show overlay when: calling, connected, declined, or showing call ended screen
+  if (callStatus !== 'connected' && callStatus !== 'calling' && callStatus !== 'declined' && !callEnded) {
     return null;
   }
   
@@ -1686,6 +1702,35 @@ export default function VideoCallOverlay() {
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">Call Ended</h2>
             <p className="text-neutral-400 text-sm sm:text-base mb-6 sm:mb-8">Duration: {formatLongDuration(callEndDuration)}</p>
+            <div className="flex gap-3 sm:gap-4 justify-center">
+              <button
+                onClick={handleCallAgain}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-white text-neutral-900 rounded-full hover:bg-neutral-200 active:bg-neutral-300 transition-all font-medium shadow-lg shadow-white/10"
+              >
+                Call Again
+              </button>
+              <button
+                onClick={handleCloseEndScreen}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-neutral-800 border border-neutral-700 text-white rounded-full hover:bg-neutral-700 active:bg-neutral-600 transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Call Declined Overlay */}
+      {callStatus === 'declined' && (
+        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center px-4 animate-fade-in">
+          <div className="bg-neutral-900/90 backdrop-blur-xl border border-red-500/30 rounded-2xl p-8 text-center w-full max-w-sm shadow-2xl shadow-red-500/10">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-full bg-red-900/30 border border-red-500/50 flex items-center justify-center">
+              <PhoneOff className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">Call Declined</h2>
+            <p className="text-neutral-400 text-sm sm:text-base mb-6 sm:mb-8">
+              {callEndReason || 'The user declined your call'}
+            </p>
             <div className="flex gap-3 sm:gap-4 justify-center">
               <button
                 onClick={handleCallAgain}

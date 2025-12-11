@@ -41,7 +41,8 @@ interface SocketContextType {
   declineCall: () => void;
   endCall: () => void;
   startCall: (friendId: string, friendInfo: { username: string; profilePicture?: string }, type: 'voice' | 'video') => void;
-  callStatus: 'idle' | 'calling' | 'ringing' | 'connected' | 'ended';
+  callStatus: 'idle' | 'calling' | 'ringing' | 'connected' | 'ended' | 'declined';
+  callEndReason: string | null;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -54,8 +55,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [currentCall, setCurrentCall] = useState<CurrentCall | null>(null);
   const [peerSocketId, setPeerSocketId] = useState<string | null>(null);
   const [callType, setCallType] = useState<'voice' | 'video' | null>(null);
-  const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'ringing' | 'connected' | 'ended'>('idle');
+  const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'ringing' | 'connected' | 'ended' | 'declined'>('idle');
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
+  const [callEndReason, setCallEndReason] = useState<string | null>(null);
   const { token } = useAuth();
 
   // Initial socket setup
@@ -168,13 +170,17 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     const handleCallDeclined = (data: any) => {
       console.log('[Socket Global] Call declined:', data);
-      setCallStatus('ended');
+      setCallStatus('declined');
+      setCallEndReason(data.reason || 'Call was declined');
       setIncomingCall(null);
       setCurrentCall(null);
       setCurrentCallId(null);
       setPeerSocketId(null);
       setCallType(null);
-      setTimeout(() => setCallStatus('idle'), 2000);
+      setTimeout(() => {
+        setCallStatus('idle');
+        setCallEndReason(null);
+      }, 5000);
     };
 
     const handleCallEnded = (data: any) => {
@@ -322,6 +328,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       endCall,
       startCall,
       callStatus,
+      callEndReason,
     }}>
       {children}
     </SocketContext.Provider>
