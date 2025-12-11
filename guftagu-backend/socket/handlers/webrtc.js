@@ -116,13 +116,17 @@ module.exports = (io, socket) => {
         io.to(partnerId).emit('partner_skipped', { matchId: match._id });
 
         // Leave match room
-        socket.leave(`match_${match._id}`);
+        socket.leave(`match_${match._id}`)
+        const partnerSocket = io.sockets.sockets.get(partnerId);
+        if (partnerSocket) {
+          partnerSocket.leave(`match_${match._id}`);
+        }
 
         logger.info(`Match skipped: ${match._id}`);
       }
 
-      // Rejoin queue automatically
-      socket.emit('join_queue', { interests: [] });
+      // Don't auto-rejoin - let frontend handle it
+      // This allows user to decide if they want to search again
     } catch (error) {
       logger.error(`Skip partner error: ${error.message}`);
     }

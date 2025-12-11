@@ -172,9 +172,12 @@ export default function ChatPage() {
     if (!socket) return;
     cleanupConnection();
     socket.emit('skip_partner');
-    setConnectionState('searching');
     setMessages([]);
     setPartner(null);
+    // Auto-rejoin queue to find next partner
+    setTimeout(() => {
+      startSearching();
+    }, 500); // Small delay to ensure cleanup completes
   };
 
   // End chat
@@ -419,10 +422,13 @@ export default function ChatPage() {
     // Partner skipped
     socket.on('partner_skipped', () => {
       cleanupConnection();
-      setConnectionState('searching');
       setMessages([]);
       setPartner(null);
       setFriendRequestStatus('none');
+      // Auto-rejoin queue to find next partner
+      setTimeout(() => {
+        startSearching();
+      }, 500); // Small delay to ensure cleanup completes
     });
 
     // Chat message received
