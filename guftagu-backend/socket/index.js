@@ -5,9 +5,6 @@ const OnlineUser = require('../models/OnlineUser');
 const Friend = require('../models/Friend');
 const logger = require('../utils/logger');
 
-// Track online users count in memory for instant updates
-let onlineUsersCount = 0;
-
 const initializeSocket = (server) => {
   const io = new Server(server, {
     cors: {
@@ -19,16 +16,30 @@ const initializeSocket = (server) => {
     pingInterval: 25000,
   });
 
-  // Connection handler
-  io.on('connection', async (socket) => {
-    onlineUsersCount++;
-    logger.info(`Socket connected: ${socket.id} (Total: ${onlineUsersCount})`);
+  // Helper function to get accurate online count
+  const getAccurateOnlineCount = () => {
+    // Get all connected sockets across all namespaces
+    const sockets = io.sockets.sockets;
+    return sockets.size;
+  };
 
-    // Broadcast updated user count to ALL clients immediately
+  // Broadcast online count to all clients
+  const broadcastOnlineCount = () => {
+    const count = getAccurateOnlineCount();
     io.emit('user_count_update', {
-      count: onlineUsersCount,
+      count,
       timestamp: new Date(),
     });
+    logger.info(`Broadcasting online count: ${count}`);
+  };
+
+  // Connection handler
+  io.on('connection', async (socket) => {
+    const currentCount = getAccurateOnlineCount();
+    logger.info(`Socket connected: ${socket.id} (Total: ${currentCount})`);
+
+    // Broadcast updated user count to ALL clients immediately
+    broadcastOnlineCount();
 
     // Track online user
     await OnlineUser.create({
@@ -140,14 +151,11 @@ const initializeSocket = (server) => {
 
     // Disconnect handler
     socket.on('disconnect', async () => {
-      onlineUsersCount = Math.max(0, onlineUsersCount - 1);
-      logger.info(`Socket disconnected: ${socket.id} (Total: ${onlineUsersCount})`);
+      const currentCount = getAccurateOnlineCount();
+      logger.info(`Socket disconnected: ${socket.id} (Total: ${currentCount})`);
 
       // Broadcast updated user count immediately
-      io.emit('user_count_update', {
-        count: onlineUsersCount,
-        timestamp: new Date(),
-      });
+      broadcastOnlineCount();
 
       // Remove from online users
       await OnlineUser.findOneAndDelete({ socketId: socket.id });
@@ -186,12 +194,15 @@ const initializeSocket = (server) => {
     });
   });
 
-  return io;
-};
+  // Periodic sync to ensure count accuracy (every 30 seconds)
+  setInterval(() => {
+    broadcastOnlineCount();
+  }, 30000);
 
-const getOnlineCount = () => onlineUsersCount;
+  // Return io instance and helper function
+  return { io, getOnlineCount: getAccurateOnlineCount };
+};
 
 module.exports = {
   initializeSocket,
-  getOnlineCount,
 };

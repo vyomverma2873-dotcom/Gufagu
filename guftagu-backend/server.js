@@ -8,7 +8,7 @@ const morgan = require('morgan');
 
 const connectDB = require('./config/database');
 const { connectRedis } = require('./config/redis');
-const { initializeSocket, getOnlineCount } = require('./socket');
+const { initializeSocket } = require('./socket');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimit');
 const logger = require('./utils/logger');
@@ -33,7 +33,7 @@ connectDB();
 connectRedis();
 
 // Initialize Socket.io
-const io = initializeSocket(server);
+const { io, getOnlineCount } = initializeSocket(server);
 app.set('io', io);
 
 // Middleware
