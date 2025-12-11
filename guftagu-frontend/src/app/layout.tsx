@@ -20,6 +20,14 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Guftagu - Random Video Chat",
   description: "Connect with strangers from around the world through random video chats. Make new friends, have conversations, and explore different cultures.",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/apple-icon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export default function RootLayout({
