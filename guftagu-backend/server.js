@@ -10,7 +10,6 @@ const connectDB = require('./config/database');
 const { connectRedis } = require('./config/redis');
 const { initializeSocket } = require('./socket');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
-const { apiLimiter } = require('./middleware/rateLimit');
 const logger = require('./utils/logger');
 
 // Import routes
@@ -48,8 +47,7 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
-app.use('/api', apiLimiter);
+// Rate limiting removed for unlimited login attempts
 
 // Health check
 app.get('/health', (req, res) => {
