@@ -426,6 +426,14 @@ exports.updateReportStatus = async (req, res) => {
 
       // If action is ban_user, actually ban the user
       if (action === 'ban_user' && reportedUser) {
+        // CRITICAL: Prevent admin from banning themselves
+        if (reportedUser._id.toString() === req.user._id.toString()) {
+          logger.warn(`Admin ${req.user.username} attempted to ban themselves via report action`);
+          return res.status(400).json({ 
+            error: 'You cannot ban yourself. This action has been blocked for your protection.' 
+          });
+        }
+        
         const Ban = require('../models/Ban');
         const User = require('../models/User');
         

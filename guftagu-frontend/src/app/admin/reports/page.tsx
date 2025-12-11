@@ -144,6 +144,12 @@ export default function AdminReportsPage() {
       return;
     }
 
+    // CRITICAL: Prevent admin from banning themselves
+    if (actionType === 'ban_user' && selectedReport.reportedUser._id === user?._id) {
+      alert('⚠️ WARNING: You cannot ban yourself! This action has been blocked for your protection.');
+      return;
+    }
+
     setIsSubmittingAction(true);
     try {
       await adminApi.updateReport(selectedReport._id, {
@@ -157,7 +163,8 @@ export default function AdminReportsPage() {
       alert('Action submitted successfully! The user has been notified via email.');
     } catch (error) {
       console.error('Failed to submit action:', error);
-      alert('Failed to submit action. Please try again.');
+      const errorMsg = (error as any)?.response?.data?.error || 'Failed to submit action. Please try again.';
+      alert(errorMsg);
     } finally {
       setIsSubmittingAction(false);
     }
