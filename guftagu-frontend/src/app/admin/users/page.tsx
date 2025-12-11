@@ -337,6 +337,45 @@ export default function AdminUsersPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Export chat messages as CSV
+  const exportChatMessagesCSV = (friend: FriendWithMessages, messages: Message[]) => {
+    if (!userDetails) return;
+    
+    const userName = userDetails.user.displayName || userDetails.user.username || 'User';
+    const userUserId = formatUserId(userDetails.user.userId);
+    const friendName = friend.friendId.displayName || friend.friendId.username || 'Friend';
+    const friendUserId = formatUserId(friend.friendId.userId);
+
+    // CSV Header
+    let csvContent = 'Timestamp,Sender Name,Sender Username,Sender User ID,Receiver Name,Receiver Username,Receiver User ID,Message Content,Read Status\n';
+
+    messages.forEach((msg) => {
+      const timestamp = new Date(msg.timestamp).toLocaleString();
+      const senderName = msg.senderId.displayName || msg.senderId.username || 'Unknown';
+      const senderUsername = msg.senderId.username || 'unknown';
+      const senderUserId = formatUserId(msg.senderId.userId);
+      const receiverName = msg.receiverId.displayName || msg.receiverId.username || 'Unknown';
+      const receiverUsername = msg.receiverId.username || 'unknown';
+      const receiverUserId = formatUserId(msg.receiverId.userId);
+      
+      // Escape content for CSV (handle quotes and commas)
+      const content = `"${msg.content.replace(/"/g, '""')}"`;
+      const readStatus = msg.isRead ? 'Read' : 'Unread';
+      
+      csvContent += `"${timestamp}","${senderName}","${senderUsername}","${senderUserId}","${receiverName}","${receiverUsername}","${receiverUserId}",${content},"${readStatus}"\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat_export_${userUserId}_${friendUserId}_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
@@ -918,6 +957,9 @@ export default function AdminUsersPage() {
                                     {friend.friendId.displayName}
                                   </p>
                                   <p className="text-zinc-400 text-xs">@{friend.friendId.username}</p>
+                                  <p className="text-zinc-500 text-xs font-mono">
+                                    ID: {formatUserId(friend.friendId.userId)}
+                                  </p>
                                 </div>
                                 <div className="text-right">
                                   <div className="flex items-center gap-1 text-xs text-zinc-400">
@@ -942,16 +984,28 @@ export default function AdminUsersPage() {
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-semibold text-white">Chat History</h4>
                           {activeFriendId && friendMessages.length > 0 && (
-                            <button
-                              onClick={() => {
-                                const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
-                                if (friend) exportChatMessages(friend.friendId.displayName, friendMessages);
-                              }}
-                              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white transition"
-                            >
-                              <Download className="w-3 h-3" />
-                              Export
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
+                                  if (friend) exportChatMessages(friend.friendId.displayName, friendMessages);
+                                }}
+                                className="flex items-center gap-1 px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white transition"
+                              >
+                                <Download className="w-3 h-3" />
+                                TXT
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
+                                  if (friend) exportChatMessagesCSV(friend, friendMessages);
+                                }}
+                                className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white transition"
+                              >
+                                <Download className="w-3 h-3" />
+                                CSV
+                              </button>
+                            </div>
                           )}
                         </div>
                         {!activeFriendId ? (
@@ -963,24 +1017,88 @@ export default function AdminUsersPage() {
                         ) : friendMessages.length === 0 ? (
                           <p className="text-zinc-400 text-sm text-center py-8">No messages</p>
                         ) : (
-                          <div className="space-y-2 max-h-96 overflow-y-auto">
-                            {friendMessages.map((msg) => (
-                              <div
-                                key={msg._id}
-                                className={`p-2 rounded text-sm ${
-                                  msg.senderId._id === userDetails.user._id
-                                    ? 'bg-blue-600/20 ml-8'
-                                    : 'bg-zinc-700/50 mr-8'
-                                }`}
-                              >
-                                <p className="text-white">{msg.content}</p>
-                                <p className="text-xs text-zinc-400 mt-1">
-                                  {msg.senderId._id === userDetails.user._id ? 'User' : msg.senderId.displayName} • 
-                                  {new Date(msg.timestamp).toLocaleString()}
-                                </p>
+                          <>
+                            {/* Conversation Participants Info */}
+                            <div className="bg-zinc-800/50 rounded-lg p-3 mb-3">
+                              <p className="text-xs text-zinc-500 mb-2">Conversation Between:</p>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <div>
+                                    <p className="text-white text-sm font-medium">
+                                      {userDetails.user.displayName || userDetails.user.username}
+                                    </p>
+                                    <p className="text-zinc-400 text-xs">
+                                      @{userDetails.user.username} • {formatUserId(userDetails.user.userId)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-zinc-500 rounded-full"></div>
+                                  <div>
+                                    {(() => {
+                                      const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
+                                      return friend ? (
+                                        <>
+                                          <p className="text-white text-sm font-medium">
+                                            {friend.friendId.displayName}
+                                          </p>
+                                          <p className="text-zinc-400 text-xs">
+                                            @{friend.friendId.username} • {formatUserId(friend.friendId.userId)}
+                                          </p>
+                                        </>
+                                      ) : null;
+                                    })()}
+                                  </div>
+                                </div>
                               </div>
-                            ))}
+                              <p className="text-xs text-zinc-500 mt-2">
+                                Total Messages: {friendMessages.length}
+                              </p>
+                            </div>
+
+                            {/* Messages */}
+                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {friendMessages.map((msg) => {
+                              const isSentByUser = msg.senderId._id === userDetails.user._id;
+                              const senderName = isSentByUser 
+                                ? (userDetails.user.displayName || userDetails.user.username)
+                                : (msg.senderId.displayName || msg.senderId.username);
+                              const senderUserId = isSentByUser
+                                ? formatUserId(userDetails.user.userId)
+                                : formatUserId(msg.senderId.userId);
+                              const senderUsername = isSentByUser
+                                ? userDetails.user.username
+                                : msg.senderId.username;
+                              
+                              return (
+                                <div
+                                  key={msg._id}
+                                  className={`p-3 rounded text-sm ${
+                                    isSentByUser
+                                      ? 'bg-blue-600/20 ml-8 border-l-2 border-blue-500'
+                                      : 'bg-zinc-700/50 mr-8 border-l-2 border-zinc-500'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-white font-medium text-xs">
+                                      {senderName}
+                                    </p>
+                                    <span className="text-zinc-500 text-xs">@{senderUsername}</span>
+                                    <span className="text-zinc-500 text-xs font-mono">
+                                      {senderUserId}
+                                    </span>
+                                  </div>
+                                  <p className="text-white">{msg.content}</p>
+                                  <p className="text-xs text-zinc-400 mt-1">
+                                    {new Date(msg.timestamp).toLocaleString()}
+                                    {msg.isRead && <span className="ml-2">• Read</span>}
+                                  </p>
+                                </div>
+                              );
+                            })}
                           </div>
+                          </>
                         )}
                       </div>
                     </div>
