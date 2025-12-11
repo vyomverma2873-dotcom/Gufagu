@@ -426,8 +426,8 @@ export default function ChatPage() {
 
   return (
     <div className={cn(
-      "fixed inset-0 bg-zinc-950 flex flex-col overflow-hidden",
-      connectionState === 'idle' ? 'top-16 z-40' : 'top-0 z-[9999]'
+      "fixed inset-0 flex flex-col overflow-hidden",
+      connectionState === 'idle' ? 'top-16 z-40 bg-transparent' : 'top-0 z-[9999] bg-zinc-950'
     )}>
       {connectionState === 'idle' ? (
         // Start screen - Card-based design
