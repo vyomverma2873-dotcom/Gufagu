@@ -378,7 +378,9 @@ exports.updateReportStatus = async (req, res) => {
     const { reportId } = req.params;
     const { status, action, notes } = req.body;
 
-    const report = await Report.findById(reportId);
+    const report = await Report.findById(reportId)
+      .populate('reportedUserId', 'username email displayName');
+      
     if (!report) {
       return res.status(404).json({ error: 'Report not found' });
     }
@@ -388,18 +390,88 @@ exports.updateReportStatus = async (req, res) => {
     report.reviewedBy = req.user._id;
     report.reviewedByUsername = req.user.username;
     report.reviewedAt = new Date();
-    report.moderatorNotes = notes; // Fixed: use moderatorNotes instead of reviewNotes
+    report.moderatorNotes = notes;
     if (action) {
       report.actionTaken = action;
     }
     await report.save();
+
+    // Handle email notifications based on action type
+    if (action && ['ban_user', 'send_warning', 'close_issue'].includes(action)) {
+      const reportedUser = report.reportedUserId;
+      
+      if (reportedUser && reportedUser.email) {
+        const { sendReportActionEmail } = require('../utils/brevo');
+        
+        const actionDetails = {
+          actionType: action,
+          reason: report.reason,
+          notes: notes || '',
+          adminUsername: req.user.username,
+        };
+        
+        // Send email notification (non-blocking)
+        try {
+          await sendReportActionEmail(
+            reportedUser.email,
+            reportedUser.displayName || reportedUser.username,
+            actionDetails
+          );
+          logger.info(`Report action email sent to ${reportedUser.email} for action: ${action}`);
+        } catch (emailError) {
+          logger.warn('Failed to send report action email:', emailError.message);
+          // Don't fail the request if email fails
+        }
+      }
+
+      // If action is ban_user, actually ban the user
+      if (action === 'ban_user' && reportedUser) {
+        const Ban = require('../models/Ban');
+        const User = require('../models/User');
+        
+        try {
+          // Check if user is already banned
+          const existingBan = await Ban.findOne({
+            userId: reportedUser._id,
+            isActive: true,
+          });
+
+          if (!existingBan) {
+            // Create permanent ban
+            const ban = new Ban({
+              userId: reportedUser._id,
+              username: reportedUser.username,
+              userId7Digit: reportedUser.userId,
+              email: reportedUser.email,
+              reason: report.reason,
+              banType: 'permanent',
+              bannedBy: req.user._id,
+              bannedByUsername: req.user.username,
+              description: notes || `Banned due to report: ${report.reason}`,
+              isActive: true,
+            });
+            await ban.save();
+
+            // Update user's banned status
+            await User.findByIdAndUpdate(reportedUser._id, {
+              isBanned: true,
+              banReason: report.reason,
+            });
+
+            logger.info(`User ${reportedUser.username} banned via report action`);
+          }
+        } catch (banError) {
+          logger.error('Failed to ban user via report action:', banError);
+        }
+      }
+    }
 
     // Log action (non-blocking)
     try {
       await SystemLog.create({
         action: 'report_reviewed',
         performedBy: req.user._id,
-        details: { reportId, status, action },
+        details: { reportId, status, action, emailSent: true },
       });
     } catch (logError) {
       logger.warn('Failed to log report review:', logError.message);

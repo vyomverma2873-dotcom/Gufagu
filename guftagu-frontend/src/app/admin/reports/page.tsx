@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, AlertTriangle, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Shield, Mail, AlertCircle } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -59,6 +59,13 @@ export default function AdminReportsPage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [updatingAction, setUpdatingAction] = useState<{ reportId: string; action: string } | null>(null);
+  
+  // Action Modal State
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [actionType, setActionType] = useState<'ban_user' | 'send_warning' | 'close_issue' | ''>('');
+  const [actionNotes, setActionNotes] = useState('');
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -68,6 +75,23 @@ export default function AdminReportsPage() {
 
     fetchReports();
   }, [isAuthenticated, authLoading, user, router, pagination.page, statusFilter]);
+
+  // Close modal on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        handleCloseModal();
+      }
+    };
+
+    if (showActionModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showActionModal]);
 
   const fetchReports = async () => {
     try {
@@ -97,6 +121,45 @@ export default function AdminReportsPage() {
       alert('Failed to update report. Please try again.');
     } finally {
       setUpdatingAction(null);
+    }
+  };
+
+  const handleOpenActionModal = (report: Report) => {
+    setSelectedReport(report);
+    setActionType('');
+    setActionNotes('');
+    setShowActionModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowActionModal(false);
+    setSelectedReport(null);
+    setActionType('');
+    setActionNotes('');
+  };
+
+  const handleSubmitAction = async () => {
+    if (!selectedReport || !actionType) {
+      alert('Please select an action type.');
+      return;
+    }
+
+    setIsSubmittingAction(true);
+    try {
+      await adminApi.updateReport(selectedReport._id, {
+        status: 'action_taken',
+        action: actionType,
+        notes: actionNotes,
+      });
+      
+      await fetchReports();
+      handleCloseModal();
+      alert('Action submitted successfully! The user has been notified via email.');
+    } catch (error) {
+      console.error('Failed to submit action:', error);
+      alert('Failed to submit action. Please try again.');
+    } finally {
+      setIsSubmittingAction(false);
     }
   };
 
@@ -218,12 +281,11 @@ export default function AdminReportsPage() {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => handleUpdateReport(report._id, 'action_taken', 'warning_issued')}
-                      isLoading={updatingAction?.reportId === report._id && updatingAction?.action === 'action_taken'}
-                      disabled={updatingAction !== null && !(updatingAction?.reportId === report._id && updatingAction?.action === 'action_taken')}
+                      onClick={() => handleOpenActionModal(report)}
+                      disabled={updatingAction !== null}
                     >
                       <CheckCircle className="w-4 h-4 mr-1" />
-                      Action Taken
+                      Take Action
                     </Button>
                     <Button
                       size="sm"
@@ -276,6 +338,149 @@ export default function AdminReportsPage() {
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Action Modal */}
+        {showActionModal && selectedReport && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div 
+              ref={modalRef}
+              className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-lg shadow-2xl"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-neutral-800">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-violet-600/20 rounded-lg">
+                    <Shield className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Take Action on Report</h3>
+                    <p className="text-sm text-neutral-400">Select action and notify user</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5">
+                {/* Reported User Info */}
+                <div className="bg-neutral-800/50 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar 
+                      src={selectedReport.reportedUser.profilePicture} 
+                      alt={selectedReport.reportedUser.username} 
+                      size="md" 
+                    />
+                    <div>
+                      <p className="text-sm text-neutral-400">Taking action against:</p>
+                      <p className="font-medium text-white">
+                        {selectedReport.reportedUser.displayName || selectedReport.reportedUser.username}
+                      </p>
+                      <p className="text-xs text-neutral-500 font-mono">
+                        {formatUserId(selectedReport.reportedUser.userId)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-neutral-700">
+                    <p className="text-xs text-neutral-400">Report Reason:</p>
+                    <p className="text-sm text-white capitalize">
+                      {selectedReport.reason.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Action Type <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={actionType}
+                    onChange={(e) => setActionType(e.target.value as any)}
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  >
+                    <option value="">Select an action...</option>
+                    <option value="ban_user">🚫 Ban User</option>
+                    <option value="send_warning">⚠️ Send Warning</option>
+                    <option value="close_issue">✓ Close Issue (No Action)</option>
+                  </select>
+                </div>
+
+                {/* Action Description */}
+                {actionType && (
+                  <div className="bg-blue-950/30 border border-blue-800/50 rounded-lg p-3">
+                    <div className="flex gap-2">
+                      <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-xs text-blue-300">
+                        {actionType === 'ban_user' && (
+                          <p>The user will be permanently banned and receive an email notification. They will not be able to access their account.</p>
+                        )}
+                        {actionType === 'send_warning' && (
+                          <p>The user will receive a warning email about their behavior. This serves as a first notice before potential ban.</p>
+                        )}
+                        {actionType === 'close_issue' && (
+                          <p>The report will be marked as resolved without taking action. A closure notification will be sent to the reported user.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Additional Notes (Optional)
+                  </label>
+                  <textarea
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    placeholder="Add any additional context or notes about this action..."
+                    rows={3}
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2.5 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                  />
+                </div>
+
+                {/* Email Notification Info */}
+                <div className="flex items-start gap-2 bg-neutral-800/50 rounded-lg p-3">
+                  <Mail className="w-4 h-4 text-neutral-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-neutral-400">
+                    An email notification will be automatically sent to{' '}
+                    <span className="font-mono text-neutral-300">
+                      {selectedReport.reportedUser.displayName || selectedReport.reportedUser.username}
+                    </span>{' '}
+                    informing them of this action.
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-neutral-800 flex gap-3">
+                <button
+                  onClick={handleCloseModal}
+                  disabled={isSubmittingAction}
+                  className="flex-1 px-4 py-2.5 bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitAction}
+                  disabled={!actionType || isSubmittingAction}
+                  className="flex-1 px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmittingAction ? (
+                    <>
+                      <Spinner />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Submit Action
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
