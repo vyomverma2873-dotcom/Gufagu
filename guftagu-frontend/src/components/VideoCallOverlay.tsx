@@ -106,6 +106,13 @@ export default function VideoCallOverlay() {
   const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>('excellent');
   const [callEnded, setCallEnded] = useState(false);
   const [callEndDuration, setCallEndDuration] = useState(0);
+  // Store peer info for "Call Again" feature (persists after currentCall is nulled)
+  const [savedPeerInfo, setSavedPeerInfo] = useState<{
+    userId: string;
+    username: string;
+    profilePicture?: string;
+    callType: 'voice' | 'video';
+  } | null>(null);
   const [isFlippingCamera, setIsFlippingCamera] = useState(false);
   const [remoteCameraOff, setRemoteCameraOff] = useState(false);
   const [remoteMuted, setRemoteMuted] = useState(false);
@@ -170,6 +177,18 @@ export default function VideoCallOverlay() {
 
   // Store audio level from ScriptProcessor (Safari fallback)
   const audioLevelRef = useRef({ local: 0, remote: 0 });
+
+  // Save peer info when call is active (so we can use it for "Call Again" after currentCall is nulled)
+  useEffect(() => {
+    if (currentCall?.peer) {
+      setSavedPeerInfo({
+        userId: currentCall.peer.userId,
+        username: currentCall.peer.displayName || currentCall.peer.username || 'Unknown',
+        profilePicture: currentCall.peer.profilePicture,
+        callType: currentCall.callType,
+      });
+    }
+  }, [currentCall]);
 
   // Detect mobile device
   useEffect(() => {
@@ -1588,24 +1607,25 @@ export default function VideoCallOverlay() {
   };
 
   const handleCallAgain = () => {
-    if (!currentCall?.peer) return;
+    // Use savedPeerInfo since currentCall is already null when call ends
+    if (!savedPeerInfo) {
+      console.log('[VideoCallOverlay] No saved peer info for Call Again');
+      return;
+    }
     
-    // Save peer info BEFORE endCall() clears currentCall
-    const peerUserId = currentCall.peer.userId;
-    const peerUsername = currentCall.peer.displayName || currentCall.peer.username || 'Unknown';
-    const peerProfilePicture = currentCall.peer.profilePicture;
-    const savedCallType = currentCall.callType;
+    const { userId, username, profilePicture, callType: savedCallType } = savedPeerInfo;
     
     setCallEnded(false);
-    endCall(); // Close current overlay (this sets currentCall to null)
+    endCall(); // Close current overlay
     
     // Re-initiate call to the same user using saved values
     setTimeout(() => {
+      console.log('[VideoCallOverlay] Calling again:', userId, username);
       startCall(
-        peerUserId,
+        userId,
         {
-          username: peerUsername,
-          profilePicture: peerProfilePicture
+          username,
+          profilePicture
         },
         savedCallType
       );
