@@ -53,14 +53,6 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Content */}
             <div>
-              {/* Online count badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900/80 border border-neutral-700/50 rounded-full mb-8 backdrop-blur-xl">
-                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
-                <span className="text-sm text-neutral-400">
-                  <span className="font-medium text-white">{onlineCount.toLocaleString()}</span> online
-                </span>
-              </div>
-
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
                 Connect.
                 <br />

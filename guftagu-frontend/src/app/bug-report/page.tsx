@@ -1,23 +1,9 @@
 'use client';
 
-import { Bug, Send } from 'lucide-react';
-import { useState } from 'react';
-import Button from '@/components/ui/Button';
+import { Bug, Mail, Github, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
 
 export default function BugReportPage() {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    steps: '',
-    expected: '',
-    actual: '',
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Bug report submitted:', formData);
-  };
-
   return (
     <div className="min-h-[calc(100vh-4rem)] py-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -30,74 +16,111 @@ export default function BugReportPage() {
         </div>
 
         <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 shadow-lg">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-neutral-300 mb-2">Bug Title</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-3 bg-neutral-800/60 border border-neutral-700/50 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20"
-                placeholder="Brief description of the bug"
-                required
-              />
+          <div className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold text-white mb-4">How to Report a Bug</h2>
+              <p className="text-neutral-400 mb-6">
+                We appreciate you taking the time to help us improve. Please use one of the following methods to report bugs:
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-300 mb-2">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
-                className="w-full px-4 py-3 bg-neutral-800/60 border border-neutral-700/50 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
-                placeholder="Detailed description of the bug"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-300 mb-2">Steps to Reproduce</label>
-              <textarea
-                value={formData.steps}
-                onChange={(e) => setFormData({ ...formData, steps: e.target.value })}
-                rows={4}
-                className="w-full px-4 py-3 bg-neutral-800/60 border border-neutral-700/50 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
-                placeholder="1. Go to...&#10;2. Click on...&#10;3. See error"
-                required
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">Expected Behavior</label>
-                <textarea
-                  value={formData.expected}
-                  onChange={(e) => setFormData({ ...formData, expected: e.target.value })}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-neutral-800/60 border border-neutral-700/50 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
-                  placeholder="What should happen"
-                  required
-                />
+            <div className="grid gap-6">
+              {/* Email Contact */}
+              <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                    <Mail className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-white mb-2">Email</h3>
+                    <p className="text-neutral-400 mb-3">
+                      Send detailed bug reports directly to our support team
+                    </p>
+                    <a
+                      href="mailto:vyomverma2873@gmail.com?subject=Bug Report - Guftagu"
+                      className="inline-flex items-center gap-2 text-white hover:text-neutral-300 transition-colors"
+                    >
+                      <Mail className="w-4 h-4" />
+                      vyomverma2873@gmail.com
+                    </a>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">Actual Behavior</label>
-                <textarea
-                  value={formData.actual}
-                  onChange={(e) => setFormData({ ...formData, actual: e.target.value })}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-neutral-800/60 border border-neutral-700/50 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
-                  placeholder="What actually happens"
-                  required
-                />
+              {/* GitHub Issues */}
+              <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                    <Github className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-white mb-2">GitHub Issues</h3>
+                    <p className="text-neutral-400 mb-3">
+                      Create an issue on our GitHub repository for technical bugs
+                    </p>
+                    <a
+                      href="https://github.com/vyomverma2873-dotcom/Gufagu/issues"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-white hover:text-neutral-300 transition-colors"
+                    >
+                      <Github className="w-4 h-4" />
+                      View Repository
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Page */}
+              <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                    <MessageSquare className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium text-white mb-2">Contact Form</h3>
+                    <p className="text-neutral-400 mb-3">
+                      Use our general contact form for all inquiries including bug reports
+                    </p>
+                    <Link
+                      href="/contact"
+                      className="inline-flex items-center gap-2 text-white hover:text-neutral-300 transition-colors"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Go to Contact Page
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
-              <Send className="w-4 h-4 mr-2" />
-              Submit Bug Report
-            </Button>
-          </form>
+            {/* Guidelines */}
+            <div className="bg-neutral-800/40 border border-neutral-700/30 rounded-xl p-6 mt-8">
+              <h3 className="text-lg font-medium text-white mb-4">Reporting Guidelines</h3>
+              <ul className="space-y-2 text-neutral-400">
+                <li className="flex items-start gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>Provide a clear and descriptive title</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>Include detailed steps to reproduce the issue</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>Describe expected vs. actual behavior</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>Include browser/device information if relevant</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>Add screenshots or screen recordings if possible</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>
