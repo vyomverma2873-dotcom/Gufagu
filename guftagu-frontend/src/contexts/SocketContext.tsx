@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { getSocket, connectSocket, disconnectSocket } from '@/lib/socket';
 import { Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
@@ -59,6 +59,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [callEndReason, setCallEndReason] = useState<string | null>(null);
   const { token } = useAuth();
+  
+  // Refs to track status reset timers (so we can cancel them on new call)
+  const callEndedTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const callDeclinedTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initial socket setup
   useEffect(() => {
@@ -177,9 +181,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setCurrentCallId(null);
       setPeerSocketId(null);
       setCallType(null);
-      setTimeout(() => {
+      // Store timer ref so it can be cancelled if user starts new call
+      callDeclinedTimerRef.current = setTimeout(() => {
         setCallStatus('idle');
         setCallEndReason(null);
+        callDeclinedTimerRef.current = null;
       }, 5000);
     };
 
@@ -191,7 +197,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setCurrentCallId(null);
       setPeerSocketId(null);
       setCallType(null);
-      setTimeout(() => setCallStatus('idle'), 2000);
+      // Store timer ref so it can be cancelled if user starts new call
+      callEndedTimerRef.current = setTimeout(() => {
+        setCallStatus('idle');
+        callEndedTimerRef.current = null;
+      }, 2000);
     };
 
     const handleCallError = (data: any) => {
@@ -289,6 +299,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     if (!socket) {
       console.log('[Socket] Cannot start call - no socket');
       return;
+    }
+    
+    // Clear any pending status reset timers from previous calls
+    if (callEndedTimerRef.current) {
+      clearTimeout(callEndedTimerRef.current);
+      callEndedTimerRef.current = null;
+    }
+    if (callDeclinedTimerRef.current) {
+      clearTimeout(callDeclinedTimerRef.current);
+      callDeclinedTimerRef.current = null;
     }
     
     console.log('[Socket] Starting', type, 'call to', friendInfo.username);
