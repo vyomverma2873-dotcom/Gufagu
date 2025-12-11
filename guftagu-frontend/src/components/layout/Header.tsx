@@ -44,21 +44,26 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-2xl shadow-2xl shadow-black/20 px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
-            {/* Logo - Minimal graphical design */}
+            {/* Logo - Premium graphical design */}
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white to-neutral-200 flex items-center justify-center shadow-lg shadow-white/10 group-hover:shadow-white/20 transition-all overflow-hidden">
-                  {/* Chat bubble inspired logo */}
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white via-neutral-100 to-neutral-200 flex items-center justify-center shadow-lg shadow-white/10 group-hover:shadow-white/25 transition-all duration-300 overflow-hidden">
+                  {/* Premium overlapping speech bubbles */}
                   <svg viewBox="0 0 32 32" className="w-7 h-7" fill="none">
-                    {/* Main chat bubble */}
+                    {/* Back bubble - slightly offset */}
                     <path 
-                      d="M6 8C6 6.89543 6.89543 6 8 6H24C25.1046 6 26 6.89543 26 8V18C26 19.1046 25.1046 20 24 20H12L7 25V20H8C6.89543 20 6 19.1046 6 18V8Z" 
+                      d="M8 6C6.89543 6 6 6.89543 6 8V15C6 16.1046 6.89543 17 8 17H9V20L12 17H18C19.1046 17 20 16.1046 20 15V8C20 6.89543 19.1046 6 18 6H8Z" 
+                      className="fill-neutral-400"
+                    />
+                    {/* Front bubble - overlapping */}
+                    <path 
+                      d="M14 10C12.8954 10 12 10.8954 12 12V19C12 20.1046 12.8954 21 14 21H20L24 25V21H24C25.1046 21 26 20.1046 26 19V12C26 10.8954 25.1046 10 24 10H14Z" 
                       className="fill-neutral-800"
                     />
-                    {/* Three dots representing conversation */}
-                    <circle cx="11" cy="13" r="1.5" className="fill-white" />
-                    <circle cx="16" cy="13" r="1.5" className="fill-white" />
-                    <circle cx="21" cy="13" r="1.5" className="fill-white" />
+                    {/* Subtle accent dots on front bubble */}
+                    <circle cx="16" cy="15.5" r="1" className="fill-white/90" />
+                    <circle cx="19" cy="15.5" r="1" className="fill-white/90" />
+                    <circle cx="22" cy="15.5" r="1" className="fill-white/90" />
                   </svg>
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-neutral-900"></div>

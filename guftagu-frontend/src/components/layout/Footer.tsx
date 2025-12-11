@@ -27,8 +27,24 @@ export default function Footer() {
             {/* Brand & Description */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-lg">
-                  <span className="text-xl font-black text-neutral-900">G</span>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white via-neutral-100 to-neutral-200 flex items-center justify-center shadow-lg overflow-hidden">
+                  {/* Premium overlapping speech bubbles */}
+                  <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
+                    {/* Back bubble - slightly offset */}
+                    <path 
+                      d="M8 6C6.89543 6 6 6.89543 6 8V15C6 16.1046 6.89543 17 8 17H9V20L12 17H18C19.1046 17 20 16.1046 20 15V8C20 6.89543 19.1046 6 18 6H8Z" 
+                      className="fill-neutral-400"
+                    />
+                    {/* Front bubble - overlapping */}
+                    <path 
+                      d="M14 10C12.8954 10 12 10.8954 12 12V19C12 20.1046 12.8954 21 14 21H20L24 25V21H24C25.1046 21 26 20.1046 26 19V12C26 10.8954 25.1046 10 24 10H14Z" 
+                      className="fill-neutral-800"
+                    />
+                    {/* Subtle accent dots on front bubble */}
+                    <circle cx="16" cy="15.5" r="1" className="fill-white/90" />
+                    <circle cx="19" cy="15.5" r="1" className="fill-white/90" />
+                    <circle cx="22" cy="15.5" r="1" className="fill-white/90" />
+                  </svg>
                 </div>
                 <div>
                   <span className="text-2xl font-semibold text-white">Guftagu</span>

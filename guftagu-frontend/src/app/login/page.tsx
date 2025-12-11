@@ -48,18 +48,23 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white to-neutral-200 flex items-center justify-center shadow-lg overflow-hidden">
-              {/* Chat bubble inspired logo */}
-              <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
-                {/* Main chat bubble */}
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-white via-neutral-100 to-neutral-200 flex items-center justify-center shadow-lg overflow-hidden">
+              {/* Premium overlapping speech bubbles */}
+              <svg viewBox="0 0 32 32" className="w-9 h-9" fill="none">
+                {/* Back bubble - slightly offset */}
                 <path 
-                  d="M6 8C6 6.89543 6.89543 6 8 6H24C25.1046 6 26 6.89543 26 8V18C26 19.1046 25.1046 20 24 20H12L7 25V20H8C6.89543 20 6 19.1046 6 18V8Z" 
+                  d="M8 6C6.89543 6 6 6.89543 6 8V15C6 16.1046 6.89543 17 8 17H9V20L12 17H18C19.1046 17 20 16.1046 20 15V8C20 6.89543 19.1046 6 18 6H8Z" 
+                  className="fill-neutral-400"
+                />
+                {/* Front bubble - overlapping */}
+                <path 
+                  d="M14 10C12.8954 10 12 10.8954 12 12V19C12 20.1046 12.8954 21 14 21H20L24 25V21H24C25.1046 21 26 20.1046 26 19V12C26 10.8954 25.1046 10 24 10H14Z" 
                   className="fill-neutral-800"
                 />
-                {/* Three dots representing conversation */}
-                <circle cx="11" cy="13" r="1.5" className="fill-white" />
-                <circle cx="16" cy="13" r="1.5" className="fill-white" />
-                <circle cx="21" cy="13" r="1.5" className="fill-white" />
+                {/* Subtle accent dots on front bubble */}
+                <circle cx="16" cy="15.5" r="1" className="fill-white/90" />
+                <circle cx="19" cy="15.5" r="1" className="fill-white/90" />
+                <circle cx="22" cy="15.5" r="1" className="fill-white/90" />
               </svg>
             </div>
           </Link>
