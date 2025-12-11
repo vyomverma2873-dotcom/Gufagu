@@ -1,12 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <!-- Rounded container background -->
+  <rect x="0" y="0" width="180" height="180" rx="36" fill="url(#bgGrad)"/>
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#6366F1;stop-opacity:1" />
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E5E5E5;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <!-- Background circle -->
-  <circle cx="90" cy="90" r="85" fill="url(#grad)"/>
-  <!-- Letter G -->
-  <text x="90" y="115" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle">G</text>
+  <!-- Back bubble - scaled up -->
+  <path 
+    d="M45 34C39.477 34 35 38.477 35 44V83.5C35 89.023 39.477 93.5 45 93.5H50.625V110L67.5 93.5H101.25C106.773 93.5 111.25 89.023 111.25 83.5V44C111.25 38.477 106.773 34 101.25 34H45Z" 
+    fill="#A3A3A3"
+  />
+  <!-- Front bubble - scaled up -->
+  <path 
+    d="M78.75 56.5C73.227 56.5 68.75 60.977 68.75 66.5V106C68.75 111.523 73.227 116 78.75 116H112.5L135 140V116C140.523 116 145 111.523 145 106V66.5C145 60.977 140.523 56.5 135 56.5H78.75Z" 
+    fill="#262626"
+  />
+  <!-- Accent dots on front bubble -->
+  <circle cx="90" cy="87" r="5.5" fill="#FFFFFF" fill-opacity="0.9" />
+  <circle cx="107" cy="87" r="5.5" fill="#FFFFFF" fill-opacity="0.9" />
+  <circle cx="124" cy="87" r="5.5" fill="#FFFFFF" fill-opacity="0.9" />
+  <!-- Status indicator -->
+  <circle cx="155" cy="155" r="18" fill="#34D399" />
 </svg>

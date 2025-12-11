@@ -1,14 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Rounded container background -->
+  <rect x="0" y="0" width="32" height="32" rx="6" fill="url(#bgGrad)"/>
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#6366F1;stop-opacity:1" />
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E5E5E5;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <!-- Main chat bubble -->
-  <rect x="2" y="4" width="28" height="20" rx="4" fill="url(#grad)"/>
-  <!-- Chat bubble tail -->
-  <path d="M8 24 L12 28 L16 24" fill="url(#grad)"/>
-  <!-- Letter G -->
-  <text x="16" y="18" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">G</text>
+  <!-- Back bubble - slightly offset -->
+  <path 
+    d="M8 6C6.89543 6 6 6.89543 6 8V15C6 16.1046 6.89543 17 8 17H9V20L12 17H18C19.1046 17 20 16.1046 20 15V8C20 6.89543 19.1046 6 18 6H8Z" 
+    fill="#A3A3A3"
+  />
+  <!-- Front bubble - overlapping -->
+  <path 
+    d="M14 10C12.8954 10 12 10.8954 12 12V19C12 20.1046 12.8954 21 14 21H20L24 25V21H24C25.1046 21 26 20.1046 26 19V12C26 10.8954 25.1046 10 24 10H14Z" 
+    fill="#262626"
+  />
+  <!-- Accent dots on front bubble -->
+  <circle cx="16" cy="15.5" r="1" fill="#FFFFFF" fill-opacity="0.9" />
+  <circle cx="19" cy="15.5" r="1" fill="#FFFFFF" fill-opacity="0.9" />
+  <circle cx="22" cy="15.5" r="1" fill="#FFFFFF" fill-opacity="0.9" />
+  <!-- Status indicator -->
+  <circle cx="27" cy="27" r="4" fill="#34D399" />
 </svg>
