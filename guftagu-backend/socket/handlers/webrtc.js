@@ -3,8 +3,195 @@ const QueueEntry = require('../../models/QueueEntry');
 const User = require('../../models/User');
 const logger = require('../../utils/logger');
 
-// In-memory queue for faster matching
-const matchingQueue = new Map();
+// FIFO queue for fair matching (array instead of Map)
+const matchingQueue = [];
+
+// Track recently matched pairs to prevent immediate re-matching
+// Key: sorted pair of socket IDs, Value: timestamp
+const recentlyMatched = new Map();
+const REMATCH_COOLDOWN_MS = 30000; // 30 seconds before same pair can match again
+
+// Helper: Clean up expired recently matched entries
+function cleanupRecentlyMatched() {
+  const now = Date.now();
+  for (const [key, timestamp] of recentlyMatched.entries()) {
+    if (now - timestamp > REMATCH_COOLDOWN_MS) {
+      recentlyMatched.delete(key);
+    }
+  }
+}
+
+// Helper: Check if two users were recently matched
+function wereRecentlyMatched(socketId1, socketId2) {
+  const key = [socketId1, socketId2].sort().join(':');
+  const timestamp = recentlyMatched.get(key);
+  if (!timestamp) return false;
+  return Date.now() - timestamp < REMATCH_COOLDOWN_MS;
+}
+
+// Helper: Mark two users as recently matched
+function markAsRecentlyMatched(socketId1, socketId2) {
+  const key = [socketId1, socketId2].sort().join(':');
+  recentlyMatched.set(key, Date.now());
+}
+
+// Helper: Remove user from queue by socket ID
+function removeFromQueue(socketId) {
+  const index = matchingQueue.findIndex(entry => entry.socketId === socketId);
+  if (index !== -1) {
+    matchingQueue.splice(index, 1);
+    return true;
+  }
+  return false;
+}
+
+// Helper: Find user in queue by socket ID
+function findInQueue(socketId) {
+  return matchingQueue.find(entry => entry.socketId === socketId);
+}
+
+// Helper: Add to queue and trigger matching
+function addToQueueAndMatch(io, socket, queueEntry) {
+  // Remove if already in queue
+  removeFromQueue(socket.id);
+  
+  // Add to end of queue (FIFO)
+  matchingQueue.push(queueEntry);
+  
+  logger.info(`User joined queue: ${socket.id} (Queue size: ${matchingQueue.length})`);
+  
+  // Trigger matching
+  processQueue(io);
+}
+
+// Process queue - match first compatible pair
+function processQueue(io) {
+  cleanupRecentlyMatched();
+  
+  if (matchingQueue.length < 2) return;
+  
+  // Try to find a match for the first person in queue
+  for (let i = 0; i < matchingQueue.length; i++) {
+    const user1 = matchingQueue[i];
+    
+    for (let j = i + 1; j < matchingQueue.length; j++) {
+      const user2 = matchingQueue[j];
+      
+      // Skip if same logged-in user
+      if (user1.userId && user2.userId && user1.userId.toString() === user2.userId.toString()) {
+        continue;
+      }
+      
+      // Skip if recently matched (unless very few users online)
+      if (matchingQueue.length > 2 && wereRecentlyMatched(user1.socketId, user2.socketId)) {
+        continue;
+      }
+      
+      // Check interest overlap (if both have interests)
+      let matchedByInterests = false;
+      let commonInterests = [];
+      if (user1.interests.length > 0 && user2.interests.length > 0) {
+        commonInterests = user1.interests.filter(i => user2.interests.includes(i));
+        if (commonInterests.length === 0) continue;
+        matchedByInterests = true;
+      }
+      
+      // Found a compatible match!
+      // Remove both from queue
+      removeFromQueue(user1.socketId);
+      removeFromQueue(user2.socketId);
+      
+      // Mark as recently matched
+      markAsRecentlyMatched(user1.socketId, user2.socketId);
+      
+      // Create match
+      createMatch(io, user1, user2, commonInterests, matchedByInterests);
+      
+      // Continue processing queue for remaining users
+      processQueue(io);
+      return;
+    }
+  }
+  
+  // No compatible match found, notify first user of queue position
+  if (matchingQueue.length > 0) {
+    const firstUser = matchingQueue[0];
+    const socket = io.sockets.sockets.get(firstUser.socketId);
+    if (socket) {
+      socket.emit('queue_position', {
+        position: 1,
+        totalWaiting: matchingQueue.length,
+        estimatedWait: matchingQueue.length * 5,
+      });
+    }
+  }
+}
+
+// Create match between two users
+async function createMatch(io, user1, user2, commonInterests, matchedByInterests) {
+  try {
+    // Remove from database queue
+    await QueueEntry.deleteMany({ socketId: { $in: [user1.socketId, user2.socketId] } });
+    
+    // Create match record
+    const match = await Match.create({
+      user1Id: user1.userId,
+      user2Id: user2.userId,
+      user1SocketId: user1.socketId,
+      user2SocketId: user2.socketId,
+      user1Username: user1.username,
+      user2Username: user2.username,
+      user1UserId7Digit: user1.userId7Digit,
+      user2UserId7Digit: user2.userId7Digit,
+      interests: commonInterests,
+      matchedByInterests,
+      startTime: new Date(),
+    });
+    
+    // Get socket instances
+    const socket1 = io.sockets.sockets.get(user1.socketId);
+    const socket2 = io.sockets.sockets.get(user2.socketId);
+    
+    // Join match room
+    if (socket1) socket1.join(`match_${match._id}`);
+    if (socket2) socket2.join(`match_${match._id}`);
+    
+    // Notify both users - user1 is initiator (FIFO - was in queue first)
+    if (socket1) {
+      socket1.emit('match_found', {
+        partnerId: user2.socketId,
+        partnerUsername: user2.username,
+        partnerUserId7Digit: user2.userId7Digit,
+        partnerInterests: user2.interests,
+        matchId: match._id,
+        isInitiator: true,
+      });
+    }
+    
+    if (socket2) {
+      socket2.emit('match_found', {
+        partnerId: user1.socketId,
+        partnerUsername: user1.username,
+        partnerUserId7Digit: user1.userId7Digit,
+        partnerInterests: user1.interests,
+        matchId: match._id,
+        isInitiator: false,
+      });
+    }
+    
+    // Emit to admin room
+    io.to('admin_room').emit('admin_match_started', {
+      matchId: match._id,
+      user1: { userId: user1.userId, username: user1.username },
+      user2: { userId: user2.userId, username: user2.username },
+      timestamp: new Date(),
+    });
+    
+    logger.info(`Match created: ${match._id} (${user1.username} <-> ${user2.username})`);
+  } catch (error) {
+    logger.error(`Create match error: ${error.message}`);
+  }
+}
 
 module.exports = (io, socket) => {
   // Join matching queue
@@ -12,10 +199,7 @@ module.exports = (io, socket) => {
     try {
       const { interests = [] } = data;
 
-      // Remove from existing queue if any
-      matchingQueue.delete(socket.id);
-
-      // Add to queue
+      // Create queue entry
       const queueEntry = {
         socketId: socket.id,
         userId: socket.userId || null,
@@ -24,8 +208,6 @@ module.exports = (io, socket) => {
         interests,
         joinedAt: new Date(),
       };
-
-      matchingQueue.set(socket.id, queueEntry);
 
       // Save to database as backup
       await QueueEntry.findOneAndUpdate(
@@ -39,10 +221,8 @@ module.exports = (io, socket) => {
         { upsert: true, new: true }
       );
 
-      logger.info(`User joined queue: ${socket.id}`);
-
-      // Try to find a match
-      await findMatch(io, socket, queueEntry);
+      // Add to queue and trigger matching
+      addToQueueAndMatch(io, socket, queueEntry);
     } catch (error) {
       logger.error(`Join queue error: ${error.message}`);
       socket.emit('error', { code: 'QUEUE_ERROR', message: 'Failed to join queue' });
@@ -52,7 +232,7 @@ module.exports = (io, socket) => {
   // Leave queue
   socket.on('leave_queue', async () => {
     try {
-      matchingQueue.delete(socket.id);
+      removeFromQueue(socket.id);
       await QueueEntry.findOneAndDelete({ socketId: socket.id });
       logger.info(`User left queue: ${socket.id}`);
     } catch (error) {
@@ -87,7 +267,7 @@ module.exports = (io, socket) => {
     });
   });
 
-  // Skip partner
+  // Skip partner - AUTO-REJOIN BOTH USERS
   socket.on('skip_partner', async () => {
     try {
       // End current match
@@ -111,22 +291,47 @@ module.exports = (io, socket) => {
         match.duration = Math.floor((match.endTime - match.startTime) / 1000);
         await match.save();
 
-        // Notify partner
         const partnerId = match.user1SocketId === socket.id ? match.user2SocketId : match.user1SocketId;
-        io.to(partnerId).emit('partner_skipped', { matchId: match._id });
+        const partnerSocket = io.sockets.sockets.get(partnerId);
 
         // Leave match room
-        socket.leave(`match_${match._id}`)
-        const partnerSocket = io.sockets.sockets.get(partnerId);
+        socket.leave(`match_${match._id}`);
         if (partnerSocket) {
           partnerSocket.leave(`match_${match._id}`);
         }
 
-        logger.info(`Match skipped: ${match._id}`);
-      }
+        // Notify partner that they were skipped
+        io.to(partnerId).emit('partner_skipped', { matchId: match._id });
 
-      // Don't auto-rejoin - let frontend handle it
-      // This allows user to decide if they want to search again
+        logger.info(`Match skipped: ${match._id}`);
+
+        // AUTO-REJOIN BOTH USERS TO QUEUE
+        // Create queue entries for both users
+        const skipperEntry = {
+          socketId: socket.id,
+          userId: socket.userId || null,
+          username: socket.username || 'Anonymous',
+          userId7Digit: socket.userId7Digit || null,
+          interests: [],
+          joinedAt: new Date(),
+        };
+
+        const partnerEntry = {
+          socketId: partnerId,
+          userId: partnerSocket?.userId || null,
+          username: partnerSocket?.username || 'Anonymous',
+          userId7Digit: partnerSocket?.userId7Digit || null,
+          interests: [],
+          joinedAt: new Date(),
+        };
+
+        // Add partner first (they were skipped, give them slight priority)
+        // Then add skipper
+        if (partnerSocket) {
+          addToQueueAndMatch(io, partnerSocket, partnerEntry);
+        }
+        addToQueueAndMatch(io, socket, skipperEntry);
+      }
     } catch (error) {
       logger.error(`Skip partner error: ${error.message}`);
     }
@@ -203,11 +408,11 @@ module.exports = (io, socket) => {
     }
   });
 
-  // Handle disconnection for active matches
+  // Handle disconnection for active matches - AUTO-REJOIN PARTNER
   socket.on('disconnect', async () => {
     try {
       // Remove from queue
-      matchingQueue.delete(socket.id);
+      removeFromQueue(socket.id);
       await QueueEntry.findOneAndDelete({ socketId: socket.id });
 
       // Handle active match
@@ -231,99 +436,33 @@ module.exports = (io, socket) => {
         await match.save();
 
         const partnerId = match.user1SocketId === socket.id ? match.user2SocketId : match.user1SocketId;
+        const partnerSocket = io.sockets.sockets.get(partnerId);
+
+        // Notify partner
         io.to(partnerId).emit('partner_disconnected', {
           reason: 'disconnect',
           matchId: match._id,
         });
+
+        // AUTO-REJOIN PARTNER TO QUEUE
+        if (partnerSocket) {
+          partnerSocket.leave(`match_${match._id}`);
+          
+          const partnerEntry = {
+            socketId: partnerId,
+            userId: partnerSocket.userId || null,
+            username: partnerSocket.username || 'Anonymous',
+            userId7Digit: partnerSocket.userId7Digit || null,
+            interests: [],
+            joinedAt: new Date(),
+          };
+          
+          // Add partner to queue immediately
+          addToQueueAndMatch(io, partnerSocket, partnerEntry);
+        }
       }
     } catch (error) {
       logger.error(`Disconnect cleanup error: ${error.message}`);
     }
   });
 };
-
-async function findMatch(io, socket, queueEntry) {
-  // Find compatible partner from queue
-  for (const [partnerId, partnerEntry] of matchingQueue.entries()) {
-    // Skip self
-    if (partnerId === socket.id) continue;
-
-    // Skip if same user (if logged in)
-    if (queueEntry.userId && partnerEntry.userId && queueEntry.userId.equals(partnerEntry.userId)) {
-      continue;
-    }
-
-    // Check interest overlap (optional)
-    let matchedByInterests = false;
-    const commonInterests = queueEntry.interests.filter((i) =>
-      partnerEntry.interests.includes(i)
-    );
-    if (queueEntry.interests.length > 0 && partnerEntry.interests.length > 0) {
-      if (commonInterests.length === 0) continue;
-      matchedByInterests = true;
-    }
-
-    // Found a match!
-    matchingQueue.delete(socket.id);
-    matchingQueue.delete(partnerId);
-
-    // Remove from database queue
-    await QueueEntry.deleteMany({ socketId: { $in: [socket.id, partnerId] } });
-
-    // Create match record
-    const match = await Match.create({
-      user1Id: queueEntry.userId,
-      user2Id: partnerEntry.userId,
-      user1SocketId: socket.id,
-      user2SocketId: partnerId,
-      user1Username: queueEntry.username,
-      user2Username: partnerEntry.username,
-      user1UserId7Digit: queueEntry.userId7Digit,
-      user2UserId7Digit: partnerEntry.userId7Digit,
-      interests: commonInterests,
-      matchedByInterests,
-      startTime: new Date(),
-    });
-
-    // Join match room
-    socket.join(`match_${match._id}`);
-    io.sockets.sockets.get(partnerId)?.join(`match_${match._id}`);
-
-    // Notify both users - only one should be the initiator
-    socket.emit('match_found', {
-      partnerId: partnerId,
-      partnerUsername: partnerEntry.username,
-      partnerUserId7Digit: partnerEntry.userId7Digit,
-      partnerInterests: partnerEntry.interests,
-      matchId: match._id,
-      isInitiator: true, // This user initiates the WebRTC connection
-    });
-
-    io.to(partnerId).emit('match_found', {
-      partnerId: socket.id,
-      partnerUsername: queueEntry.username,
-      partnerUserId7Digit: queueEntry.userId7Digit,
-      partnerInterests: queueEntry.interests,
-      matchId: match._id,
-      isInitiator: false, // This user waits for the offer
-    });
-
-    // Emit to admin room
-    io.to('admin_room').emit('admin_match_started', {
-      matchId: match._id,
-      user1: { userId: queueEntry.userId, username: queueEntry.username },
-      user2: { userId: partnerEntry.userId, username: partnerEntry.username },
-      timestamp: new Date(),
-    });
-
-    logger.info(`Match created: ${match._id} (${queueEntry.username} <-> ${partnerEntry.username})`);
-    return;
-  }
-
-  // No match found, notify user they're in queue
-  socket.emit('queue_position', {
-    position: matchingQueue.size,
-    totalWaiting: matchingQueue.size,
-    estimatedWait: matchingQueue.size * 5, // rough estimate
-  });
-}

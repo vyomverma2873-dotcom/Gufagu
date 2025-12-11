@@ -167,17 +167,15 @@ export default function ChatPage() {
     });
   };
 
-  // Skip current partner
+  // Skip current partner - server handles auto-rejoin for both users
   const skipPartner = () => {
     if (!socket) return;
     cleanupConnection();
     socket.emit('skip_partner');
     setMessages([]);
     setPartner(null);
-    // Auto-rejoin queue to find next partner
-    setTimeout(() => {
-      startSearching();
-    }, 500); // Small delay to ensure cleanup completes
+    setConnectionState('searching'); // Show searching state immediately
+    // Server will auto-rejoin both users to queue and emit match_found
   };
 
   // End chat
@@ -412,23 +410,22 @@ export default function ChatPage() {
       }
     });
 
-    // Partner disconnected
+    // Partner disconnected - server auto-rejoins us to queue
     socket.on('partner_disconnected', () => {
       cleanupConnection();
-      setConnectionState('disconnected');
+      setConnectionState('searching'); // Show searching state
       setFriendRequestStatus('none');
+      // Server will auto-rejoin us and emit match_found
     });
 
-    // Partner skipped
+    // Partner skipped - server auto-rejoins us to queue
     socket.on('partner_skipped', () => {
       cleanupConnection();
       setMessages([]);
       setPartner(null);
       setFriendRequestStatus('none');
-      // Auto-rejoin queue to find next partner
-      setTimeout(() => {
-        startSearching();
-      }, 500); // Small delay to ensure cleanup completes
+      setConnectionState('searching'); // Show searching state
+      // Server will auto-rejoin us and emit match_found
     });
 
     // Chat message received
