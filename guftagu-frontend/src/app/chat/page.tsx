@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Video, VideoOff, Mic, MicOff, SkipForward, PhoneOff, MessageSquare, Send, Users } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, SkipForward, PhoneOff, MessageSquare, Send, Users, UserPlus, Check, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useSocket } from '@/contexts/SocketContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { friendsApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface ChatMessage {
@@ -38,6 +39,7 @@ export default function ChatPage() {
   const [messageInput, setMessageInput] = useState('');
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [friendRequestStatus, setFriendRequestStatus] = useState<'none' | 'sending' | 'sent' | 'friends' | 'pending'>('none');
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -251,6 +253,53 @@ export default function ChatPage() {
     }, 1000);
   };
 
+  // Check friendship status with partner
+  const checkPartnerFriendship = async (partnerUsername: string) => {
+    try {
+      // Use search to find the user and check friendship
+      const searchResponse = await friendsApi.searchUsers(partnerUsername);
+      const users = searchResponse.data.users || [];
+      const matchedUser = users.find((u: any) => u.username === partnerUsername);
+      
+      if (matchedUser) {
+        const statusResponse = await friendsApi.checkFriendship(matchedUser._id);
+        const status = statusResponse.data;
+        
+        if (status?.isFriend) {
+          setFriendRequestStatus('friends');
+        } else if (status?.pendingRequest) {
+          setFriendRequestStatus(status.pendingRequest.isSender ? 'sent' : 'pending');
+        } else {
+          setFriendRequestStatus('none');
+        }
+      } else {
+        setFriendRequestStatus('none');
+      }
+    } catch (error) {
+      console.error('Failed to check friendship status:', error);
+      setFriendRequestStatus('none');
+    }
+  };
+
+  // Send friend request to current partner
+  const sendFriendRequest = async () => {
+    if (!partner || friendRequestStatus !== 'none') return;
+    
+    setFriendRequestStatus('sending');
+    try {
+      await friendsApi.sendRequest(partner.username);
+      setFriendRequestStatus('sent');
+    } catch (error: any) {
+      console.error('Failed to send friend request:', error);
+      // Check if already friends or request exists
+      if (error.response?.data?.error?.includes('already')) {
+        setFriendRequestStatus('sent');
+      } else {
+        setFriendRequestStatus('none');
+      }
+    }
+  };
+
   // Socket event handlers
   useEffect(() => {
     if (!socket) return;
@@ -265,6 +314,12 @@ export default function ChatPage() {
         interests: data.partnerInterests || [],
       });
       setConnectionState('connecting');
+      
+      // Reset and check friend request status for new partner
+      setFriendRequestStatus('none');
+      if (data.partnerUsername) {
+        checkPartnerFriendship(data.partnerUsername);
+      }
 
       // Only the initiator creates and sends the offer
       if (data.isInitiator) {
@@ -348,6 +403,7 @@ export default function ChatPage() {
     socket.on('partner_disconnected', () => {
       cleanupConnection();
       setConnectionState('disconnected');
+      setFriendRequestStatus('none');
     });
 
     // Partner skipped
@@ -356,6 +412,7 @@ export default function ChatPage() {
       setConnectionState('searching');
       setMessages([]);
       setPartner(null);
+      setFriendRequestStatus('none');
     });
 
     // Chat message received
@@ -496,8 +553,60 @@ export default function ChatPage() {
                   </div>
                 )}
                 {partner && connectionState === 'connected' && (
-                  <div className="absolute top-2 left-2 md:top-3 md:left-3 px-2 py-1 md:px-3 md:py-1.5 bg-zinc-900/90 backdrop-blur-sm rounded-lg text-xs md:text-sm text-white font-medium">
-                    {partner.username}
+                  <div className="absolute top-2 left-2 md:top-3 md:left-3 flex items-center gap-1.5 md:gap-2">
+                    <div className="px-2 py-1 md:px-3 md:py-1.5 bg-zinc-900/90 backdrop-blur-sm rounded-lg text-xs md:text-sm text-white font-medium">
+                      {partner.username}
+                    </div>
+                    {/* Add Friend Button */}
+                    {isAuthenticated && (
+                      <button
+                        onClick={sendFriendRequest}
+                        disabled={friendRequestStatus !== 'none'}
+                        className={cn(
+                          'flex items-center gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all',
+                          friendRequestStatus === 'none'
+                            ? 'bg-white text-neutral-900 hover:bg-neutral-100'
+                            : friendRequestStatus === 'sending'
+                            ? 'bg-zinc-700 text-white cursor-wait'
+                            : friendRequestStatus === 'sent'
+                            ? 'bg-emerald-600 text-white cursor-default'
+                            : friendRequestStatus === 'friends'
+                            ? 'bg-emerald-600 text-white cursor-default'
+                            : 'bg-amber-600 text-white cursor-default'
+                        )}
+                      >
+                        {friendRequestStatus === 'none' && (
+                          <>
+                            <UserPlus className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            <span className="hidden sm:inline">Add</span>
+                          </>
+                        )}
+                        {friendRequestStatus === 'sending' && (
+                          <>
+                            <Loader2 className="w-3 h-3 md:w-3.5 md:h-3.5 animate-spin" />
+                            <span className="hidden sm:inline">Sending</span>
+                          </>
+                        )}
+                        {friendRequestStatus === 'sent' && (
+                          <>
+                            <Check className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            <span className="hidden sm:inline">Sent</span>
+                          </>
+                        )}
+                        {friendRequestStatus === 'friends' && (
+                          <>
+                            <Check className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            <span className="hidden sm:inline">Friends</span>
+                          </>
+                        )}
+                        {friendRequestStatus === 'pending' && (
+                          <>
+                            <Check className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            <span className="hidden sm:inline">Pending</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
