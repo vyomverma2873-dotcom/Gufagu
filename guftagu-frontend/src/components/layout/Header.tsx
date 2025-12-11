@@ -20,6 +20,8 @@ export default function Header() {
   const { onlineCount, isConnected } = useSocket();
   const { unreadCount } = useNotifications();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Track page loading state
   useEffect(() => {
@@ -31,19 +33,29 @@ export default function Header() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Close user menu if clicking outside
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
+      // Close mobile menu if clicking outside (but not on the menu button)
+      if (
+        mobileMenuRef.current && 
+        !mobileMenuRef.current.contains(event.target as Node) &&
+        mobileMenuButtonRef.current &&
+        !mobileMenuButtonRef.current.contains(event.target as Node)
+      ) {
+        setMobileMenuOpen(false);
+      }
     };
 
-    if (userMenuOpen) {
+    if (userMenuOpen || mobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [userMenuOpen]);
+  }, [userMenuOpen, mobileMenuOpen]);
 
   // Close dropdown when route changes
   useEffect(() => {
@@ -229,6 +241,7 @@ export default function Header() {
 
               {/* Mobile Menu Button */}
               <button
+                ref={mobileMenuButtonRef}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-all"
               >
@@ -241,7 +254,7 @@ export default function Header() {
 
       {/* Mobile Menu - Only for authenticated users */}
       {mobileMenuOpen && isAuthenticated && (
-        <div className="md:hidden px-4 pb-3">
+        <div className="md:hidden px-4 pb-3" ref={mobileMenuRef}>
           <div className="bg-neutral-900/95 backdrop-blur-2xl border border-neutral-700/50 rounded-2xl p-4 mt-2">
             <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800/60 border border-neutral-700/50 rounded-xl mb-4">
               <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
