@@ -15,7 +15,7 @@ export default function Badge({ children, variant = 'default', size = 'md', clas
     danger: 'bg-red-500/20 text-red-400',
     error: 'bg-red-500/20 text-red-400',
     info: 'bg-blue-500/20 text-blue-400',
-    primary: 'bg-violet-500/20 text-violet-400',
+    primary: 'bg-zinc-500/20 text-zinc-300',
   };
 
   const sizes = {

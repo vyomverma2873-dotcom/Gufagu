@@ -118,7 +118,7 @@ export default function OnboardPage() {
                 {username.length >= 3 && (
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                     {isChecking ? (
-                      <div className="w-5 h-5 border-2 border-zinc-600 border-t-violet-500 rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-zinc-600 border-t-white rounded-full animate-spin" />
                     ) : isAvailable === true ? (
                       <Check className="w-5 h-5 text-emerald-500" />
                     ) : isAvailable === false ? (

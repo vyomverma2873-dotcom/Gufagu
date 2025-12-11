@@ -446,7 +446,7 @@ export default function ChatPage() {
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
                     {connectionState === 'searching' && (
                       <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 border-4 border-zinc-700 border-t-violet-500 rounded-full animate-spin" />
+                        <div className="w-12 h-12 mx-auto mb-4 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
                         <p className="text-zinc-400">Finding someone...</p>
                       </div>
                     )}
@@ -483,7 +483,7 @@ export default function ChatPage() {
                 {!localStream && (
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
                     <div className="text-center">
-                      <div className="w-10 h-10 mx-auto mb-3 border-4 border-zinc-700 border-t-violet-500 rounded-full animate-spin" />
+                      <div className="w-10 h-10 mx-auto mb-3 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
                       <p className="text-zinc-400 text-sm">Starting camera...</p>
                     </div>
                   </div>
