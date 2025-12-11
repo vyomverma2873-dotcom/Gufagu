@@ -47,7 +47,7 @@ export default function Footer() {
                   </svg>
                 </div>
                 <div>
-                  <span className="text-2xl font-semibold text-white">Guftagu</span>
+                  <span className="text-2xl font-bold text-white font-[family-name:var(--font-outfit)]" style={{ letterSpacing: '-0.01em' }}>Guftagu</span>
                   <span className="block text-xs text-neutral-500 uppercase tracking-widest">Connect</span>
                 </div>
               </div>
