@@ -47,9 +47,3 @@ export default function RootLayout({
     </html>
   );
 }
-          </div>
-        </Providers>
-      </body>
-    </html>
-  );
-}
