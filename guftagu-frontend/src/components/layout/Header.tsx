@@ -44,17 +44,24 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-2xl shadow-2xl shadow-black/20 px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
-            {/* Logo - Minimal elegant design */}
+            {/* Logo - Minimal graphical design */}
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-white/10 group-hover:shadow-white/20 transition-all">
-                  <span className="text-lg font-black text-neutral-900 tracking-tighter">G</span>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white to-neutral-200 flex items-center justify-center shadow-lg shadow-white/10 group-hover:shadow-white/20 transition-all overflow-hidden">
+                  {/* Chat bubble inspired logo */}
+                  <svg viewBox="0 0 32 32" className="w-7 h-7" fill="none">
+                    {/* Main chat bubble */}
+                    <path 
+                      d="M6 8C6 6.89543 6.89543 6 8 6H24C25.1046 6 26 6.89543 26 8V18C26 19.1046 25.1046 20 24 20H12L7 25V20H8C6.89543 20 6 19.1046 6 18V8Z" 
+                      className="fill-neutral-800"
+                    />
+                    {/* Three dots representing conversation */}
+                    <circle cx="11" cy="13" r="1.5" className="fill-white" />
+                    <circle cx="16" cy="13" r="1.5" className="fill-white" />
+                    <circle cx="21" cy="13" r="1.5" className="fill-white" />
+                  </svg>
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-neutral-900"></div>
-              </div>
-              <div className="hidden sm:block">
-                <span className="text-xl font-semibold text-white tracking-tight">Guftagu</span>
-                <span className="block text-[10px] text-neutral-500 uppercase tracking-widest -mt-0.5">Connect</span>
               </div>
             </Link>
 
@@ -180,13 +187,8 @@ export default function Header() {
               ) : (
                 <div className="flex items-center gap-2">
                   <Link href="/login">
-                    <button className="px-4 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/60 text-sm font-medium transition-all">
-                      Login
-                    </button>
-                  </Link>
-                  <Link href="/login">
                     <button className="px-5 py-2 rounded-xl bg-white text-neutral-900 hover:bg-neutral-100 text-sm font-medium shadow-lg shadow-white/10 transition-all">
-                      Get Started
+                      Login
                     </button>
                   </Link>
                 </div>

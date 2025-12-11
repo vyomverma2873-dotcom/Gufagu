@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, ArrowRight, Video } from 'lucide-react';
+import { Mail, ArrowRight } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { authApi } from '@/lib/api';
@@ -48,8 +48,19 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center">
-              <Video className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white to-neutral-200 flex items-center justify-center shadow-lg overflow-hidden">
+              {/* Chat bubble inspired logo */}
+              <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none">
+                {/* Main chat bubble */}
+                <path 
+                  d="M6 8C6 6.89543 6.89543 6 8 6H24C25.1046 6 26 6.89543 26 8V18C26 19.1046 25.1046 20 24 20H12L7 25V20H8C6.89543 20 6 19.1046 6 18V8Z" 
+                  className="fill-neutral-800"
+                />
+                {/* Three dots representing conversation */}
+                <circle cx="11" cy="13" r="1.5" className="fill-white" />
+                <circle cx="16" cy="13" r="1.5" className="fill-white" />
+                <circle cx="21" cy="13" r="1.5" className="fill-white" />
+              </svg>
             </div>
           </Link>
           <h1 className="text-3xl font-bold text-white mb-2">Welcome to Guftagu</h1>
@@ -89,6 +100,17 @@ export default function LoginPage() {
         <p className="text-center text-sm text-zinc-500 mt-8">
           By continuing, you agree to our{' '}
           <Link href="/terms" className="text-violet-400 hover:text-violet-300">
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="text-violet-400 hover:text-violet-300">
+            Privacy Policy
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
             Terms of Service
           </Link>{' '}
           and{' '}
