@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSocket } from '@/contexts/SocketContext';
 import { adminApi } from '@/lib/api';
 
 interface DashboardStats {
@@ -82,7 +81,6 @@ function QuickActionButton({ href, icon: Icon, label, badge }: { href: string; i
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { onlineCount } = useSocket();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,12 +142,6 @@ export default function AdminDashboardPage() {
               </h1>
               <p className="text-neutral-400 mt-1 text-sm">Platform overview and management controls</p>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-900/30 border border-emerald-500/30 rounded-xl">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-                <span className="text-emerald-400 font-medium">{onlineCount || stats?.onlineUsers || 0} online</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -169,12 +161,6 @@ export default function AdminDashboardPage() {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
-            title="Online Now"
-            value={onlineCount || stats?.onlineUsers || 0}
-            icon={Activity}
-            highlight
-          />
-          <StatCard
             title="Total Users"
             value={stats?.totalUsers?.toLocaleString() || 0}
             icon={Users}
@@ -190,6 +176,12 @@ export default function AdminDashboardPage() {
             title="This Month"
             value={stats?.usersThisMonth || 0}
             icon={TrendingUp}
+          />
+          <StatCard
+            title="Banned Users"
+            value={stats?.bannedUsers || 0}
+            icon={UserX}
+            link="/admin/bans"
           />
         </div>
 
@@ -211,10 +203,9 @@ export default function AdminDashboardPage() {
             link="/admin/reports"
           />
           <StatCard
-            title="Banned Users"
-            value={stats?.bannedUsers || 0}
-            icon={UserX}
-            link="/admin/bans"
+            title="Total Reports"
+            value={stats?.totalReports || 0}
+            icon={AlertTriangle}
           />
         </div>
 

@@ -1,12 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, Shield, Zap, MessageSquare, Globe, ArrowRight, Sparkles } from 'lucide-react';
-import { useSocket } from '@/contexts/SocketContext';
+import { Users, Shield, Zap, MessageSquare, Globe, ArrowRight, Sparkles, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
-  const { onlineCount, isConnected } = useSocket();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   
   // Determine chat destination - if still loading, default to chat (will check auth there)
@@ -14,34 +12,34 @@ export default function Home() {
 
   const features = [
     {
-      icon: Sparkles,
-      title: 'HD Video Chat',
-      description: 'Crystal clear video and audio for seamless conversations.',
+      icon: Heart,
+      title: 'Safe Space',
+      description: 'A judgment-free environment designed for introverts to practice social skills.',
     },
     {
       icon: Users,
-      title: 'Random Matching',
-      description: 'Connect instantly with people who share your interests.',
+      title: 'Like-Minded People',
+      description: 'Connect with others who understand the challenges of social interaction.',
     },
     {
       icon: Shield,
-      title: 'Safe & Secure',
-      description: 'Your privacy is our priority with advanced security.',
+      title: 'Privacy First',
+      description: 'Your comfort matters. Control your visibility and interaction pace.',
     },
     {
       icon: Zap,
-      title: 'Instant Connect',
-      description: 'No waiting. Start chatting in seconds.',
+      title: 'Low Pressure',
+      description: 'No awkward silences. Skip anytime without judgment.',
     },
     {
       icon: MessageSquare,
-      title: 'Text & Video',
-      description: 'Chat via text alongside video or independently.',
+      title: 'Multiple Modes',
+      description: 'Start with text, then gradually move to voice or video when ready.',
     },
     {
       icon: Globe,
       title: 'Global Community',
-      description: 'Meet people from every corner of the world.',
+      description: 'Practice with people from different cultures and backgrounds.',
     },
   ];
 
@@ -151,14 +149,15 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-3xl p-10 md:p-14 shadow-2xl text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Ready to Connect?
+              Your Journey Starts Here
             </h2>
             <p className="text-neutral-400 max-w-md mx-auto mb-8">
-              Join thousands making meaningful connections every day.
+              Take the first step towards building confidence in social interactions. 
+              Practice at your own pace, in a space designed for people like you.
             </p>
             <Link href={chatHref}>
               <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-neutral-900 rounded-xl font-medium shadow-lg shadow-white/10 hover:shadow-white/20 transition-all hover:scale-[1.02]">
-                Get Started Free
+                Begin Your Journey
                 <ArrowRight className="w-4 h-4" />
               </button>
             </Link>

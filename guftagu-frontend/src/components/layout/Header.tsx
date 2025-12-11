@@ -17,7 +17,7 @@ export default function Header() {
   const [isPageLoading, setIsPageLoading] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
-  const { onlineCount, isConnected } = useSocket();
+  const { isConnected } = useSocket();
   const { unreadCount } = useNotifications();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -108,14 +108,6 @@ export default function Header() {
                 Guftagu
               </span>
             </Link>
-
-            {/* Online Count */}
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-neutral-800/60 border border-neutral-700/50 rounded-xl">
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
-              <span className="text-sm text-neutral-400">
-                <span className="font-medium text-white">{onlineCount.toLocaleString()}</span> online
-              </span>
-            </div>
 
             {/* Desktop Navigation - Only for authenticated users */}
             {isAuthenticated && (
@@ -256,12 +248,6 @@ export default function Header() {
       {mobileMenuOpen && isAuthenticated && (
         <div className="md:hidden px-4 pb-3" ref={mobileMenuRef}>
           <div className="bg-neutral-900/95 backdrop-blur-2xl border border-neutral-700/50 rounded-2xl p-4 mt-2">
-            <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800/60 border border-neutral-700/50 rounded-xl mb-4">
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-neutral-500'}`} />
-              <span className="text-sm text-neutral-400">
-                <span className="font-medium text-white">{onlineCount.toLocaleString()}</span> online
-              </span>
-            </div>
             <nav className="space-y-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
