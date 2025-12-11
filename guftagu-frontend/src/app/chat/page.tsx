@@ -44,7 +44,9 @@ export default function ChatPage() {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previousMessagesLengthRef = useRef<number>(0);
 
   // ICE servers configuration
   const iceServers = {
@@ -387,9 +389,13 @@ export default function ChatPage() {
     };
   }, [socket, createPeerConnection]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom only on new messages (not when typing)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only scroll if a new message was added
+    if (messages.length > previousMessagesLengthRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      previousMessagesLengthRef.current = messages.length;
+    }
   }, [messages]);
 
   // Cleanup on unmount
@@ -405,18 +411,21 @@ export default function ChatPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-zinc-950 flex flex-col">
       {/* Main content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex flex-col md:flex-row">
         {/* Video area */}
-        <div className={cn('flex-1 relative', isChatOpen && 'hidden md:block')}>
+        <div className={cn(
+          'flex-1 relative',
+          isChatOpen ? 'hidden md:block' : 'block'
+        )}>
           {connectionState === 'idle' ? (
             // Start screen
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="text-center max-w-md">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
                   <Video className="w-10 h-10 text-white" />
                 </div>
-                <h1 className="text-3xl font-bold text-white mb-4">Ready to Chat?</h1>
-                <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
+                <h1 className="text-2xl md:text-3xl font-bold text-white mb-4">Ready to Chat?</h1>
+                <p className="text-zinc-400 mb-8">
                   Connect with random strangers for video conversations. Click below to start.
                 </p>
                 <div className="flex items-center justify-center gap-2 mb-6">
@@ -433,9 +442,9 @@ export default function ChatPage() {
             </div>
           ) : (
             // Video grid
-            <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            <div className="absolute inset-0 flex flex-col gap-2 p-2 md:grid md:grid-cols-2 md:gap-4 md:p-4">
               {/* Remote video */}
-              <div className="relative bg-zinc-900 rounded-2xl overflow-hidden flex items-center justify-center">
+              <div className="relative bg-zinc-900 rounded-xl md:rounded-2xl overflow-hidden flex items-center justify-center h-1/2 md:h-auto">
                 <video
                   ref={remoteVideoRef}
                   autoPlay
@@ -472,7 +481,7 @@ export default function ChatPage() {
               </div>
 
               {/* Local video */}
-              <div className="relative bg-zinc-900 rounded-2xl overflow-hidden">
+              <div className="relative bg-zinc-900 rounded-xl md:rounded-2xl overflow-hidden h-1/2 md:h-auto">
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -502,57 +511,57 @@ export default function ChatPage() {
 
           {/* Controls */}
           {connectionState !== 'idle' && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3">
+            <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 md:gap-3">
               <button
                 onClick={toggleVideo}
                 className={cn(
-                  'p-4 rounded-full transition-colors',
+                  'p-3 md:p-4 rounded-full transition-colors',
                   isVideoEnabled
                     ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
                     : 'bg-red-600 hover:bg-red-700 text-white'
                 )}
               >
-                {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+                {isVideoEnabled ? <Video className="w-5 h-5 md:w-6 md:h-6" /> : <VideoOff className="w-5 h-5 md:w-6 md:h-6" />}
               </button>
 
               <button
                 onClick={toggleAudio}
                 className={cn(
-                  'p-4 rounded-full transition-colors',
+                  'p-3 md:p-4 rounded-full transition-colors',
                   isAudioEnabled
                     ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
                     : 'bg-red-600 hover:bg-red-700 text-white'
                 )}
               >
-                {isAudioEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+                {isAudioEnabled ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}
               </button>
 
               <button
                 onClick={() => setIsChatOpen(!isChatOpen)}
                 className={cn(
-                  'p-4 rounded-full transition-colors md:hidden',
+                  'p-3 md:p-4 rounded-full transition-colors md:hidden',
                   isChatOpen
-                    ? 'bg-violet-600 text-white'
+                    ? 'bg-zinc-600 text-white'
                     : 'bg-zinc-800 hover:bg-zinc-700 text-white'
                 )}
               >
-                <MessageSquare className="w-6 h-6" />
+                <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
               </button>
 
               {connectionState === 'connected' && (
                 <button
                   onClick={skipPartner}
-                  className="p-4 rounded-full bg-amber-600 hover:bg-amber-700 text-white transition-colors"
+                  className="p-3 md:p-4 rounded-full bg-amber-600 hover:bg-amber-700 text-white transition-colors"
                 >
-                  <SkipForward className="w-6 h-6" />
+                  <SkipForward className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
               )}
 
               <button
                 onClick={endChat}
-                className="p-4 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
+                className="p-3 md:p-4 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
               >
-                <PhoneOff className="w-6 h-6" />
+                <PhoneOff className="w-5 h-5 md:w-6 md:h-6" />
               </button>
             </div>
           )}
@@ -562,7 +571,7 @@ export default function ChatPage() {
         {connectionState !== 'idle' && (
           <div
             className={cn(
-              'w-full md:w-96 bg-zinc-900/50 border-l border-zinc-800 flex flex-col',
+              'w-full md:w-96 bg-neutral-900/70 backdrop-blur-xl border-t md:border-t-0 md:border-l border-neutral-800 flex flex-col',
               !isChatOpen && 'hidden md:flex'
             )}
           >
@@ -581,15 +590,15 @@ export default function ChatPage() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={cn(
-                    'max-w-[80%] rounded-2xl px-4 py-2',
+                    'max-w-[80%] rounded-xl px-4 py-2.5',
                     msg.isOwn
-                      ? 'ml-auto bg-violet-600 text-white'
-                      : 'bg-zinc-800 text-white'
+                      ? 'ml-auto bg-zinc-700 text-white'
+                      : 'bg-neutral-800 text-white'
                   )}
                 >
                   <p className="text-sm">{msg.message}</p>
@@ -620,13 +629,13 @@ export default function ChatPage() {
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Type a message..."
-                  className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2.5 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   disabled={connectionState !== 'connected'}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageInput.trim() || connectionState !== 'connected'}
-                  className="p-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-colors"
+                  className="p-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-colors"
                 >
                   <Send className="w-5 h-5" />
                 </button>
