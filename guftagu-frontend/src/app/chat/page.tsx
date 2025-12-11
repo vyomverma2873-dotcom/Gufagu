@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Video, VideoOff, Mic, MicOff, SkipForward, PhoneOff, MessageSquare, Send, Users, UserPlus, Check, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Spinner from '@/components/ui/Spinner';
 import { useSocket } from '@/contexts/SocketContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { friendsApi } from '@/lib/api';
@@ -27,8 +29,9 @@ interface MatchPartner {
 type ConnectionState = 'idle' | 'searching' | 'connecting' | 'connected' | 'disconnected';
 
 export default function ChatPage() {
+  const router = useRouter();
   const { socket, isConnected, onlineCount } = useSocket();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [partner, setPartner] = useState<MatchPartner | null>(null);
@@ -57,6 +60,13 @@ export default function ChatPage() {
       { urls: 'stun:stun1.l.google.com:19302' },
     ],
   };
+
+  // Redirect to login if not authenticated after auth check completes
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // Initialize local media
   const initializeMedia = useCallback(async () => {
@@ -484,6 +494,30 @@ export default function ChatPage() {
       document.body.classList.remove('chat-active');
     };
   }, [connectionState]);
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <Spinner size="lg" />
+          <p className="text-neutral-400 mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <Spinner size="lg" />
+          <p className="text-neutral-400 mt-4">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn(

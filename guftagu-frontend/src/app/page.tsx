@@ -7,7 +7,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
   const { onlineCount, isConnected } = useSocket();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  // Determine chat destination - if still loading, default to chat (will check auth there)
+  const chatHref = authLoading ? '/chat' : (isAuthenticated ? '/chat' : '/login');
 
   const features = [
     {
@@ -72,7 +75,7 @@ export default function Home() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link href={isAuthenticated ? '/chat' : '/login'}>
+                <Link href={chatHref}>
                   <button className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-neutral-900 rounded-xl font-medium shadow-lg shadow-white/10 hover:shadow-white/20 transition-all hover:scale-[1.02]">
                     Start Chatting
                     <ArrowRight className="w-4 h-4" />
@@ -161,7 +164,7 @@ export default function Home() {
             <p className="text-neutral-400 max-w-md mx-auto mb-8">
               Join thousands making meaningful connections every day.
             </p>
-            <Link href={isAuthenticated ? '/chat' : '/login'}>
+            <Link href={chatHref}>
               <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-neutral-900 rounded-xl font-medium shadow-lg shadow-white/10 hover:shadow-white/20 transition-all hover:scale-[1.02]">
                 Get Started Free
                 <ArrowRight className="w-4 h-4" />
