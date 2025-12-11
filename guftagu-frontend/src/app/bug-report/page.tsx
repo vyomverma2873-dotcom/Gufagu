@@ -1,6 +1,6 @@
 'use client';
 
-import { Bug, Mail, Github, MessageSquare } from 'lucide-react';
+import { Bug, Mail, Instagram, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 export default function BugReportPage() {
@@ -47,25 +47,25 @@ export default function BugReportPage() {
                 </div>
               </div>
 
-              {/* GitHub Issues */}
+              {/* Instagram DM */}
               <div className="bg-neutral-800/60 border border-neutral-700/50 rounded-xl p-6">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
-                    <Github className="w-6 h-6 text-white" />
+                    <Instagram className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-medium text-white mb-2">GitHub Issues</h3>
+                    <h3 className="text-lg font-medium text-white mb-2">Instagram</h3>
                     <p className="text-neutral-400 mb-3">
-                      Create an issue on our GitHub repository for technical bugs
+                      Send a direct message on Instagram for quick bug reports and support
                     </p>
                     <a
-                      href="https://github.com/vyomverma2873-dotcom/Gufagu/issues"
+                      href="https://instagram.com/imvyomverma"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-white hover:text-neutral-300 transition-colors"
                     >
-                      <Github className="w-4 h-4" />
-                      View Repository
+                      <Instagram className="w-4 h-4" />
+                      @imvyomverma
                     </a>
                   </div>
                 </div>
