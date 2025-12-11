@@ -8,6 +8,7 @@ import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { adminApi } from '@/lib/api';
 import { formatDate, formatRelativeTime, formatUserId } from '@/lib/utils';
@@ -42,6 +43,8 @@ export default function AdminBansPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [isUnbanning, setIsUnbanning] = useState<string | null>(null);
+  const [showUnbanModal, setShowUnbanModal] = useState(false);
+  const [selectedBan, setSelectedBan] = useState<Ban | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -69,8 +72,6 @@ export default function AdminBansPage() {
   };
 
   const handleUnban = async (userId: string) => {
-    if (!confirm('Are you sure you want to unban this user?')) return;
-
     setIsUnbanning(userId);
     try {
       await adminApi.unbanUser(userId);
@@ -162,7 +163,10 @@ export default function AdminBansPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleUnban(ban.user._id)}
+                    onClick={() => {
+                      setSelectedBan(ban);
+                      setShowUnbanModal(true);
+                    }}
                     isLoading={isUnbanning === ban.user._id}
                   >
                     Unban
@@ -203,6 +207,30 @@ export default function AdminBansPage() {
           </div>
         )}
       </div>
+
+      {/* Unban Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showUnbanModal}
+        onClose={() => {
+          setShowUnbanModal(false);
+          setSelectedBan(null);
+        }}
+        onConfirm={() => {
+          if (selectedBan) {
+            handleUnban(selectedBan.user._id);
+          }
+        }}
+        title="Unban User"
+        message={`Are you sure you want to unban ${selectedBan?.user.displayName || selectedBan?.user.username}? They will be able to access the platform again.`}
+        confirmText="Unban User"
+        cancelText="Cancel"
+        confirmVariant="primary"
+        icon={
+          <div className="p-3 rounded-xl bg-emerald-900/30">
+            <Shield className="w-8 h-8 text-emerald-400" />
+          </div>
+        }
+      />
     </div>
   );
 }

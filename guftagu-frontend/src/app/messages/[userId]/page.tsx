@@ -7,6 +7,7 @@ import { ArrowLeft, Send, MoreVertical, Phone, Video, PhoneOff, X, PhoneCall, Ph
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { messagesApi, userApi, friendsApi } from '@/lib/api';
@@ -80,6 +81,8 @@ export default function ConversationPage() {
   // Action menu state
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showUnfriendModal, setShowUnfriendModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
@@ -341,7 +344,8 @@ export default function ConversationPage() {
       return;
     }
     if (!chatUser.isOnline) {
-      alert('User is offline');
+      setActionError('User is offline');
+      setTimeout(() => setActionError(''), 3000);
       return;
     }
     
@@ -377,10 +381,6 @@ export default function ConversationPage() {
   // Handle block user
   const handleBlockUser = async () => {
     if (!chatUser) return;
-    
-    if (!confirm(`Are you sure you want to block ${chatUser.displayName || chatUser.username}? This will also unfriend them.`)) {
-      return;
-    }
 
     setIsSubmittingAction(true);
     setActionError('');
@@ -400,10 +400,6 @@ export default function ConversationPage() {
   // Handle unfriend user
   const handleUnfriend = async () => {
     if (!chatUser) return;
-    
-    if (!confirm(`Are you sure you want to unfriend ${chatUser.displayName || chatUser.username}?`)) {
-      return;
-    }
 
     setIsSubmittingAction(true);
     setActionError('');
@@ -710,7 +706,10 @@ export default function ConversationPage() {
                           Report User
                         </button>
                         <button
-                          onClick={handleBlockUser}
+                          onClick={() => {
+                            setShowActionMenu(false);
+                            setShowBlockModal(true);
+                          }}
                           disabled={isSubmittingAction}
                           className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-700 hover:text-white transition-colors disabled:opacity-50"
                         >
@@ -718,7 +717,10 @@ export default function ConversationPage() {
                           Block User
                         </button>
                         <button
-                          onClick={handleUnfriend}
+                          onClick={() => {
+                            setShowActionMenu(false);
+                            setShowUnfriendModal(true);
+                          }}
                           disabled={isSubmittingAction}
                           className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors disabled:opacity-50"
                         >
@@ -1020,6 +1022,40 @@ export default function ConversationPage() {
           </div>
         </div>
       )}
+
+      {/* Block User Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        onConfirm={handleBlockUser}
+        title="Block User"
+        message={`Are you sure you want to block ${chatUser?.displayName || chatUser?.username}? This will also unfriend them and you won't be able to message each other.`}
+        confirmText="Block User"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        icon={
+          <div className="p-3 rounded-xl bg-red-900/30">
+            <Shield className="w-8 h-8 text-red-400" />
+          </div>
+        }
+      />
+
+      {/* Unfriend Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showUnfriendModal}
+        onClose={() => setShowUnfriendModal(false)}
+        onConfirm={handleUnfriend}
+        title="Unfriend User"
+        message={`Are you sure you want to unfriend ${chatUser?.displayName || chatUser?.username}? You can send them a friend request again later.`}
+        confirmText="Unfriend"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        icon={
+          <div className="p-3 rounded-xl bg-amber-900/30">
+            <UserMinus className="w-8 h-8 text-amber-400" />
+          </div>
+        }
+      />
     </div>
   );
 }
