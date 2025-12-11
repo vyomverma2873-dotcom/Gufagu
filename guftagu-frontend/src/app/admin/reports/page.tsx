@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, AlertTriangle, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Shield, Mail, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Shield, Mail, AlertCircle, X } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -66,6 +66,15 @@ export default function AdminReportsPage() {
   const [actionNotes, setActionNotes] = useState('');
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Notification Modal State
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({ show: false, type: 'info', title: '', message: '' });
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -93,6 +102,28 @@ export default function AdminReportsPage() {
     };
   }, [showActionModal]);
 
+  // Close notification on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotification({ ...notification, show: false });
+      }
+    };
+
+    if (notification.show) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [notification.show]);
+
+  // Helper to show notifications
+  const showNotification = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
+    setNotification({ show: true, type, title, message });
+  };
+
   const fetchReports = async () => {
     try {
       setIsLoading(true);
@@ -118,7 +149,7 @@ export default function AdminReportsPage() {
       setSelectedReport(null);
     } catch (error) {
       console.error('Failed to update report:', error);
-      alert('Failed to update report. Please try again.');
+      showNotification('error', 'Update Failed', 'Failed to update report. Please try again.');
     } finally {
       setUpdatingAction(null);
     }
@@ -140,13 +171,17 @@ export default function AdminReportsPage() {
 
   const handleSubmitAction = async () => {
     if (!selectedReport || !actionType) {
-      alert('Please select an action type.');
+      showNotification('warning', 'Action Required', 'Please select an action type before submitting.');
       return;
     }
 
     // CRITICAL: Prevent admin from banning themselves
     if (actionType === 'ban_user' && selectedReport.reportedUser._id === user?._id) {
-      alert('⚠️ WARNING: You cannot ban yourself! This action has been blocked for your protection.');
+      showNotification(
+        'warning', 
+        'Self-Ban Blocked', 
+        'You cannot ban yourself! This action has been blocked for your protection.'
+      );
       return;
     }
 
@@ -160,11 +195,22 @@ export default function AdminReportsPage() {
       
       await fetchReports();
       handleCloseModal();
-      alert('Action submitted successfully! The user has been notified via email.');
+      
+      const actionLabels = {
+        ban_user: 'User Banned',
+        send_warning: 'Warning Sent',
+        close_issue: 'Issue Closed'
+      };
+      
+      showNotification(
+        'success',
+        actionLabels[actionType] || 'Action Completed',
+        'The action has been submitted successfully. The user has been notified via email.'
+      );
     } catch (error) {
       console.error('Failed to submit action:', error);
       const errorMsg = (error as any)?.response?.data?.error || 'Failed to submit action. Please try again.';
-      alert(errorMsg);
+      showNotification('error', 'Action Failed', errorMsg);
     } finally {
       setIsSubmittingAction(false);
     }
@@ -486,6 +532,76 @@ export default function AdminReportsPage() {
                       Submit Action
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notification Modal */}
+        {notification.show && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div 
+              ref={notificationRef}
+              className="bg-neutral-900 border border-neutral-700 rounded-2xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200"
+            >
+              {/* Modal Header */}
+              <div className={`p-6 border-b ${
+                notification.type === 'success' ? 'border-green-800/30 bg-green-950/20' :
+                notification.type === 'error' ? 'border-red-800/30 bg-red-950/20' :
+                notification.type === 'warning' ? 'border-yellow-800/30 bg-yellow-950/20' :
+                'border-blue-800/30 bg-blue-950/20'
+              }`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      notification.type === 'success' ? 'bg-green-600/20' :
+                      notification.type === 'error' ? 'bg-red-600/20' :
+                      notification.type === 'warning' ? 'bg-yellow-600/20' :
+                      'bg-blue-600/20'
+                    }`}>
+                      {notification.type === 'success' && <CheckCircle className="w-5 h-5 text-green-400" />}
+                      {notification.type === 'error' && <XCircle className="w-5 h-5 text-red-400" />}
+                      {notification.type === 'warning' && <AlertTriangle className="w-5 h-5 text-yellow-400" />}
+                      {notification.type === 'info' && <AlertCircle className="w-5 h-5 text-blue-400" />}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{notification.title}</h3>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setNotification({ ...notification, show: false })}
+                    className="text-neutral-400 hover:text-white transition-colors p-1"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <p className={`text-sm leading-relaxed ${
+                  notification.type === 'success' ? 'text-green-100' :
+                  notification.type === 'error' ? 'text-red-100' :
+                  notification.type === 'warning' ? 'text-yellow-100' :
+                  'text-blue-100'
+                }`}>
+                  {notification.message}
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-neutral-800 flex justify-end">
+                <button
+                  onClick={() => setNotification({ ...notification, show: false })}
+                  className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
+                    notification.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                    notification.type === 'error' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                    notification.type === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' :
+                    'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  Got it
                 </button>
               </div>
             </div>
