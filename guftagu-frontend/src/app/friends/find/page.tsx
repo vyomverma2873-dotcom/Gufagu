@@ -222,23 +222,29 @@ export default function FindFriendsPage() {
                             
                             {/* Bio */}
                             {user.bio && (
-                              <p className="text-sm text-neutral-400 mt-2 line-clamp-2">{user.bio}</p>
+                              <div className="mt-3">
+                                <p className="text-xs text-neutral-500 mb-1">About</p>
+                                <p className="text-sm text-neutral-300 line-clamp-2">{user.bio}</p>
+                              </div>
                             )}
                             
                             {/* Interests */}
                             {user.interests && user.interests.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {user.interests.slice(0, 5).map((interest, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="px-2 py-0.5 bg-neutral-700/60 border border-neutral-600/50 text-neutral-300 text-xs rounded-lg"
-                                  >
-                                    {interest}
-                                  </span>
-                                ))}
-                                {user.interests.length > 5 && (
-                                  <span className="text-xs text-neutral-500">+{user.interests.length - 5} more</span>
-                                )}
+                              <div className="mt-3">
+                                <p className="text-xs text-neutral-500 mb-1.5">Interests</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {user.interests.slice(0, 5).map((interest, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="px-2 py-0.5 bg-neutral-700/60 border border-neutral-600/50 text-neutral-300 text-xs rounded-lg"
+                                    >
+                                      {interest}
+                                    </span>
+                                  ))}
+                                  {user.interests.length > 5 && (
+                                    <span className="text-xs text-neutral-500">+{user.interests.length - 5} more</span>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -256,18 +262,19 @@ export default function FindFriendsPage() {
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <Input
                     placeholder="Enter 7-digit user ID"
                     value={searchQuery}
                     onChange={handleQueryChange}
                     icon={<Hash className="w-5 h-5" />}
-                    className="font-mono text-lg tracking-wider"
+                    className="font-mono text-lg tracking-wider flex-1"
                   />
                   <Button
                     onClick={searchById}
                     isLoading={isSearching}
                     disabled={searchQuery.length !== 7}
+                    className="w-full sm:w-auto whitespace-nowrap"
                   >
                     Send Request
                   </Button>
