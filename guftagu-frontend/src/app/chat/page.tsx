@@ -408,23 +408,40 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Hide footer when video call is active
+  // Hide navbar and footer when video call is active
   useEffect(() => {
+    const navbar = document.querySelector('nav');
+    const header = document.querySelector('header');
     const footer = document.querySelector('footer');
-    if (footer) {
-      if (connectionState !== 'idle') {
-        footer.style.display = 'none';
-      } else {
-        footer.style.display = '';
-      }
+    
+    const isActive = connectionState !== 'idle';
+    
+    // Hide navbar (try both nav and header selectors)
+    if (navbar) {
+      navbar.style.display = isActive ? 'none' : '';
     }
+    if (header) {
+      header.style.display = isActive ? 'none' : '';
+    }
+    
+    // Hide footer
+    if (footer) {
+      footer.style.display = isActive ? 'none' : '';
+    }
+    
     return () => {
+      // Restore visibility on unmount
+      if (navbar) navbar.style.display = '';
+      if (header) header.style.display = '';
       if (footer) footer.style.display = '';
     };
   }, [connectionState]);
 
   return (
-    <div className="fixed inset-0 top-16 bg-zinc-950 flex flex-col overflow-hidden">
+    <div className={cn(
+      "fixed inset-0 bg-zinc-950 flex flex-col overflow-hidden",
+      connectionState === 'idle' ? 'top-16' : 'top-0'
+    )}>
       {connectionState === 'idle' ? (
         // Start screen - Card-based design
         <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
