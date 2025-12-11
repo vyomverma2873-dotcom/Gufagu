@@ -33,7 +33,7 @@ export default function ChatPage() {
   const [partner, setPartner] = useState<MatchPartner | null>(null);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Chat is always visible in the new layout
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
@@ -408,43 +408,56 @@ export default function ChatPage() {
     };
   }, []);
 
+  // Hide footer when video call is active
+  useEffect(() => {
+    const footer = document.querySelector('footer');
+    if (footer) {
+      if (connectionState !== 'idle') {
+        footer.style.display = 'none';
+      } else {
+        footer.style.display = '';
+      }
+    }
+    return () => {
+      if (footer) footer.style.display = '';
+    };
+  }, [connectionState]);
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-zinc-950 flex flex-col">
-      {/* Main content */}
-      <div className="flex-1 flex flex-col md:flex-row">
-        {/* Video area */}
-        <div className={cn(
-          'flex-1 relative',
-          isChatOpen ? 'hidden md:block' : 'block'
-        )}>
-          {connectionState === 'idle' ? (
-            // Start screen
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-              <div className="text-center max-w-md">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
-                  <Video className="w-10 h-10 text-white" />
-                </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white mb-4">Ready to Chat?</h1>
-                <p className="text-zinc-400 mb-8">
-                  Connect with random strangers for video conversations. Click below to start.
-                </p>
-                <div className="flex items-center justify-center gap-2 mb-6">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-zinc-400">
-                    <span className="text-white font-semibold">{onlineCount.toLocaleString()}</span> users online
-                  </span>
-                </div>
-                <Button onClick={startSearching} size="lg" className="px-8">
-                  <Video className="w-5 h-5 mr-2" />
-                  Start Video Chat
-                </Button>
+    <div className="fixed inset-0 top-16 bg-zinc-950 flex flex-col overflow-hidden">
+      {connectionState === 'idle' ? (
+        // Start screen - Card-based design
+        <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+          <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-5 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
+                <Video className="w-8 h-8 text-white" />
               </div>
+              <h1 className="text-xl md:text-2xl font-bold text-white mb-3">Random Video Chat</h1>
+              <p className="text-neutral-400 text-sm mb-6">
+                Connect with random strangers for video conversations.
+              </p>
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-neutral-400 text-sm">
+                  <span className="text-white font-semibold">{onlineCount.toLocaleString()}</span> online
+                </span>
+              </div>
+              <Button onClick={startSearching} size="lg" className="w-full">
+                <Video className="w-5 h-5 mr-2" />
+                Start Video Chat
+              </Button>
             </div>
-          ) : (
-            // Video grid
-            <div className="absolute inset-0 flex flex-col gap-2 p-2 md:grid md:grid-cols-2 md:gap-4 md:p-4">
+          </div>
+        </div>
+      ) : (
+        // Active call - Vertical layout: Video on top, Chat below
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Video Section - Takes remaining space */}
+          <div className="flex-1 min-h-0 relative p-2 md:p-3">
+            <div className="h-full grid grid-cols-2 gap-2">
               {/* Remote video */}
-              <div className="relative bg-zinc-900 rounded-xl md:rounded-2xl overflow-hidden flex items-center justify-center h-1/2 md:h-auto">
+              <div className="relative bg-neutral-900 rounded-xl overflow-hidden">
                 <video
                   ref={remoteVideoRef}
                   autoPlay
@@ -452,36 +465,36 @@ export default function ChatPage() {
                   className="w-full h-full object-cover"
                 />
                 {connectionState !== 'connected' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
+                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
                     {connectionState === 'searching' && (
                       <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
-                        <p className="text-zinc-400">Finding someone...</p>
+                        <div className="w-10 h-10 mx-auto mb-3 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
+                        <p className="text-neutral-400 text-xs md:text-sm">Finding...</p>
                       </div>
                     )}
                     {connectionState === 'connecting' && (
                       <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 border-4 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
-                        <p className="text-zinc-400">Connecting...</p>
+                        <div className="w-10 h-10 mx-auto mb-3 border-4 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
+                        <p className="text-neutral-400 text-xs md:text-sm">Connecting...</p>
                       </div>
                     )}
                     {connectionState === 'disconnected' && (
-                      <div className="text-center">
-                        <p className="text-zinc-400 mb-4">Partner disconnected</p>
-                        <Button onClick={startSearching}>Find New Partner</Button>
+                      <div className="text-center p-2">
+                        <p className="text-neutral-400 text-xs md:text-sm mb-2">Disconnected</p>
+                        <Button onClick={startSearching} size="sm">Find New</Button>
                       </div>
                     )}
                   </div>
                 )}
                 {partner && connectionState === 'connected' && (
-                  <div className="absolute top-4 left-4 px-3 py-1.5 bg-zinc-900/80 backdrop-blur rounded-lg">
-                    <span className="text-sm text-white font-medium">{partner.username}</span>
+                  <div className="absolute top-2 left-2 px-2 py-1 bg-zinc-900/80 backdrop-blur rounded text-xs text-white">
+                    {partner.username}
                   </div>
                 )}
               </div>
 
               {/* Local video */}
-              <div className="relative bg-zinc-900 rounded-xl md:rounded-2xl overflow-hidden h-1/2 md:h-auto">
+              <div className="relative bg-neutral-900 rounded-xl overflow-hidden">
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -490,127 +503,104 @@ export default function ChatPage() {
                   className="w-full h-full object-cover mirror"
                 />
                 {!localStream && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
-                    <div className="text-center">
-                      <div className="w-10 h-10 mx-auto mb-3 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
-                      <p className="text-zinc-400 text-sm">Starting camera...</p>
-                    </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                    <div className="w-8 h-8 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
                   </div>
                 )}
                 {localStream && !isVideoEnabled && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
-                    <VideoOff className="w-12 h-12 text-zinc-600" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                    <VideoOff className="w-8 h-8 text-zinc-600" />
                   </div>
                 )}
-                <div className="absolute top-4 left-4 px-3 py-1.5 bg-zinc-900/80 backdrop-blur rounded-lg">
-                  <span className="text-sm text-white font-medium">You</span>
+                <div className="absolute top-2 left-2 px-2 py-1 bg-zinc-900/80 backdrop-blur rounded text-xs text-white">
+                  You
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Controls */}
-          {connectionState !== 'idle' && (
-            <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 md:gap-3">
+            {/* Controls overlay */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
               <button
                 onClick={toggleVideo}
                 className={cn(
-                  'p-3 md:p-4 rounded-full transition-colors',
+                  'p-2.5 md:p-3 rounded-full transition-colors',
                   isVideoEnabled
                     ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
                     : 'bg-red-600 hover:bg-red-700 text-white'
                 )}
               >
-                {isVideoEnabled ? <Video className="w-5 h-5 md:w-6 md:h-6" /> : <VideoOff className="w-5 h-5 md:w-6 md:h-6" />}
+                {isVideoEnabled ? <Video className="w-4 h-4 md:w-5 md:h-5" /> : <VideoOff className="w-4 h-4 md:w-5 md:h-5" />}
               </button>
 
               <button
                 onClick={toggleAudio}
                 className={cn(
-                  'p-3 md:p-4 rounded-full transition-colors',
+                  'p-2.5 md:p-3 rounded-full transition-colors',
                   isAudioEnabled
                     ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
                     : 'bg-red-600 hover:bg-red-700 text-white'
                 )}
               >
-                {isAudioEnabled ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}
-              </button>
-
-              <button
-                onClick={() => setIsChatOpen(!isChatOpen)}
-                className={cn(
-                  'p-3 md:p-4 rounded-full transition-colors md:hidden',
-                  isChatOpen
-                    ? 'bg-zinc-600 text-white'
-                    : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                )}
-              >
-                <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
+                {isAudioEnabled ? <Mic className="w-4 h-4 md:w-5 md:h-5" /> : <MicOff className="w-4 h-4 md:w-5 md:h-5" />}
               </button>
 
               {connectionState === 'connected' && (
                 <button
                   onClick={skipPartner}
-                  className="p-3 md:p-4 rounded-full bg-amber-600 hover:bg-amber-700 text-white transition-colors"
+                  className="p-2.5 md:p-3 rounded-full bg-amber-600 hover:bg-amber-700 text-white transition-colors"
                 >
-                  <SkipForward className="w-5 h-5 md:w-6 md:h-6" />
+                  <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               )}
 
               <button
                 onClick={endChat}
-                className="p-3 md:p-4 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
+                className="p-2.5 md:p-3 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
               >
-                <PhoneOff className="w-5 h-5 md:w-6 md:h-6" />
+                <PhoneOff className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Chat sidebar */}
-        {connectionState !== 'idle' && (
-          <div
-            className={cn(
-              'w-full md:w-96 bg-neutral-900/70 backdrop-blur-xl border-t md:border-t-0 md:border-l border-neutral-800 flex flex-col',
-              !isChatOpen && 'hidden md:flex'
-            )}
-          >
+          {/* Chat Section - Fixed height, always visible */}
+          <div className="h-48 md:h-56 bg-neutral-900/80 backdrop-blur-xl border-t border-neutral-800 flex flex-col">
             {/* Chat header */}
-            <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="w-5 h-5 text-zinc-400" />
-                <span className="font-medium text-white">Chat</span>
-              </div>
-              <button
-                onClick={() => setIsChatOpen(false)}
-                className="md:hidden p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
-              >
-                Back
-              </button>
+            <div className="px-3 py-2 border-b border-neutral-800 flex items-center gap-2 flex-shrink-0">
+              <MessageSquare className="w-4 h-4 text-neutral-400" />
+              <span className="text-sm font-medium text-white">Chat</span>
+              {partner && connectionState === 'connected' && (
+                <span className="text-xs text-neutral-500">with {partner.username}</span>
+              )}
             </div>
 
-            {/* Messages */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+            {/* Messages container - scrollable */}
+            <div 
+              ref={messagesContainerRef} 
+              className="flex-1 overflow-y-auto px-3 py-2 space-y-2"
+            >
+              {messages.length === 0 && (
+                <p className="text-neutral-500 text-xs text-center py-4">No messages yet</p>
+              )}
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={cn(
-                    'max-w-[80%] rounded-xl px-4 py-2.5',
+                    'max-w-[75%] rounded-lg px-3 py-1.5',
                     msg.isOwn
                       ? 'ml-auto bg-zinc-700 text-white'
                       : 'bg-neutral-800 text-white'
                   )}
                 >
-                  <p className="text-sm">{msg.message}</p>
+                  <p className="text-xs md:text-sm">{msg.message}</p>
                 </div>
               ))}
               {isPartnerTyping && (
-                <div className="flex items-center gap-2 text-zinc-400 text-sm">
-                  <span>Partner is typing</span>
-                  <span className="flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="flex items-center gap-1.5 text-neutral-400 text-xs">
+                  <span>Typing</span>
+                  <span className="flex gap-0.5">
+                    <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </span>
                 </div>
               )}
@@ -618,7 +608,7 @@ export default function ChatPage() {
             </div>
 
             {/* Message input */}
-            <div className="p-4 border-t border-zinc-800">
+            <div className="px-3 py-2 border-t border-neutral-800 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -629,21 +619,21 @@ export default function ChatPage() {
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Type a message..."
-                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2.5 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-zinc-500"
+                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
                   disabled={connectionState !== 'connected'}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageInput.trim() || connectionState !== 'connected'}
-                  className="p-2.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-colors"
+                  className="p-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors flex-shrink-0"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
