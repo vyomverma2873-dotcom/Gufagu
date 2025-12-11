@@ -58,7 +58,7 @@ export default function AdminReportsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
+  const [updatingAction, setUpdatingAction] = useState<{ reportId: string; action: string } | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -87,7 +87,7 @@ export default function AdminReportsPage() {
   };
 
   const handleUpdateReport = async (reportId: string, status: string, action?: string) => {
-    setUpdatingReportId(reportId);
+    setUpdatingAction({ reportId, action: status });
     try {
       await adminApi.updateReport(reportId, { status, action });
       await fetchReports();
@@ -96,7 +96,7 @@ export default function AdminReportsPage() {
       console.error('Failed to update report:', error);
       alert('Failed to update report. Please try again.');
     } finally {
-      setUpdatingReportId(null);
+      setUpdatingAction(null);
     }
   };
 
@@ -210,8 +210,8 @@ export default function AdminReportsPage() {
                     <Button
                       size="sm"
                       onClick={() => handleUpdateReport(report._id, 'reviewed')}
-                      isLoading={updatingReportId === report._id}
-                      disabled={updatingReportId !== null && updatingReportId !== report._id}
+                      isLoading={updatingAction?.reportId === report._id && updatingAction?.action === 'reviewed'}
+                      disabled={updatingAction !== null && !(updatingAction?.reportId === report._id && updatingAction?.action === 'reviewed')}
                     >
                       <Clock className="w-4 h-4 mr-1" />
                       Mark Reviewed
@@ -219,8 +219,8 @@ export default function AdminReportsPage() {
                     <Button
                       size="sm"
                       onClick={() => handleUpdateReport(report._id, 'action_taken', 'warning_issued')}
-                      isLoading={updatingReportId === report._id}
-                      disabled={updatingReportId !== null && updatingReportId !== report._id}
+                      isLoading={updatingAction?.reportId === report._id && updatingAction?.action === 'action_taken'}
+                      disabled={updatingAction !== null && !(updatingAction?.reportId === report._id && updatingAction?.action === 'action_taken')}
                     >
                       <CheckCircle className="w-4 h-4 mr-1" />
                       Action Taken
@@ -229,8 +229,8 @@ export default function AdminReportsPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => handleUpdateReport(report._id, 'dismissed')}
-                      isLoading={updatingReportId === report._id}
-                      disabled={updatingReportId !== null && updatingReportId !== report._id}
+                      isLoading={updatingAction?.reportId === report._id && updatingAction?.action === 'dismissed'}
+                      disabled={updatingAction !== null && !(updatingAction?.reportId === report._id && updatingAction?.action === 'dismissed')}
                     >
                       <XCircle className="w-4 h-4 mr-1" />
                       Dismiss
