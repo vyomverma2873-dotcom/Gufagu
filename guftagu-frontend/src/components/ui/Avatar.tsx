@@ -40,7 +40,7 @@ export default function Avatar({ src, alt = '', size = 'md', isOnline, className
       ) : (
         <div
           className={cn(
-            'rounded-full bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center text-white font-medium',
+            'rounded-full bg-gradient-to-br from-zinc-600 to-zinc-700 flex items-center justify-center text-white font-medium',
             sizes[size]
           )}
         >

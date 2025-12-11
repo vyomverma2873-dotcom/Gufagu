@@ -6,7 +6,6 @@ import { ArrowLeft, X, Plus, AtSign, Check, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import Avatar from '@/components/ui/Avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { userApi } from '@/lib/api';
 import { debounce } from '@/lib/utils';
@@ -166,20 +165,6 @@ export default function EditProfilePage() {
 
         {/* Form Card */}
         <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-6 space-y-6">
-          {/* Profile Picture */}
-          <div className="flex items-center gap-5">
-            <Avatar
-              src={user.profilePicture}
-              alt={user.displayName || user.username || ''}
-              size="xl"
-              className="w-16 h-16 rounded-xl"
-            />
-            <div>
-              <h3 className="text-sm font-medium text-white">Profile Picture</h3>
-              <p className="text-xs text-neutral-500">Update your profile picture from your account settings</p>
-            </div>
-          </div>
-
           {/* Username */}
           <div>
             <label className="block text-xs font-medium text-neutral-400 mb-1.5">Username</label>
