@@ -418,9 +418,13 @@ export default function ChatPage() {
       document.body.classList.remove('video-chat-active');
     }
     
+    // Always hide footer on chat page (idle or active)
+    document.body.classList.add('chat-active');
+    
     return () => {
-      // Always remove class on unmount
+      // Always remove classes on unmount
       document.body.classList.remove('video-chat-active');
+      document.body.classList.remove('chat-active');
     };
   }, [connectionState]);
 
