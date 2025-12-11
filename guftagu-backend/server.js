@@ -20,6 +20,7 @@ const friendsRoutes = require('./routes/friends');
 const messagesRoutes = require('./routes/messages');
 const notificationRoutes = require('./routes/notification');
 const adminRoutes = require('./routes/admin');
+const contactRoutes = require('./routes/contact');
 
 // Initialize Express
 const app = express();
@@ -66,6 +67,7 @@ app.use('/api/friends', friendsRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Get online users count
 app.get('/api/stats/online', (req, res) => {

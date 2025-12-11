@@ -28,6 +28,10 @@ router.get('/bans', adminController.getActiveBans);
 // Logs
 router.get('/logs', adminController.getSystemLogs);
 
+// Contact Queries
+router.get('/contact-queries', adminController.getContactQueries);
+router.put('/contact-queries/:queryId', adminController.resolveContactQuery);
+
 // Chat Export
 router.get('/chats/stats', adminController.getChatStats);
 router.get('/chats/conversations', adminController.getConversationsList);

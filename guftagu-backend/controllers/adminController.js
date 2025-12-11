@@ -5,8 +5,10 @@ const SystemLog = require('../models/SystemLog');
 const Match = require('../models/Match');
 const OnlineUser = require('../models/OnlineUser');
 const Message = require('../models/Message');
+const ContactQuery = require('../models/ContactQuery');
 const mongoose = require('mongoose');
 const { sendBanNotificationEmail } = require('../utils/brevo');
+const { sendEmail } = require('../utils/email');
 const logger = require('../utils/logger');
 
 // Get admin dashboard stats
@@ -981,9 +983,123 @@ exports.getUserMessages = async (req, res) => {
         total,
         pages: Math.ceil(total / limit)
       }
+    });    } catch (error) {
+    logger.error('Get user messages error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get all contact queries
+exports.getContactQueries = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+
+    const queries = await ContactQuery.find(query)
+      .populate('resolvedBy', 'username displayName')
+      .sort('-createdAt')
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    const total = await ContactQuery.countDocuments(query);
+
+    res.json({
+      queries,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
-    logger.error('Get user messages error:', error);
+    logger.error('Get contact queries error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Resolve contact query
+exports.resolveContactQuery = async (req, res) => {
+  try {
+    const { queryId } = req.params;
+    const { status, adminComments } = req.body;
+
+    const query = await ContactQuery.findById(queryId);
+    if (!query) {
+      return res.status(404).json({ error: 'Query not found' });
+    }
+
+    // Update query
+    query.status = status || 'resolved';
+    query.adminComments = adminComments || '';
+    query.resolvedBy = req.user._id;
+    query.resolvedAt = new Date();
+    await query.save();
+
+    // Send resolution email to user
+    if (status === 'resolved') {
+      try {
+        await sendEmail({
+          to: query.email,
+          subject: 'Your Query Has Been Resolved - Guftagu Support',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Query Resolved</h2>
+              <p>Hi ${query.name},</p>
+              <p>Your support query has been resolved by our team.</p>
+              
+              <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #555;">Your Query:</h3>
+                <p style="margin: 5px 0;"><strong>Subject:</strong> ${query.subject}</p>
+                <p style="margin: 5px 0;"><strong>Message:</strong></p>
+                <p style="margin: 5px 0; padding: 10px; background: white; border-radius: 4px;">${query.message}</p>
+              </div>
+              
+              ${adminComments ? `
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4caf50;">
+                  <h3 style="margin-top: 0; color: #2e7d32;">Admin Response:</h3>
+                  <p style="margin: 0;">${adminComments}</p>
+                </div>
+              ` : ''}
+              
+              <p>Thank you for contacting us. If you have any further questions, feel free to reach out again.</p>
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+              <p style="color: #999; font-size: 12px;">
+                This is an automated message from Guftagu Support.<br>
+                © ${new Date().getFullYear()} Guftagu. All rights reserved.
+              </p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        logger.error('Failed to send resolution email:', emailError);
+        // Don't fail the request if email fails
+      }
+    }
+
+    // Log action
+    try {
+      await SystemLog.create({
+        action: 'contact_query_resolved',
+        performedBy: req.user._id,
+        details: { queryId, status, hasComments: !!adminComments },
+      });
+    } catch (logError) {
+      logger.warn('Failed to log contact query resolution:', logError.message);
+    }
+
+    const populatedQuery = await ContactQuery.findById(queryId)
+      .populate('resolvedBy', 'username displayName');
+
+    res.json({ 
+      message: 'Query resolved successfully', 
+      query: populatedQuery 
+    });
+  } catch (error) {
+    logger.error('Resolve contact query error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

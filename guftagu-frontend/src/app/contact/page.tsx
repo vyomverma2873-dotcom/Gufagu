@@ -1,8 +1,9 @@
 'use client';
 
-import { Mail, Phone, Instagram, MapPin, Send } from 'lucide-react';
+import { Mail, Phone, Instagram, MapPin, Send, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
+import { contactApi } from '@/lib/api';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -11,11 +12,32 @@ export default function ContactPage() {
     subject: '',
     message: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      const response = await contactApi.submitQuery(formData);
+      
+      if (response.data.success) {
+        setSubmitSuccess(true);
+        setFormData({ name: '', email: '', subject: '', message: '' });
+        
+        // Reset success message after 5 seconds
+        setTimeout(() => {
+          setSubmitSuccess(false);
+        }, 5000);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to submit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -90,6 +112,25 @@ export default function ContactPage() {
           {/* Contact Form */}
           <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-8 shadow-lg">
             <h2 className="text-2xl font-semibold text-white mb-6">Send us a Message</h2>
+            
+            {/* Success Message */}
+            {submitSuccess && (
+              <div className="mb-6 p-4 bg-emerald-900/30 border border-emerald-500/50 rounded-xl flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-emerald-400 font-medium">Message sent successfully!</p>
+                  <p className="text-sm text-neutral-400 mt-1">We've received your query and will get back to you soon via email.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-xl">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-300 mb-2">Name</label>
@@ -139,9 +180,9 @@ export default function ContactPage() {
                 />
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>
                 <Send className="w-4 h-4 mr-2" />
-                Send Message
+                {isSubmitting ? 'Sending...' : 'Send Message'}
               </Button>
             </form>
           </div>

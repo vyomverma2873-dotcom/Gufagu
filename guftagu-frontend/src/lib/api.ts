@@ -130,6 +130,16 @@ export const adminApi = {
   getConversations: (params?: { search?: string }) => api.get('/admin/chats/conversations', { params }),
   exportChat: (params: { user1Id?: string; user2Id?: string; startDate?: string; endDate?: string }) => 
     api.get('/admin/chats/export', { params, responseType: 'blob' }),
+  // Contact Queries
+  getContactQueries: (params?: any) => api.get('/admin/contact-queries', { params }),
+  resolveContactQuery: (queryId: string, data: { status: string; adminComments?: string }) =>
+    api.put(`/admin/contact-queries/${queryId}`, data),
+};
+
+// Contact API (public)
+export const contactApi = {
+  submitQuery: (data: { name: string; email: string; subject: string; message: string }) =>
+    api.post('/contact/submit', data),
 };
 
 export default api;
