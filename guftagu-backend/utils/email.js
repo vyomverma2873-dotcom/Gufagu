@@ -32,14 +32,15 @@ const sendEmail = async ({ to, subject, html, from, fromName }) => {
   }
 
   if (!apiInstance) {
+    console.error('Email service not configured - BREVO_API_KEY missing');
     throw new Error('Email service not configured');
   }
 
   const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
   
   sendSmtpEmail.sender = {
-    email: from || 'noreply@guftagu.com',
-    name: fromName || 'Guftagu Support'
+    email: from || process.env.BREVO_SENDER_EMAIL || 'noreply@guftagu.com',
+    name: fromName || process.env.BREVO_SENDER_NAME || 'Guftagu Support'
   };
   
   sendSmtpEmail.to = [{ email: to }];
@@ -47,11 +48,12 @@ const sendEmail = async ({ to, subject, html, from, fromName }) => {
   sendSmtpEmail.htmlContent = html;
 
   try {
+    console.log(`Attempting to send email to ${to} with subject: ${subject}`);
     const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log(`Email sent successfully to ${to}`);
+    console.log(`✓ Email sent successfully to ${to}`, result);
     return result;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error(`✗ Failed to send email to ${to}:`, error.response?.body || error.message || error);
     throw error;
   }
 };

@@ -18,15 +18,20 @@ exports.submitQuery = async (req, res) => {
     }
 
     // Rate limiting - check recent submissions from same email
-    const recentQuery = await ContactQuery.findOne({
-      email: email.toLowerCase(),
-      createdAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) }, // Last hour
-    });
-
-    if (recentQuery) {
-      return res.status(429).json({ 
-        error: 'You can only submit one query per hour. Please wait before submitting again.' 
+    // Skip rate limiting for admin email
+    const isAdminEmail = email.toLowerCase() === 'vyomverma2873@gmail.com';
+    
+    if (!isAdminEmail) {
+      const recentQuery = await ContactQuery.findOne({
+        email: email.toLowerCase(),
+        createdAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) }, // Last hour
       });
+
+      if (recentQuery) {
+        return res.status(429).json({ 
+          error: 'You can only submit one query per hour. Please wait before submitting again.' 
+        });
+      }
     }
 
     // Get IP and user agent for spam prevention
@@ -44,9 +49,11 @@ exports.submitQuery = async (req, res) => {
     });
 
     await contactQuery.save();
+    console.log(`Contact query saved: ${contactQuery._id} from ${email}`);
 
     // Send confirmation email to user
     try {
+      console.log(`Sending confirmation email to: ${email}`);
       await sendEmail({
         to: email,
         subject: 'Thank You - Query Received',
@@ -74,8 +81,9 @@ exports.submitQuery = async (req, res) => {
           </div>
         `,
       });
+      console.log(`✓ Confirmation email sent successfully to ${email}`);
     } catch (emailError) {
-      console.error('Failed to send confirmation email:', emailError);
+      console.error(`✗ Failed to send confirmation email to ${email}:`, emailError.response?.body || emailError.message || emailError);
       // Don't fail the request if email fails
     }
 

@@ -1041,6 +1041,7 @@ exports.resolveContactQuery = async (req, res) => {
     // Send resolution email to user
     if (status === 'resolved') {
       try {
+        console.log(`Sending resolution email to: ${query.email}`);
         await sendEmail({
           to: query.email,
           subject: 'Your Query Has Been Resolved - Guftagu Support',
@@ -1074,8 +1075,9 @@ exports.resolveContactQuery = async (req, res) => {
             </div>
           `,
         });
+        console.log(`✓ Resolution email sent successfully to ${query.email}`);
       } catch (emailError) {
-        logger.error('Failed to send resolution email:', emailError);
+        logger.error(`✗ Failed to send resolution email to ${query.email}:`, emailError.response?.body || emailError.message || emailError);
         // Don't fail the request if email fails
       }
     }
