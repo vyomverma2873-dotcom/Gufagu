@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Users, MessageSquare, Bell, User, Settings, LogOut, Menu, X, Sparkles } from 'lucide-react';
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -19,12 +19,36 @@ export default function Header() {
   const { user, isAuthenticated, logout, isLoading: authLoading } = useAuth();
   const { onlineCount, isConnected } = useSocket();
   const { unreadCount } = useNotifications();
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Track page loading state
   useEffect(() => {
     setIsPageLoading(true);
     const timer = setTimeout(() => setIsPageLoading(false), 500);
     return () => clearTimeout(timer);
+  }, [pathname]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userMenuOpen]);
+
+  // Close dropdown when route changes
+  useEffect(() => {
+    setUserMenuOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
   const navLinks = [
@@ -118,6 +142,7 @@ export default function Header() {
                   {/* Notifications */}
                   <Link
                     href="/notifications"
+                    onClick={() => setUserMenuOpen(false)}
                     className="relative p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-all"
                   >
                     <Bell className="w-5 h-5" />
@@ -129,7 +154,7 @@ export default function Header() {
                   </Link>
 
                   {/* User Menu */}
-                  <div className="relative">
+                  <div className="relative" ref={userMenuRef}>
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
                       className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-neutral-800/60 transition-all"

@@ -781,8 +781,8 @@ export default function AdminUsersPage() {
 
       {/* User Details Modal */}
       {detailsModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-6xl shadow-2xl my-8">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-6xl shadow-2xl my-4 sm:my-8 overflow-hidden">
             {/* Modal Header */}
             <div className="p-6 border-b border-zinc-700 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
               <h2 className="text-2xl font-bold text-white">User Details</h2>
@@ -827,8 +827,8 @@ export default function AdminUsersPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="border-b border-zinc-700 px-6">
-                  <div className="flex gap-4">
+                <div className="border-b border-zinc-700 px-4 sm:px-6 overflow-x-auto">
+                  <div className="flex gap-2 sm:gap-4 min-w-max">
                     <button
                       onClick={() => setActiveTab('overview')}
                       className={`px-4 py-3 border-b-2 transition ${
@@ -865,7 +865,7 @@ export default function AdminUsersPage() {
                 </div>
 
                 {/* Tab Content */}
-                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                <div className="p-4 sm:p-6 max-h-[60vh] overflow-y-auto overflow-x-hidden">
                   {activeTab === 'overview' && (
                     <div className="space-y-6">
                       {/* Stats Grid */}
@@ -1105,32 +1105,32 @@ export default function AdminUsersPage() {
                   )}
 
                   {activeTab === 'reports' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6 overflow-hidden">
                       {/* Reports Made */}
-                      <div>
+                      <div className="overflow-hidden">
                         <h4 className="font-semibold text-white mb-3">Reports Made by User ({userDetails.stats.reportsMade})</h4>
                         {userDetails.reportsMade.length === 0 ? (
                           <p className="text-zinc-400 text-sm text-center py-4">No reports made</p>
                         ) : (
-                          <div className="space-y-2">
+                          <div className="space-y-2 overflow-x-auto">
                             {userDetails.reportsMade.map((report) => (
-                              <div key={report._id} className="bg-zinc-800/50 p-4 rounded-lg">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <p className="text-white font-medium capitalize">{report.reason.replace(/_/g, ' ')}</p>
-                                    <p className="text-xs text-zinc-500">Reported: @{report.reportedUserId?.username}</p>
+                              <div key={report._id} className="bg-zinc-800/50 p-4 rounded-lg min-w-0">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-white font-medium capitalize truncate">{report.reason.replace(/_/g, ' ')}</p>
+                                    <p className="text-xs text-zinc-500 truncate">Reported: @{report.reportedUserId?.username}</p>
                                   </div>
-                                  <Badge variant={report.status === 'pending' ? 'warning' : 'default'}>
+                                  <Badge variant={report.status === 'pending' ? 'warning' : 'default'} className="flex-shrink-0 self-start">
                                     {report.status}
                                   </Badge>
                                 </div>
                                 {report.description && (
-                                  <p className="text-sm text-zinc-400 mt-2">{report.description}</p>
+                                  <p className="text-sm text-zinc-400 mt-2 break-words">{report.description}</p>
                                 )}
-                                <div className="flex justify-between items-center mt-3 text-xs text-zinc-500">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mt-3 text-xs text-zinc-500">
                                   <span>{formatDate(report.createdAt)}</span>
                                   {report.reviewedBy && (
-                                    <span>Reviewed by {report.reviewedBy.username}</span>
+                                    <span className="truncate">Reviewed by {report.reviewedBy.username}</span>
                                   )}
                                 </div>
                               </div>
@@ -1140,36 +1140,36 @@ export default function AdminUsersPage() {
                       </div>
 
                       {/* Reports Received */}
-                      <div>
+                      <div className="overflow-hidden">
                         <h4 className="font-semibold text-white mb-3">Reports Against User ({userDetails.stats.reportsReceived})</h4>
                         {userDetails.reportsReceived.length === 0 ? (
                           <p className="text-zinc-400 text-sm text-center py-4">No reports against this user</p>
                         ) : (
-                          <div className="space-y-2">
+                          <div className="space-y-2 overflow-x-auto">
                             {userDetails.reportsReceived.map((report) => (
-                              <div key={report._id} className="bg-zinc-800/50 p-4 rounded-lg border-l-4 border-red-500/50">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <p className="text-white font-medium capitalize">{report.reason.replace(/_/g, ' ')}</p>
-                                    <p className="text-xs text-zinc-500">Reported by: @{report.reporterId?.username}</p>
+                              <div key={report._id} className="bg-zinc-800/50 p-4 rounded-lg border-l-4 border-red-500/50 min-w-0">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-white font-medium capitalize truncate">{report.reason.replace(/_/g, ' ')}</p>
+                                    <p className="text-xs text-zinc-500 truncate">Reported by: @{report.reporterId?.username}</p>
                                   </div>
-                                  <Badge variant={report.status === 'action_taken' ? 'error' : report.status === 'pending' ? 'warning' : 'default'}>
+                                  <Badge variant={report.status === 'action_taken' ? 'error' : report.status === 'pending' ? 'warning' : 'default'} className="flex-shrink-0 self-start">
                                     {report.status}
                                   </Badge>
                                 </div>
                                 {report.description && (
-                                  <p className="text-sm text-zinc-400 mt-2">{report.description}</p>
+                                  <p className="text-sm text-zinc-400 mt-2 break-words">{report.description}</p>
                                 )}
                                 {report.moderatorNotes && (
-                                  <div className="mt-2 p-2 bg-zinc-900/50 rounded">
+                                  <div className="mt-2 p-2 bg-zinc-900/50 rounded overflow-hidden">
                                     <p className="text-xs text-zinc-500">Moderator Notes:</p>
-                                    <p className="text-sm text-zinc-300">{report.moderatorNotes}</p>
+                                    <p className="text-sm text-zinc-300 break-words">{report.moderatorNotes}</p>
                                   </div>
                                 )}
-                                <div className="flex justify-between items-center mt-3 text-xs text-zinc-500">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mt-3 text-xs text-zinc-500">
                                   <span>{formatDate(report.createdAt)}</span>
                                   {report.reviewedBy && (
-                                    <span>Reviewed by {report.reviewedBy.username}</span>
+                                    <span className="truncate">Reviewed by {report.reviewedBy.username}</span>
                                   )}
                                 </div>
                               </div>
