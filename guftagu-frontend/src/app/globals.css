@@ -156,8 +156,14 @@ body {
 /* Video chat active - hide navbar and footer for full-screen experience */
 .video-chat-active header,
 .video-chat-active nav,
-.video-chat-active footer {
+.video-chat-active footer,
+.video-chat-active header *,
+body.video-chat-active > div header,
+body.video-chat-active header {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* Chat specific - hide footer when in chat */
