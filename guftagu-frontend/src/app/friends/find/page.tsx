@@ -19,6 +19,7 @@ interface SearchResult {
   displayName?: string;
   profilePicture?: string;
   bio?: string;
+  interests?: string[];
 }
 
 export default function FindFriendsPage() {
@@ -29,6 +30,7 @@ export default function FindFriendsPage() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+  const [sendingRequest, setSendingRequest] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -91,6 +93,8 @@ export default function FindFriendsPage() {
   };
 
   const sendRequest = async (userId: string, username: string) => {
+    setSendingRequest(userId);
+    setError('');
     try {
       await friendsApi.sendRequest(username);
       setSentRequests((prev) => new Set(prev).add(userId));
@@ -98,6 +102,8 @@ export default function FindFriendsPage() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to send request');
+    } finally {
+      setSendingRequest(null);
     }
   };
 
@@ -179,31 +185,64 @@ export default function FindFriendsPage() {
                     results.map((user) => (
                       <div
                         key={user._id}
-                        className="flex items-center gap-4 p-4 bg-neutral-800/50 border border-neutral-700/50 rounded-xl"
+                        className="p-4 bg-neutral-800/50 border border-neutral-700/50 rounded-xl"
                       >
-                        <Avatar
-                          src={user.profilePicture}
-                          alt={user.displayName || user.username}
-                          size="lg"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-white truncate">
-                            {user.displayName || user.username}
-                          </h3>
-                          <p className="text-sm text-neutral-400">@{user.username}</p>
-                          <p className="text-xs text-neutral-500">{formatUserId(user.userId)}</p>
+                        <div className="flex items-start gap-4">
+                          <Avatar
+                            src={user.profilePicture}
+                            alt={user.displayName || user.username}
+                            size="lg"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <div>
+                                <h3 className="font-medium text-white truncate">
+                                  {user.displayName || user.username}
+                                </h3>
+                                <p className="text-sm text-neutral-400">@{user.username}</p>
+                                <p className="text-xs text-neutral-500 font-mono">{formatUserId(user.userId)}</p>
+                              </div>
+                              {sentRequests.has(user._id) ? (
+                                <Button variant="outline" size="sm" disabled>
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Sent
+                                </Button>
+                              ) : (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => sendRequest(user._id, user.username)}
+                                  isLoading={sendingRequest === user._id}
+                                  disabled={sendingRequest !== null}
+                                >
+                                  <UserPlus className="w-4 h-4 mr-1" />
+                                  Add
+                                </Button>
+                              )}
+                            </div>
+                            
+                            {/* Bio */}
+                            {user.bio && (
+                              <p className="text-sm text-neutral-400 mt-2 line-clamp-2">{user.bio}</p>
+                            )}
+                            
+                            {/* Interests */}
+                            {user.interests && user.interests.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {user.interests.slice(0, 5).map((interest, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-0.5 bg-neutral-700/60 border border-neutral-600/50 text-neutral-300 text-xs rounded-lg"
+                                  >
+                                    {interest}
+                                  </span>
+                                ))}
+                                {user.interests.length > 5 && (
+                                  <span className="text-xs text-neutral-500">+{user.interests.length - 5} more</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {sentRequests.has(user._id) ? (
-                          <Button variant="outline" size="sm" disabled>
-                            <Check className="w-4 h-4 mr-1" />
-                            Sent
-                          </Button>
-                        ) : (
-                          <Button size="sm" onClick={() => sendRequest(user._id, user.username)}>
-                            <UserPlus className="w-4 h-4 mr-1" />
-                            Add
-                          </Button>
-                        )}
                       </div>
                     ))
                   ) : searchQuery.length >= 2 ? (

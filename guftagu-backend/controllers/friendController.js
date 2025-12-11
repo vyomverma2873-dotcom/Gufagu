@@ -465,7 +465,7 @@ const searchUsers = async (req, res, next) => {
         },
       ],
     })
-      .select('userId username displayName profilePicture bio')
+      .select('userId username displayName profilePicture bio interests')
       .limit(parseInt(limit));
 
     res.json({
@@ -476,6 +476,7 @@ const searchUsers = async (req, res, next) => {
         displayName: u.displayName,
         profilePicture: u.profilePicture,
         bio: u.bio,
+        interests: u.interests || [],
       })),
     });
   } catch (error) {
