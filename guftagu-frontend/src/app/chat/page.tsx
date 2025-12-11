@@ -408,38 +408,25 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Hide navbar and footer when video call is active
+  // Hide navbar and footer when video call is active using CSS class
   useEffect(() => {
-    const navbar = document.querySelector('nav');
-    const header = document.querySelector('header');
-    const footer = document.querySelector('footer');
-    
     const isActive = connectionState !== 'idle';
     
-    // Hide navbar (try both nav and header selectors)
-    if (navbar) {
-      navbar.style.display = isActive ? 'none' : '';
-    }
-    if (header) {
-      header.style.display = isActive ? 'none' : '';
-    }
-    
-    // Hide footer
-    if (footer) {
-      footer.style.display = isActive ? 'none' : '';
+    if (isActive) {
+      document.body.classList.add('video-chat-active');
+    } else {
+      document.body.classList.remove('video-chat-active');
     }
     
     return () => {
-      // Restore visibility on unmount
-      if (navbar) navbar.style.display = '';
-      if (header) header.style.display = '';
-      if (footer) footer.style.display = '';
+      // Always remove class on unmount
+      document.body.classList.remove('video-chat-active');
     };
   }, [connectionState]);
 
   return (
     <div className={cn(
-      "fixed inset-0 bg-zinc-950 flex flex-col overflow-hidden",
+      "fixed inset-0 bg-zinc-950 flex flex-col overflow-hidden z-50",
       connectionState === 'idle' ? 'top-16' : 'top-0'
     )}>
       {connectionState === 'idle' ? (
