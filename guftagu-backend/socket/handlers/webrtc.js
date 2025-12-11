@@ -70,7 +70,9 @@ function processQueue(io) {
   
   if (matchingQueue.length < 2) return;
   
-  // Try to find a match for the first person in queue
+  // Try to find a match - prioritize interest matches, but fallback to any match
+  let bestMatch = null;
+  
   for (let i = 0; i < matchingQueue.length; i++) {
     const user1 = matchingQueue[i];
     
@@ -90,27 +92,49 @@ function processQueue(io) {
       // Check interest overlap (if both have interests)
       let matchedByInterests = false;
       let commonInterests = [];
+      
       if (user1.interests.length > 0 && user2.interests.length > 0) {
         commonInterests = user1.interests.filter(i => user2.interests.includes(i));
-        if (commonInterests.length === 0) continue;
-        matchedByInterests = true;
+        if (commonInterests.length > 0) {
+          matchedByInterests = true;
+        }
       }
       
-      // Found a compatible match!
-      // Remove both from queue
-      removeFromQueue(user1.socketId);
-      removeFromQueue(user2.socketId);
+      // If we found an interest match, use it immediately
+      if (matchedByInterests) {
+        bestMatch = { user1, user2, commonInterests, matchedByInterests };
+        break;
+      }
       
-      // Mark as recently matched
-      markAsRecentlyMatched(user1.socketId, user2.socketId);
-      
-      // Create match
-      createMatch(io, user1, user2, commonInterests, matchedByInterests);
-      
-      // Continue processing queue for remaining users
-      processQueue(io);
-      return;
+      // Otherwise, save as fallback match (first valid pair found)
+      if (!bestMatch) {
+        bestMatch = { user1, user2, commonInterests: [], matchedByInterests: false };
+      }
     }
+    
+    // If we found an interest match, stop looking
+    if (bestMatch && bestMatch.matchedByInterests) break;
+  }
+  
+  // If we found any valid match, create it
+  if (bestMatch) {
+    const { user1, user2, commonInterests, matchedByInterests } = bestMatch;
+    
+    // Remove both from queue
+    removeFromQueue(user1.socketId);
+    removeFromQueue(user2.socketId);
+    
+    // Mark as recently matched
+    markAsRecentlyMatched(user1.socketId, user2.socketId);
+    
+    // Create match
+    createMatch(io, user1, user2, commonInterests, matchedByInterests);
+    
+    // Continue processing queue for remaining users
+    if (matchingQueue.length >= 2) {
+      processQueue(io);
+    }
+    return;
   }
   
   // No compatible match found, notify first user of queue position
