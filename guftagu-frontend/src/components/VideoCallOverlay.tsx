@@ -133,6 +133,9 @@ export default function VideoCallOverlay() {
   // Ringback tone refs
   const ringbackAudioContextRef = useRef<AudioContext | null>(null);
   const ringbackToneRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+  
+  // Timer ref for auto-dismiss (so we can cancel it on "Call Again")
+  const autoDismissTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -1599,14 +1602,20 @@ export default function VideoCallOverlay() {
       peerConnectionRef.current.close();
     }
     
-    // Auto dismiss after 3 seconds
-    setTimeout(() => {
+    // Auto dismiss after 3 seconds (store ref so we can cancel on "Call Again")
+    autoDismissTimerRef.current = setTimeout(() => {
       setCallEnded(false);
       endCall();
     }, 3000);
   };
 
   const handleCallAgain = () => {
+    // Cancel any pending auto-dismiss timer
+    if (autoDismissTimerRef.current) {
+      clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = null;
+    }
+    
     // Use savedPeerInfo since currentCall is already null when call ends
     if (!savedPeerInfo) {
       console.log('[VideoCallOverlay] No saved peer info for Call Again');
@@ -1633,6 +1642,12 @@ export default function VideoCallOverlay() {
   };
 
   const handleCloseEndScreen = () => {
+    // Cancel any pending auto-dismiss timer
+    if (autoDismissTimerRef.current) {
+      clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = null;
+    }
+    
     setCallEnded(false);
     endCall();
   };
