@@ -1590,21 +1590,25 @@ export default function VideoCallOverlay() {
   const handleCallAgain = () => {
     if (!currentCall?.peer) return;
     
-    setCallEnded(false);
-    endCall(); // Close current overlay
+    // Save peer info BEFORE endCall() clears currentCall
+    const peerUserId = currentCall.peer.userId;
+    const peerUsername = currentCall.peer.displayName || currentCall.peer.username || 'Unknown';
+    const peerProfilePicture = currentCall.peer.profilePicture;
+    const savedCallType = currentCall.callType;
     
-    // Re-initiate call to the same user
+    setCallEnded(false);
+    endCall(); // Close current overlay (this sets currentCall to null)
+    
+    // Re-initiate call to the same user using saved values
     setTimeout(() => {
-      if (currentCall.peer) {
-        startCall(
-          currentCall.peer.userId,
-          {
-            username: currentCall.peer.displayName || currentCall.peer.username || 'Unknown',
-            profilePicture: currentCall.peer.profilePicture
-          },
-          currentCall.callType
-        );
-      }
+      startCall(
+        peerUserId,
+        {
+          username: peerUsername,
+          profilePicture: peerProfilePicture
+        },
+        savedCallType
+      );
     }, 500); // Small delay to ensure clean state
   };
 
