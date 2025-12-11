@@ -112,7 +112,7 @@ export default function AdminDashboardPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-neutral-950">
+      <div className="min-h-screen flex items-center justify-center">
         <Spinner />
       </div>
     );
@@ -120,7 +120,7 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-neutral-950">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="bg-neutral-900/80 backdrop-blur-xl border border-red-500/30 rounded-2xl p-6 text-center">
           <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
           <p className="text-red-400">{error}</p>
@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-8 bg-neutral-950">
+    <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Card */}
         <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6 mb-6">
