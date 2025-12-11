@@ -17,7 +17,6 @@ interface DashboardStats {
   usersToday: number;
   usersThisMonth: number;
   userGrowth: string;
-  premiumUsers: number;
   bannedUsers: number;
   onlineUsers: number;
   totalMatches: number;
@@ -163,11 +162,6 @@ export default function AdminDashboardPage() {
             title="New Today"
             value={stats?.usersToday || 0}
             icon={UserCheck}
-          />
-          <StatCard
-            title="Premium Users"
-            value={stats?.premiumUsers || 0}
-            icon={TrendingUp}
           />
         </div>
 

@@ -14,6 +14,7 @@ router.get('/dashboard', adminController.getDashboardStats);
 // Users
 router.get('/users', adminController.getUsers);
 router.get('/users/:userId', adminController.getUserDetails);
+router.get('/users/:userId/messages/:friendId', adminController.getUserMessages);
 router.post('/users/:userId/ban', adminController.banUser);
 router.post('/users/:userId/unban', adminController.unbanUser);
 

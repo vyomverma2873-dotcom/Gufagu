@@ -24,7 +24,6 @@ exports.getDashboardStats = async (req, res) => {
     const usersLastMonth = await User.countDocuments({ 
       joinDate: { $gte: lastMonth, $lt: thisMonth } 
     });
-    const premiumUsers = await User.countDocuments({ isPremium: true });
     const bannedUsers = await User.countDocuments({ isBanned: true });
 
     // Online users
@@ -51,7 +50,6 @@ exports.getDashboardStats = async (req, res) => {
         usersToday,
         usersThisMonth,
         userGrowth,
-        premiumUsers,
         bannedUsers,
         onlineUsers,
         totalMatches,
@@ -92,8 +90,6 @@ exports.getUsers = async (req, res) => {
 
     if (status === 'banned') {
       query.isBanned = true;
-    } else if (status === 'premium') {
-      query.isPremium = true;
     } else if (status === 'active') {
       query.isBanned = { $ne: true };
     }
@@ -125,15 +121,29 @@ exports.getUsers = async (req, res) => {
 exports.getUserDetails = async (req, res) => {
   try {
     const { userId } = req.params;
+    const Friend = require('../models/Friend');
 
     const user = await User.findById(userId).select('-__v');
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get user's reports
-    const reportsMade = await Report.countDocuments({ reporter: userId });
-    const reportsReceived = await Report.countDocuments({ reportedUser: userId });
+    // Get user's friends with their details
+    const friendsData = await Friend.find({ userId: userId })
+      .populate('friendId', 'username displayName profilePicture userId email isOnline lastActive')
+      .sort('-friendsSince');
+
+    // Get user's reports made (by this user)
+    const reportsMadeData = await Report.find({ reporterId: userId })
+      .populate('reportedUserId', 'username displayName userId')
+      .populate('reviewedBy', 'username')
+      .sort('-createdAt');
+
+    // Get reports against this user
+    const reportsReceivedData = await Report.find({ reportedUserId: userId })
+      .populate('reporterId', 'username displayName userId')
+      .populate('reviewedBy', 'username')
+      .sort('-createdAt');
 
     // Get user's matches
     const totalMatches = await Match.countDocuments({
@@ -141,15 +151,55 @@ exports.getUserDetails = async (req, res) => {
     });
 
     // Get ban history
-    const banHistory = await Ban.find({ user: userId }).sort('-createdAt').limit(10);
+    const banHistory = await Ban.find({ userId: userId }).sort('-createdAt').limit(10);
+
+    // For each friend, get message count and last message
+    const friendsWithMessages = await Promise.all(
+      friendsData.map(async (friend) => {
+        if (!friend.friendId) return null;
+        
+        const messageCount = await Message.countDocuments({
+          $or: [
+            { senderId: userId, receiverId: friend.friendId._id },
+            { senderId: friend.friendId._id, receiverId: userId }
+          ]
+        });
+
+        const lastMessage = await Message.findOne({
+          $or: [
+            { senderId: userId, receiverId: friend.friendId._id },
+            { senderId: friend.friendId._id, receiverId: userId }
+          ]
+        }).sort('-timestamp').select('content timestamp senderId');
+
+        return {
+          _id: friend._id,
+          friendId: friend.friendId,
+          friendsSince: friend.friendsSince,
+          messageCount,
+          lastMessage: lastMessage ? {
+            content: lastMessage.content,
+            timestamp: lastMessage.timestamp,
+            sentByUser: lastMessage.senderId.toString() === userId
+          } : null
+        };
+      })
+    );
+
+    // Filter out null values
+    const validFriends = friendsWithMessages.filter(f => f !== null);
 
     res.json({
       user,
       stats: {
-        reportsMade,
-        reportsReceived,
+        reportsMade: reportsMadeData.length,
+        reportsReceived: reportsReceivedData.length,
         totalMatches,
+        friendsCount: validFriends.length
       },
+      friends: validFriends,
+      reportsMade: reportsMadeData,
+      reportsReceived: reportsReceivedData,
       banHistory,
     });
   } catch (error) {
@@ -894,6 +944,46 @@ exports.getChatStats = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get chat stats error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get messages between specific users for admin
+exports.getUserMessages = async (req, res) => {
+  try {
+    const { userId, friendId } = req.params;
+    const { page = 1, limit = 100 } = req.query;
+
+    const messages = await Message.find({
+      $or: [
+        { senderId: userId, receiverId: friendId },
+        { senderId: friendId, receiverId: userId }
+      ]
+    })
+    .populate('senderId', 'username displayName profilePicture userId')
+    .populate('receiverId', 'username displayName profilePicture userId')
+    .sort('timestamp')
+    .skip((page - 1) * limit)
+    .limit(parseInt(limit));
+
+    const total = await Message.countDocuments({
+      $or: [
+        { senderId: userId, receiverId: friendId },
+        { senderId: friendId, receiverId: userId }
+      ]
+    });
+
+    res.json({
+      messages,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error('Get user messages error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
