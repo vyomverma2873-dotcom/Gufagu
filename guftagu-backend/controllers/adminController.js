@@ -470,10 +470,11 @@ exports.updateReportStatus = async (req, res) => {
       }
     }
 
+    // Get reported user for email notifications and ban action
+    const reportedUser = report.reportedUserId;
+
     // Handle email notifications to reported user based on action type
     if (action && ['ban_user', 'send_warning', 'close_issue'].includes(action)) {
-      const reportedUser = report.reportedUserId;
-      
       if (reportedUser && reportedUser.email) {
         const { sendReportActionEmail } = require('../utils/brevo');
         
