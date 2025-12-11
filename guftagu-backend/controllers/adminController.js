@@ -379,7 +379,8 @@ exports.updateReportStatus = async (req, res) => {
     const { status, action, notes } = req.body;
 
     const report = await Report.findById(reportId)
-      .populate('reportedUserId', 'username email displayName');
+      .populate('reportedUserId', 'username email displayName')
+      .populate('reporterId', 'username email displayName');
       
     if (!report) {
       return res.status(404).json({ error: 'Report not found' });
@@ -396,7 +397,28 @@ exports.updateReportStatus = async (req, res) => {
     }
     await report.save();
 
-    // Handle email notifications based on action type
+    // Send email notification to reporter about the review
+    if (report.reporterId && report.reporterId.email) {
+      const { sendReportReviewEmail } = require('../utils/brevo');
+      
+      try {
+        await sendReportReviewEmail(
+          report.reporterId.email,
+          report.reporterId.displayName || report.reporterId.username,
+          {
+            reason: report.reason,
+            status: status,
+            reviewedByUsername: req.user.username,
+            moderatorNotes: notes || ''
+          }
+        );
+        logger.info(`Report review email sent to reporter ${report.reporterId.email}`);
+      } catch (emailError) {
+        logger.warn('Failed to send report review email to reporter:', emailError.message);
+      }
+    }
+
+    // Handle email notifications to reported user based on action type
     if (action && ['ban_user', 'send_warning', 'close_issue'].includes(action)) {
       const reportedUser = report.reportedUserId;
       

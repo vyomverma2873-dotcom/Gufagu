@@ -491,9 +491,155 @@ const sendReportActionEmail = async (userEmail, username, actionDetails) => {
   }
 };
 
+/**
+ * Send report review notification to the reporter
+ */
+const sendReportReviewEmail = async (reporterEmail, reporterUsername, reviewDetails) => {
+  if (!apiInstance) {
+    initBrevo();
+  }
+
+  if (!apiInstance) {
+    console.log(`[DEV MODE] Report review notification for ${reporterEmail}`);
+    return { success: true, messageId: 'dev-mode' };
+  }
+
+  const { reason, status, reviewedByUsername, moderatorNotes } = reviewDetails;
+  
+  // Format report reason
+  const reasonLabels = {
+    'inappropriate_content': 'Inappropriate Content',
+    'harassment': 'Harassment',
+    'spam': 'Spam',
+    'nudity': 'Nudity',
+    'violence': 'Violence',
+    'hate_speech': 'Hate Speech',
+    'underage': 'Underage User',
+    'scam': 'Scam',
+    'impersonation': 'Impersonation',
+    'other': 'Policy Violation'
+  };
+  
+  const formattedReason = reasonLabels[reason] || reason;
+
+  // Customize email based on status
+  let emailSubject = '';
+  let headerColor = '';
+  let headerIcon = '';
+  let statusMessage = '';
+  
+  if (status === 'reviewed') {
+    emailSubject = 'Your Report Has Been Reviewed';
+    headerColor = '#2563eb';
+    headerIcon = '✓';
+    statusMessage = 'Your report has been reviewed by our moderation team. We have taken note of your concern and are monitoring the situation.';
+  } else if (status === 'action_taken') {
+    emailSubject = 'Action Taken on Your Report';
+    headerColor = '#10b981';
+    headerIcon = '✓';
+    statusMessage = 'Your report has been reviewed and we have taken appropriate action. Thank you for helping us maintain a safe community.';
+  } else if (status === 'dismissed') {
+    emailSubject = 'Report Review: No Violation Found';
+    headerColor = '#6b7280';
+    headerIcon = 'ℹ';
+    statusMessage = 'Your report has been reviewed. After careful consideration, we determined that the reported content does not violate our community guidelines at this time.';
+  }
+
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.to = [{ email: reporterEmail }];
+  sendSmtpEmail.sender = {
+    email: process.env.BREVO_SENDER_EMAIL || 'noreply@guftagu.com',
+    name: process.env.BREVO_SENDER_NAME || 'Guftagu',
+  };
+  sendSmtpEmail.subject = emailSubject;
+  sendSmtpEmail.htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
+      <div style="max-width: 560px; margin: 0 auto; background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #1a1a1a; font-size: 28px; margin: 0;">Guftagu</h1>
+          <p style="color: #666; margin-top: 8px;">Report Update</p>
+        </div>
+        
+        <div style="background: ${headerColor}15; border: 1px solid ${headerColor}30; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+          <h2 style="color: ${headerColor}; font-size: 18px; margin: 0 0 8px 0;">${headerIcon} Report Status Update</h2>
+        </div>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.6;">
+          Dear ${reporterUsername || 'User'},
+        </p>
+        
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          ${statusMessage}
+        </p>
+        
+        <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="color: #666; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Report Reason:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${formattedReason}</td>
+            </tr>
+            <tr>
+              <td style="color: #666; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">Status:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}</td>
+            </tr>
+            <tr>
+              <td style="color: #666; font-size: 14px; padding: 8px 0;">Reviewed By:</td>
+              <td style="color: #1a1a1a; font-size: 14px; font-weight: 600; padding: 8px 0; text-align: right;">${reviewedByUsername || 'Moderation Team'}</td>
+            </tr>
+          </table>
+          ${moderatorNotes ? `
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #666; font-size: 13px; margin: 0 0 8px 0;">Moderator Notes:</p>
+              <p style="color: #333; font-size: 14px; margin: 0;">${moderatorNotes}</p>
+            </div>
+          ` : ''}
+        </div>
+        
+        <p style="color: #333; font-size: 15px; line-height: 1.6;">
+          We appreciate your vigilance in helping us maintain a safe and respectful community. If you have any concerns or questions about this decision, please don't hesitate to contact us.
+        </p>
+        
+        <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 24px;">
+          For questions or appeals, contact us at <a href="mailto:vyomverma2873@gmail.com" style="color: #2563eb;">vyomverma2873@gmail.com</a>
+        </p>
+        
+        ${getEmailFooter()}
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log(`[Brevo] Report review notification sent to ${reporterEmail}. Message ID: ${response.messageId}`);
+    return { success: true, messageId: response.messageId };
+  } catch (error) {
+    console.error('[Brevo] Report review email error:', {
+      message: error.message,
+      statusCode: error.response?.statusCode,
+      body: error.response?.body,
+      recipient: reporterEmail
+    });
+    
+    // Don't throw - review should still succeed even if email fails
+    if (error.response?.statusCode === 429) {
+      console.warn('[Brevo] Rate limit exceeded for report review notification');
+    }
+    
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   initBrevo,
   sendOTPEmail,
   sendBanNotificationEmail,
   sendReportActionEmail,
+  sendReportReviewEmail,
 };

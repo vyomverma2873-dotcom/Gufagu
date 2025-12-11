@@ -72,6 +72,11 @@ export default function AdminUsersPage() {
   const [banDescription, setBanDescription] = useState('');
   const [isBanning, setIsBanning] = useState(false);
   const [banError, setBanError] = useState('');
+  
+  // Unban Modal State
+  const [unbanModalOpen, setUnbanModalOpen] = useState(false);
+  const [unbanTargetUser, setUnbanTargetUser] = useState<AdminUser | null>(null);
+  const [isUnbanning, setIsUnbanning] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -110,6 +115,7 @@ export default function AdminUsersPage() {
   const openBanModal = (targetUser: AdminUser) => {
     // Prevent admin from banning themselves
     if (targetUser._id === user?._id) {
+      // Using browser alert here is acceptable for critical self-protection warning
       alert('You cannot ban yourself!');
       setActionMenuOpen(null);
       return;
@@ -161,16 +167,33 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleUnbanUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to unban this user?')) return;
+  // Open unban modal
+  const openUnbanModal = (targetUser: AdminUser) => {
+    setUnbanTargetUser(targetUser);
+    setUnbanModalOpen(true);
+    setActionMenuOpen(null);
+  };
 
+  // Close unban modal
+  const closeUnbanModal = () => {
+    setUnbanModalOpen(false);
+    setUnbanTargetUser(null);
+  };
+
+  // Submit unban
+  const handleUnbanUser = async () => {
+    if (!unbanTargetUser) return;
+
+    setIsUnbanning(true);
     try {
-      await adminApi.unbanUser(userId);
+      await adminApi.unbanUser(unbanTargetUser._id);
+      closeUnbanModal();
       fetchUsers();
     } catch (error) {
       console.error('Failed to unban user:', error);
+    } finally {
+      setIsUnbanning(false);
     }
-    setActionMenuOpen(null);
   };
 
   if (authLoading) {
@@ -299,7 +322,7 @@ export default function AdminUsersPage() {
                               </Link>
                               {u.isBanned ? (
                                 <button
-                                  onClick={() => handleUnbanUser(u._id)}
+                                                                  onClick={() => openUnbanModal(u)}
                                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-emerald-400 hover:bg-zinc-700"
                                 >
                                   <Shield className="w-4 h-4" />
@@ -505,6 +528,72 @@ export default function AdminUsersPage() {
                 isLoading={isBanning}
               >
                 {isBanning ? 'Banning...' : 'Ban User'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unban Confirmation Modal */}
+      {unbanModalOpen && unbanTargetUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-zinc-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-600/20 rounded-lg">
+                  <Shield className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Unban User</h3>
+                  <p className="text-sm text-zinc-400">Restore user account access</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="bg-zinc-800/50 rounded-xl p-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <Avatar 
+                    src={unbanTargetUser.profilePicture} 
+                    alt={unbanTargetUser.displayName || unbanTargetUser.username || ''} 
+                    size="md" 
+                  />
+                  <div>
+                    <p className="font-medium text-white">
+                      {unbanTargetUser.displayName || unbanTargetUser.username || 'No name'}
+                    </p>
+                    <p className="text-sm text-zinc-400">@{unbanTargetUser.username || 'unnamed'}</p>
+                    <p className="text-xs text-zinc-500 font-mono">
+                      {formatUserId(unbanTargetUser.userId)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                Are you sure you want to unban this user? They will regain full access to their account and all features.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-6 border-t border-zinc-700">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={closeUnbanModal}
+                disabled={isUnbanning}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 !bg-emerald-600 hover:!bg-emerald-700"
+                onClick={handleUnbanUser}
+                isLoading={isUnbanning}
+              >
+                {isUnbanning ? 'Unbanning...' : 'Unban User'}
               </Button>
             </div>
           </div>
