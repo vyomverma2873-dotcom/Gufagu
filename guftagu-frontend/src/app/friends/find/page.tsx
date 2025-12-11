@@ -22,6 +22,14 @@ interface SearchResult {
   interests?: string[];
 }
 
+interface FriendshipStatus {
+  isFriend: boolean;
+  pendingRequest: {
+    _id: string;
+    isSender: boolean;
+  } | null;
+}
+
 export default function FindFriendsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -30,6 +38,7 @@ export default function FindFriendsPage() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+  const [friendshipStatuses, setFriendshipStatuses] = useState<Map<string, FriendshipStatus>>(new Map());
   const [sendingRequest, setSendingRequest] = useState<string | null>(null);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -44,15 +53,35 @@ export default function FindFriendsPage() {
   const searchByUsername = debounce(async (query: string) => {
     if (query.length < 2) {
       setResults([]);
+      setFriendshipStatuses(new Map());
       return;
     }
 
     setIsSearching(true);
     try {
       const response = await friendsApi.searchUsers(query);
-      setResults(response.data.users);
+      const users = response.data.users;
+      setResults(users);
+      
+      // Check friendship status for each user
+      const statusPromises = users.map(async (user: SearchResult) => {
+        try {
+          const statusResponse = await friendsApi.checkFriendship(user._id);
+          return { userId: user._id, status: statusResponse.data };
+        } catch {
+          return { userId: user._id, status: { isFriend: false, pendingRequest: null } };
+        }
+      });
+      
+      const statuses = await Promise.all(statusPromises);
+      const statusMap = new Map();
+      statuses.forEach(({ userId, status }) => {
+        statusMap.set(userId, status);
+      });
+      setFriendshipStatuses(statusMap);
     } catch (err) {
       setResults([]);
+      setFriendshipStatuses(new Map());
     } finally {
       setIsSearching(false);
     }
@@ -99,6 +128,17 @@ export default function FindFriendsPage() {
     try {
       await friendsApi.sendRequest(username);
       setSentRequests((prev) => new Set(prev).add(userId));
+      
+      // Update friendship status
+      setFriendshipStatuses((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(userId, {
+          isFriend: false,
+          pendingRequest: { _id: 'temp', isSender: true }
+        });
+        return newMap;
+      });
+      
       setSuccess(`Friend request sent to ${username}!`);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -207,23 +247,40 @@ export default function FindFriendsPage() {
                                 <p className="text-xs text-neutral-500 font-mono">{formatUserId(user.userId)}</p>
                               </div>
                               <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
-                                {sentRequests.has(user._id) ? (
-                                  <Button variant="outline" size="sm" disabled className="whitespace-nowrap">
-                                    <Check className="w-4 h-4 mr-1" />
-                                    Sent
-                                  </Button>
-                                ) : (
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => sendRequest(user._id, user.username)}
-                                    isLoading={sendingRequest === user._id}
-                                    disabled={sendingRequest !== null}
-                                    className="whitespace-nowrap"
-                                  >
-                                    <UserPlus className="w-4 h-4 mr-1" />
-                                    Add
-                                  </Button>
-                                )}
+                                {(() => {
+                                  const status = friendshipStatuses.get(user._id);
+                                  
+                                  if (status?.isFriend) {
+                                    return (
+                                      <Button variant="outline" size="sm" disabled className="whitespace-nowrap">
+                                        <Check className="w-4 h-4 mr-1" />
+                                        Friends
+                                      </Button>
+                                    );
+                                  }
+                                  
+                                  if (status?.pendingRequest) {
+                                    return (
+                                      <Button variant="outline" size="sm" disabled className="whitespace-nowrap">
+                                        <Check className="w-4 h-4 mr-1" />
+                                        {status.pendingRequest.isSender ? 'Sent' : 'Pending'}
+                                      </Button>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => sendRequest(user._id, user.username)}
+                                      isLoading={sendingRequest === user._id}
+                                      disabled={sendingRequest !== null}
+                                      className="whitespace-nowrap"
+                                    >
+                                      <UserPlus className="w-4 h-4 mr-1" />
+                                      Add
+                                    </Button>
+                                  );
+                                })()}
                                 <button
                                   onClick={() => setExpandedUser(isExpanded ? null : user._id)}
                                   className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-700/50 rounded-lg transition-colors"
