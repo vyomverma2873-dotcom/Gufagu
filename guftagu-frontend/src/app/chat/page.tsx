@@ -459,151 +459,155 @@ export default function ChatPage() {
           </div>
         </div>
       ) : (
-        // Active call - Vertical layout: Video on top, Chat below
+        // Active call - Optimized mobile layout
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Video Section - Takes remaining space */}
-          <div className="flex-1 min-h-0 relative p-2 md:p-3">
-            <div className="h-full grid grid-cols-2 gap-2">
-              {/* Remote video */}
-              <div className="relative bg-neutral-900 rounded-xl overflow-hidden">
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-                {connectionState !== 'connected' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
-                    {connectionState === 'searching' && (
-                      <div className="text-center">
-                        <div className="w-10 h-10 mx-auto mb-3 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
-                        <p className="text-neutral-400 text-xs md:text-sm">Finding...</p>
-                      </div>
-                    )}
-                    {connectionState === 'connecting' && (
-                      <div className="text-center">
-                        <div className="w-10 h-10 mx-auto mb-3 border-4 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
-                        <p className="text-neutral-400 text-xs md:text-sm">Connecting...</p>
-                      </div>
-                    )}
-                    {connectionState === 'disconnected' && (
-                      <div className="text-center p-2">
-                        <p className="text-neutral-400 text-xs md:text-sm mb-2">Disconnected</p>
-                        <Button onClick={startSearching} size="sm">Find New</Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {partner && connectionState === 'connected' && (
-                  <div className="absolute top-2 left-2 px-2 py-1 bg-zinc-900/80 backdrop-blur rounded text-xs text-white">
-                    {partner.username}
-                  </div>
-                )}
-              </div>
+          {/* Video Section - Square/compact on mobile */}
+          <div className="flex-1 min-h-0 relative p-2 md:p-4 flex items-center justify-center">
+            {/* Centered container with max width for better mobile UX */}
+            <div className="w-full max-w-2xl h-full flex flex-col">
+              {/* Videos in compact grid */}
+              <div className="flex-1 grid grid-cols-2 gap-1.5 md:gap-3">
+                {/* Remote video */}
+                <div className="relative bg-neutral-900 rounded-lg md:rounded-xl overflow-hidden aspect-square md:aspect-auto">
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  {connectionState !== 'connected' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                      {connectionState === 'searching' && (
+                        <div className="text-center px-2">
+                          <div className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 border-3 md:border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
+                          <p className="text-neutral-400 text-[10px] md:text-sm">Finding...</p>
+                        </div>
+                      )}
+                      {connectionState === 'connecting' && (
+                        <div className="text-center px-2">
+                          <div className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 border-3 md:border-4 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
+                          <p className="text-neutral-400 text-[10px] md:text-sm">Connecting...</p>
+                        </div>
+                      )}
+                      {connectionState === 'disconnected' && (
+                        <div className="text-center p-2">
+                          <p className="text-neutral-400 text-[10px] md:text-sm mb-2">Disconnected</p>
+                          <Button onClick={startSearching} size="sm" className="text-xs">Find New</Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {partner && connectionState === 'connected' && (
+                    <div className="absolute top-1.5 left-1.5 md:top-2 md:left-2 px-1.5 py-0.5 md:px-2 md:py-1 bg-zinc-900/90 backdrop-blur rounded text-[10px] md:text-xs text-white font-medium">
+                      {partner.username}
+                    </div>
+                  )}
+                </div>
 
-              {/* Local video */}
-              <div className="relative bg-neutral-900 rounded-xl overflow-hidden">
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover mirror"
-                />
-                {!localStream && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
-                    <div className="w-8 h-8 border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
+                {/* Local video */}
+                <div className="relative bg-neutral-900 rounded-lg md:rounded-xl overflow-hidden aspect-square md:aspect-auto">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover mirror"
+                  />
+                  {!localStream && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                      <div className="w-6 h-6 md:w-8 md:h-8 border-3 md:border-4 border-zinc-700 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {localStream && !isVideoEnabled && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
+                      <VideoOff className="w-6 h-6 md:w-8 md:h-8 text-zinc-600" />
+                    </div>
+                  )}
+                  <div className="absolute top-1.5 left-1.5 md:top-2 md:left-2 px-1.5 py-0.5 md:px-2 md:py-1 bg-zinc-900/90 backdrop-blur rounded text-[10px] md:text-xs text-white font-medium">
+                    You
                   </div>
-                )}
-                {localStream && !isVideoEnabled && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-neutral-900">
-                    <VideoOff className="w-8 h-8 text-zinc-600" />
-                  </div>
-                )}
-                <div className="absolute top-2 left-2 px-2 py-1 bg-zinc-900/80 backdrop-blur rounded text-xs text-white">
-                  You
                 </div>
               </div>
-            </div>
 
-            {/* Controls overlay */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
-              <button
-                onClick={toggleVideo}
-                className={cn(
-                  'p-2.5 md:p-3 rounded-full transition-colors',
-                  isVideoEnabled
-                    ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                )}
-              >
-                {isVideoEnabled ? <Video className="w-4 h-4 md:w-5 md:h-5" /> : <VideoOff className="w-4 h-4 md:w-5 md:h-5" />}
-              </button>
-
-              <button
-                onClick={toggleAudio}
-                className={cn(
-                  'p-2.5 md:p-3 rounded-full transition-colors',
-                  isAudioEnabled
-                    ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                )}
-              >
-                {isAudioEnabled ? <Mic className="w-4 h-4 md:w-5 md:h-5" /> : <MicOff className="w-4 h-4 md:w-5 md:h-5" />}
-              </button>
-
-              {connectionState === 'connected' && (
+              {/* Controls overlay - More compact on mobile */}
+              <div className="mt-2 md:mt-4 flex items-center justify-center gap-1.5 md:gap-2">
                 <button
-                  onClick={skipPartner}
-                  className="p-2.5 md:p-3 rounded-full bg-amber-600 hover:bg-amber-700 text-white transition-colors"
+                  onClick={toggleVideo}
+                  className={cn(
+                    'p-2 md:p-2.5 rounded-full transition-colors',
+                    isVideoEnabled
+                      ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  )}
                 >
-                  <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
+                  {isVideoEnabled ? <Video className="w-4 h-4 md:w-5 md:h-5" /> : <VideoOff className="w-4 h-4 md:w-5 md:h-5" />}
                 </button>
-              )}
 
-              <button
-                onClick={endChat}
-                className="p-2.5 md:p-3 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
-              >
-                <PhoneOff className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
+                <button
+                  onClick={toggleAudio}
+                  className={cn(
+                    'p-2 md:p-2.5 rounded-full transition-colors',
+                    isAudioEnabled
+                      ? 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  )}
+                >
+                  {isAudioEnabled ? <Mic className="w-4 h-4 md:w-5 md:h-5" /> : <MicOff className="w-4 h-4 md:w-5 md:h-5" />}
+                </button>
+
+                {connectionState === 'connected' && (
+                  <button
+                    onClick={skipPartner}
+                    className="p-2 md:p-2.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white transition-colors"
+                  >
+                    <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
+                  </button>
+                )}
+
+                <button
+                  onClick={endChat}
+                  className="p-2 md:p-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
+                >
+                  <PhoneOff className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Chat Section - Fixed height, always visible */}
-          <div className="h-48 md:h-56 bg-neutral-900/80 backdrop-blur-xl border-t border-neutral-800 flex flex-col">
-            {/* Chat header */}
-            <div className="px-3 py-2 border-b border-neutral-800 flex items-center gap-2 flex-shrink-0">
-              <MessageSquare className="w-4 h-4 text-neutral-400" />
-              <span className="text-sm font-medium text-white">Chat</span>
+          {/* Chat Section - More compact on mobile */}
+          <div className="h-40 md:h-56 bg-neutral-900/95 backdrop-blur-xl border-t border-neutral-800 flex flex-col flex-shrink-0">
+            {/* Chat header - Smaller on mobile */}
+            <div className="px-2 py-1.5 md:px-3 md:py-2 border-b border-neutral-800 flex items-center gap-1.5 md:gap-2 flex-shrink-0">
+              <MessageSquare className="w-3.5 h-3.5 md:w-4 md:h-4 text-neutral-400" />
+              <span className="text-xs md:text-sm font-medium text-white">Chat</span>
               {partner && connectionState === 'connected' && (
-                <span className="text-xs text-neutral-500">with {partner.username}</span>
+                <span className="text-[10px] md:text-xs text-neutral-500 truncate">with {partner.username}</span>
               )}
             </div>
 
-            {/* Messages container - scrollable */}
+            {/* Messages container - scrollable, more compact on mobile */}
             <div 
               ref={messagesContainerRef} 
-              className="flex-1 overflow-y-auto px-3 py-2 space-y-2"
+              className="flex-1 overflow-y-auto px-2 py-1.5 md:px-3 md:py-2 space-y-1.5 md:space-y-2"
             >
               {messages.length === 0 && (
-                <p className="text-neutral-500 text-xs text-center py-4">No messages yet</p>
+                <p className="text-neutral-500 text-[10px] md:text-xs text-center py-3 md:py-4">No messages yet</p>
               )}
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={cn(
-                    'max-w-[75%] rounded-lg px-3 py-1.5',
+                    'max-w-[80%] rounded-md md:rounded-lg px-2 py-1 md:px-3 md:py-1.5',
                     msg.isOwn
                       ? 'ml-auto bg-zinc-700 text-white'
                       : 'bg-neutral-800 text-white'
                   )}
                 >
-                  <p className="text-xs md:text-sm">{msg.message}</p>
+                  <p className="text-[11px] md:text-sm leading-snug">{msg.message}</p>
                 </div>
               ))}
               {isPartnerTyping && (
-                <div className="flex items-center gap-1.5 text-neutral-400 text-xs">
+                <div className="flex items-center gap-1 md:gap-1.5 text-neutral-400 text-[10px] md:text-xs">
                   <span>Typing</span>
                   <span className="flex gap-0.5">
                     <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -615,9 +619,9 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message input */}
-            <div className="px-3 py-2 border-t border-neutral-800 flex-shrink-0">
-              <div className="flex items-center gap-2">
+            {/* Message input - Compact on mobile */}
+            <div className="px-2 py-1.5 md:px-3 md:py-2 border-t border-neutral-800 flex-shrink-0">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 <input
                   type="text"
                   value={messageInput}
@@ -626,16 +630,16 @@ export default function ChatPage() {
                     handleTyping();
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Type a message..."
-                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                  placeholder="Type message..."
+                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded-md md:rounded-lg px-2 py-1.5 md:px-3 md:py-2 text-xs md:text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
                   disabled={connectionState !== 'connected'}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageInput.trim() || connectionState !== 'connected'}
-                  className="p-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors flex-shrink-0"
+                  className="p-1.5 md:p-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-md md:rounded-lg text-white transition-colors flex-shrink-0"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 </button>
               </div>
             </div>
