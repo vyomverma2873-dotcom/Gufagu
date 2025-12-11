@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, X, Plus, AtSign, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, X, Plus, AtSign, Check, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -168,20 +168,15 @@ export default function EditProfilePage() {
         <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-6 space-y-6">
           {/* Profile Picture */}
           <div className="flex items-center gap-5">
-            <div className="relative">
-              <Avatar
-                src={user.profilePicture}
-                alt={user.displayName || user.username || ''}
-                size="xl"
-                className="w-16 h-16 rounded-xl"
-              />
-              <button className="absolute -bottom-1 -right-1 p-1.5 bg-white rounded-lg text-neutral-900 hover:bg-neutral-100 transition-colors">
-                <Camera className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <Avatar
+              src={user.profilePicture}
+              alt={user.displayName || user.username || ''}
+              size="xl"
+              className="w-16 h-16 rounded-xl"
+            />
             <div>
               <h3 className="text-sm font-medium text-white">Profile Picture</h3>
-              <p className="text-xs text-neutral-500">JPG, PNG or WebP. Max 5MB.</p>
+              <p className="text-xs text-neutral-500">Update your profile picture from your account settings</p>
             </div>
           </div>
 

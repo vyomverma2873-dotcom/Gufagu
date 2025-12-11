@@ -125,7 +125,7 @@ export default function PublicProfilePage() {
         {/* Profile Header */}
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
           {/* Cover */}
-          <div className="h-32 bg-gradient-to-r from-violet-600 to-purple-600" />
+          <div className="h-32 bg-gradient-to-r from-zinc-800 to-zinc-700" />
           
           {/* Profile info */}
           <div className="px-6 pb-6">
@@ -142,9 +142,6 @@ export default function PublicProfilePage() {
                   <h1 className="text-2xl font-bold text-white">
                     {user.displayName || user.username}
                   </h1>
-                  {user.isPremium && (
-                    <Badge variant="warning">Premium</Badge>
-                  )}
                 </div>
                 <p className="text-zinc-400">@{user.username}</p>
               </div>
@@ -209,21 +206,21 @@ export default function PublicProfilePage() {
             <div className="mt-6 grid grid-cols-3 gap-4">
               <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
-                  <Video className="w-4 h-4 text-violet-400" />
+                  <Video className="w-4 h-4 text-zinc-400" />
                   <span className="text-2xl font-bold text-white">{user.totalMatches || 0}</span>
                 </div>
                 <p className="text-sm text-zinc-400">Matches</p>
               </div>
               <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
-                  <Users className="w-4 h-4 text-violet-400" />
+                  <Users className="w-4 h-4 text-zinc-400" />
                   <span className="text-2xl font-bold text-white">{user.friendsCount || 0}</span>
                 </div>
                 <p className="text-sm text-zinc-400">Friends</p>
               </div>
               <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
-                  <Calendar className="w-4 h-4 text-violet-400" />
+                  <Calendar className="w-4 h-4 text-zinc-400" />
                 </div>
                 <p className="text-sm text-zinc-400">
                   Joined {formatDate(user.joinDate, { month: 'short', year: 'numeric' })}

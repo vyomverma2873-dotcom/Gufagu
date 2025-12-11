@@ -57,14 +57,9 @@ export default function ProfilePage() {
               />
               
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-semibold text-white">
-                    {user.displayName || user.username}
-                  </h1>
-                  {user.isPremium && (
-                    <span className="px-2 py-0.5 bg-white/10 text-white text-xs rounded">Pro</span>
-                  )}
-                </div>
+                <h1 className="text-xl font-semibold text-white mb-1">
+                  {user.displayName || user.username}
+                </h1>
                 <p className="text-sm text-neutral-400">@{user.username}</p>
               </div>
 
