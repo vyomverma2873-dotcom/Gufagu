@@ -497,54 +497,59 @@ exports.updateReportStatus = async (req, res) => {
           // Don't fail the request if email fails
         }
       }
+    }
 
-      // If action is ban_user, actually ban the user
-      if (action === 'ban_user' && reportedUser) {
-        // CRITICAL: Prevent admin from banning themselves
-        if (reportedUser._id.toString() === req.user._id.toString()) {
-          logger.warn(`Admin ${req.user.username} attempted to ban themselves via report action`);
-          return res.status(400).json({ 
-            error: 'You cannot ban yourself. This action has been blocked for your protection.' 
-          });
-        }
-        
-        const Ban = require('../models/Ban');
-        const User = require('../models/User');
-        
-        try {
-          // Check if user is already banned
-          const existingBan = await Ban.findOne({
+    // If action is ban_user, actually ban the user
+    if (action === 'ban_user' && reportedUser) {
+      // CRITICAL: Prevent admin from banning themselves
+      if (reportedUser._id.toString() === req.user._id.toString()) {
+        logger.warn(`Admin ${req.user.username} attempted to ban themselves via report action`);
+        return res.status(400).json({ 
+          error: 'You cannot ban yourself. This action has been blocked for your protection.' 
+        });
+      }
+      
+      const Ban = require('../models/Ban');
+      const User = require('../models/User');
+      
+      try {
+        // Check if user is already banned
+        const existingBan = await Ban.findOne({
+          userId: reportedUser._id,
+          isActive: true,
+        });
+
+        if (!existingBan) {
+          // Create permanent ban
+          const ban = new Ban({
             userId: reportedUser._id,
+            username: reportedUser.username,
+            userId7Digit: reportedUser.userId,
+            email: reportedUser.email,
+            reason: report.reason,
+            banType: 'permanent',
+            bannedBy: req.user._id,
+            bannedByUsername: req.user.username,
+            description: notes || `Banned due to report: ${report.reason}`,
             isActive: true,
           });
+          await ban.save();
 
-          if (!existingBan) {
-            // Create permanent ban
-            const ban = new Ban({
-              userId: reportedUser._id,
-              username: reportedUser.username,
-              userId7Digit: reportedUser.userId,
-              email: reportedUser.email,
-              reason: report.reason,
-              banType: 'permanent',
-              bannedBy: req.user._id,
-              bannedByUsername: req.user.username,
-              description: notes || `Banned due to report: ${report.reason}`,
-              isActive: true,
-            });
-            await ban.save();
+          // Update user's banned status
+          await User.findByIdAndUpdate(reportedUser._id, {
+            isBanned: true,
+            banReason: report.reason,
+          });
 
-            // Update user's banned status
-            await User.findByIdAndUpdate(reportedUser._id, {
-              isBanned: true,
-              banReason: report.reason,
-            });
-
-            logger.info(`User ${reportedUser.username} banned via report action`);
-          }
-        } catch (banError) {
-          logger.error('Failed to ban user via report action:', banError);
+          logger.info(`User ${reportedUser.username} banned via report action`);
         }
+      } catch (banError) {
+        logger.error('Failed to ban user via report action:', banError);
+        // Return error to frontend instead of failing silently
+        return res.status(500).json({ 
+          error: 'Failed to ban user. Please try again.',
+          details: banError.message 
+        });
       }
     }
 

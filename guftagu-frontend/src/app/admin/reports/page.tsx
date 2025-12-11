@@ -187,7 +187,7 @@ export default function AdminReportsPage() {
 
     setIsSubmittingAction(true);
     try {
-      await adminApi.updateReport(selectedReport._id, {
+      const response = await adminApi.updateReport(selectedReport._id, {
         status: 'action_taken',
         action: actionType,
         notes: actionNotes,
@@ -207,10 +207,15 @@ export default function AdminReportsPage() {
         actionLabels[actionType] || 'Action Completed',
         'The action has been submitted successfully. The user has been notified via email.'
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to submit action:', error);
-      const errorMsg = (error as any)?.response?.data?.error || 'Failed to submit action. Please try again.';
-      showNotification('error', 'Action Failed', errorMsg);
+      // Check if it's a specific ban error from backend
+      if (error?.response?.data?.error) {
+        showNotification('error', 'Action Failed', error.response.data.error);
+      } else {
+        const errorMsg = error?.response?.data?.error || 'Failed to submit action. Please try again.';
+        showNotification('error', 'Action Failed', errorMsg);
+      }
     } finally {
       setIsSubmittingAction(false);
     }
