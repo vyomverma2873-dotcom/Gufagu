@@ -21,6 +21,4 @@
   <circle cx="90" cy="87" r="5.5" fill="#FFFFFF" fill-opacity="0.9" />
   <circle cx="107" cy="87" r="5.5" fill="#FFFFFF" fill-opacity="0.9" />
   <circle cx="124" cy="87" r="5.5" fill="#FFFFFF" fill-opacity="0.9" />
-  <!-- Status indicator -->
-  <circle cx="155" cy="155" r="18" fill="#34D399" />
 </svg>

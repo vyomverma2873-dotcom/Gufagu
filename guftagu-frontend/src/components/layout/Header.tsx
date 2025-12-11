@@ -102,7 +102,6 @@ export default function Header() {
                     <circle cx="22" cy="15.5" r="1" className="fill-white/90" />
                   </svg>
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-neutral-900"></div>
               </div>
               <span className="text-xl font-bold text-white tracking-tight group-hover:text-neutral-100 transition-colors font-[family-name:var(--font-poppins)]">
                 Guftagu
