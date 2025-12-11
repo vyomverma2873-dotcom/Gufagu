@@ -28,23 +28,24 @@ interface Report {
     profilePicture?: string;
     userId: string;
   };
-  type: string;
   reason: string;
   description?: string;
-  status: 'pending' | 'reviewed' | 'resolved' | 'dismissed';
+  status: 'pending' | 'reviewed' | 'action_taken' | 'dismissed';
   actionTaken?: string;
+  moderatorNotes?: string;
   reviewedBy?: {
     username: string;
     displayName?: string;
   };
   reviewedAt?: string;
   createdAt: string;
+  timestamp: string;
 }
 
 const statusColors: Record<string, string> = {
   pending: 'warning',
   reviewed: 'primary',
-  resolved: 'success',
+  action_taken: 'success',
   dismissed: 'default',
 };
 
@@ -57,7 +58,7 @@ export default function AdminReportsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -86,15 +87,16 @@ export default function AdminReportsPage() {
   };
 
   const handleUpdateReport = async (reportId: string, status: string, action?: string) => {
-    setIsUpdating(true);
+    setUpdatingReportId(reportId);
     try {
       await adminApi.updateReport(reportId, { status, action });
-      fetchReports();
+      await fetchReports();
       setSelectedReport(null);
     } catch (error) {
       console.error('Failed to update report:', error);
+      alert('Failed to update report. Please try again.');
     } finally {
-      setIsUpdating(false);
+      setUpdatingReportId(null);
     }
   };
 
@@ -122,7 +124,7 @@ export default function AdminReportsPage() {
 
         {/* Filters */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {['', 'pending', 'reviewed', 'resolved', 'dismissed'].map((status) => (
+          {['', 'pending', 'reviewed', 'action_taken', 'dismissed'].map((status) => (
             <button
               key={status}
               onClick={() => {
@@ -135,7 +137,7 @@ export default function AdminReportsPage() {
                   : 'bg-zinc-800 text-zinc-400 hover:text-white'
               }`}
             >
-              {status === '' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === '' ? 'All' : status === 'action_taken' ? 'Action Taken' : status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
         </div>
@@ -164,6 +166,7 @@ export default function AdminReportsPage() {
                     <div>
                       <p className="text-sm text-zinc-400">Reported by</p>
                       <p className="font-medium text-white">{report.reporter.displayName || report.reporter.username}</p>
+                      <p className="text-xs text-zinc-500 font-mono">{formatUserId(report.reporter.userId)}</p>
                     </div>
                   </div>
 
@@ -175,12 +178,15 @@ export default function AdminReportsPage() {
                     <div>
                       <p className="text-sm text-zinc-400">Reported</p>
                       <p className="font-medium text-white">{report.reportedUser.displayName || report.reportedUser.username}</p>
+                      <p className="text-xs text-zinc-500 font-mono">{formatUserId(report.reportedUser.userId)}</p>
                     </div>
                   </div>
 
                   {/* Status & Actions */}
                   <div className="flex items-center gap-4">
-                    <Badge variant={statusColors[report.status] as any}>{report.status}</Badge>
+                    <Badge variant={statusColors[report.status] as any}>
+                      {report.status === 'action_taken' ? 'Action Taken' : report.status}
+                    </Badge>
                     <span className="text-sm text-zinc-500">{formatRelativeTime(report.createdAt)}</span>
                   </div>
                 </div>
@@ -189,12 +195,8 @@ export default function AdminReportsPage() {
                 <div className="mt-4 pt-4 border-t border-zinc-800">
                   <div className="flex flex-wrap gap-4 text-sm">
                     <div>
-                      <span className="text-zinc-400">Type:</span>
-                      <span className="ml-2 text-white capitalize">{report.type}</span>
-                    </div>
-                    <div>
                       <span className="text-zinc-400">Reason:</span>
-                      <span className="ml-2 text-white">{report.reason}</span>
+                      <span className="ml-2 text-white capitalize">{report.reason.replace(/_/g, ' ')}</span>
                     </div>
                   </div>
                   {report.description && (
@@ -207,17 +209,28 @@ export default function AdminReportsPage() {
                   <div className="mt-4 pt-4 border-t border-zinc-800 flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      onClick={() => handleUpdateReport(report._id, 'resolved', 'warning_issued')}
-                      isLoading={isUpdating}
+                      onClick={() => handleUpdateReport(report._id, 'reviewed')}
+                      isLoading={updatingReportId === report._id}
+                      disabled={updatingReportId !== null && updatingReportId !== report._id}
+                    >
+                      <Clock className="w-4 h-4 mr-1" />
+                      Mark Reviewed
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleUpdateReport(report._id, 'action_taken', 'warning_issued')}
+                      isLoading={updatingReportId === report._id}
+                      disabled={updatingReportId !== null && updatingReportId !== report._id}
                     >
                       <CheckCircle className="w-4 h-4 mr-1" />
-                      Resolve
+                      Action Taken
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleUpdateReport(report._id, 'dismissed')}
-                      isLoading={isUpdating}
+                      isLoading={updatingReportId === report._id}
+                      disabled={updatingReportId !== null && updatingReportId !== report._id}
                     >
                       <XCircle className="w-4 h-4 mr-1" />
                       Dismiss

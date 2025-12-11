@@ -383,21 +383,38 @@ exports.updateReportStatus = async (req, res) => {
       return res.status(404).json({ error: 'Report not found' });
     }
 
+    // Update report fields
     report.status = status;
     report.reviewedBy = req.user._id;
+    report.reviewedByUsername = req.user.username;
     report.reviewedAt = new Date();
-    report.reviewNotes = notes;
-    report.actionTaken = action;
+    report.moderatorNotes = notes; // Fixed: use moderatorNotes instead of reviewNotes
+    if (action) {
+      report.actionTaken = action;
+    }
     await report.save();
 
-    // Log action
-    await SystemLog.create({
-      action: 'report_reviewed',
-      performedBy: req.user._id,
-      details: { reportId, status, action },
-    });
+    // Log action (non-blocking)
+    try {
+      await SystemLog.create({
+        action: 'report_reviewed',
+        performedBy: req.user._id,
+        details: { reportId, status, action },
+      });
+    } catch (logError) {
+      logger.warn('Failed to log report review:', logError.message);
+    }
 
-    res.json({ message: 'Report updated', report });
+    // Populate the response
+    const populatedReport = await Report.findById(reportId)
+      .populate('reporterId', 'username displayName profilePicture userId')
+      .populate('reportedUserId', 'username displayName profilePicture userId')
+      .populate('reviewedBy', 'username displayName');
+
+    res.json({ 
+      message: 'Report updated successfully', 
+      report: populatedReport 
+    });
   } catch (error) {
     logger.error('Update report error:', error);
     res.status(500).json({ error: 'Server error' });
