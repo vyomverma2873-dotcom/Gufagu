@@ -246,9 +246,14 @@ body.video-chat-active [data-footer] {
   pointer-events: none !important;
 }
 
-/* Ensure room takes full height */
-body.video-chat-active {
-  overflow: hidden;
+/* Ensure room takes full height and prevents scrolling */
+body.video-chat-active,
+body.video-chat-active html {
+  overflow: hidden !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  position: fixed !important;
+  width: 100% !important;
 }
 
 /* Chat specific - hide footer when in chat */

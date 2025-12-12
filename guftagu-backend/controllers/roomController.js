@@ -225,7 +225,7 @@ const joinRoom = async (req, res, next) => {
       );
     }
 
-    // Check if user is already in the room
+    // Check if user is already in the room (actively participating)
     const existingParticipant = await RoomParticipant.findOne({
       roomCode: code,
       userId: req.user._id,
@@ -249,15 +249,30 @@ const joinRoom = async (req, res, next) => {
 
     const isHost = room.hostUserId.equals(req.user._id);
 
-    // Add participant
-    const participant = new RoomParticipant({
+    // Check for any previous participant record (including left participants)
+    const previousParticipant = await RoomParticipant.findOne({
       roomCode: code,
-      roomId: room._id,
       userId: req.user._id,
-      isHost,
-    });
+    }).sort({ updatedAt: -1 });
 
-    await participant.save();
+    let participant;
+    if (previousParticipant && previousParticipant.leftAt) {
+      // Reuse existing record - update it for rejoin
+      previousParticipant.leftAt = null;
+      previousParticipant.isKicked = false;
+      previousParticipant.joinedAt = new Date();
+      previousParticipant.isHost = isHost;
+      participant = await previousParticipant.save();
+    } else {
+      // Create new participant record
+      participant = new RoomParticipant({
+        roomCode: code,
+        roomId: room._id,
+        userId: req.user._id,
+        isHost,
+      });
+      await participant.save();
+    }
 
     // Update participant count
     room.currentParticipants += 1;

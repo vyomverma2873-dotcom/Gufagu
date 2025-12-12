@@ -64,9 +64,8 @@ export default function VideoTile({
   return (
     <div
       className={cn(
-        'relative bg-neutral-900 rounded-xl overflow-hidden aspect-video group',
+        'participant-card relative bg-neutral-900 rounded-xl overflow-hidden aspect-video group',
         'border border-neutral-800/50 shadow-lg',
-        'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
         className
       )}
       onMouseEnter={() => setShowOverlay(true)}

@@ -84,8 +84,7 @@ export default function VideoGrid({
     <div className="w-full h-full p-4 flex items-center justify-center">
       <div
         className={cn(
-          'grid gap-3 w-full h-full',
-          'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          'video-grid grid gap-3 w-full h-full',
           getGridClass(),
           totalParticipants === 1 && 'place-items-center'
         )}
