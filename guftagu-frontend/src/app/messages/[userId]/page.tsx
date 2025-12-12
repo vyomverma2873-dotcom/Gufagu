@@ -208,7 +208,7 @@ export default function ConversationPage() {
           content: data.message || data.content,
           isOwn: false,
           isRead: true,
-          isNew: true, // For animation
+          isNew: false, // No animation delay - appear instantly
           timestamp: data.timestamp || new Date().toISOString(),
         };
         
@@ -229,16 +229,8 @@ export default function ConversationPage() {
           return [...prev, newMsg as TimelineItem];
         });
         
-        // Remove animation flag after animation completes
-        setTimeout(() => {
-          setMessages((prev) => 
-            prev.map(m => m._id === newMsg._id ? { ...m, isNew: false } : m)
-          );
-        }, 500);
-        
-        // Mark as read via REST and socket for real-time read receipts
+        // Mark as read via socket (non-blocking, no REST call)
         if (data.messageId) {
-          messagesApi.markAsRead([data.messageId]);
           socket?.emit('dm_mark_read', { messageIds: [data.messageId], fromUserId: data.from?.userId });
         }
       }
