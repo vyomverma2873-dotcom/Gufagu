@@ -683,11 +683,11 @@ export default function ConversationPage() {
                     <h2 className="font-semibold text-white text-sm sm:text-base truncate group-hover:text-neutral-200 transition-colors">
                       {chatUser.displayName || chatUser.username}
                     </h2>
-                    {/* Online status badge */}
-                    <div className="flex items-center gap-1.5 mt-0.5 min-h-[24px]">
+                    {/* Online status badge - fixed height container to prevent layout shift */}
+                    <div className="flex items-center gap-1.5 mt-0.5 h-6">
                       {isTyping ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-800/60 border border-neutral-700/40 rounded-full">
-                          <span className="flex gap-1 items-center">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-neutral-800/60 border border-neutral-700/40 rounded-full h-5">
+                          <span className="flex gap-0.5 items-center">
                             <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full animate-typing-dot" style={{ animationDelay: '0ms' }} />
                             <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full animate-typing-dot" style={{ animationDelay: '200ms' }} />
                             <span className="w-1.5 h-1.5 bg-neutral-300 rounded-full animate-typing-dot" style={{ animationDelay: '400ms' }} />
@@ -695,12 +695,12 @@ export default function ConversationPage() {
                           <span className="text-xs text-neutral-400 font-medium">typing</span>
                         </span>
                       ) : chatUser.isOnline ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/20 rounded-full">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/20 rounded-full h-5">
                           <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                           <span className="text-xs text-emerald-400 font-medium">Online</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-neutral-800/80 rounded-full">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-neutral-800/80 rounded-full h-5">
                           <span className="w-2 h-2 bg-neutral-500 rounded-full" />
                           <span className="text-xs text-neutral-400 font-medium">Offline</span>
                         </span>
