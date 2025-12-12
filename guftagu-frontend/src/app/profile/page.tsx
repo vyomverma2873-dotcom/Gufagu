@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [actualFriendsCount, setActualFriendsCount] = useState<number | null>(null);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -27,13 +28,16 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchFriendsCount = async () => {
       if (isAuthenticated) {
+        setIsLoadingFriends(true);
         try {
           const response = await friendsApi.getFriends();
           setActualFriendsCount(response.data.friends?.length || 0);
         } catch (error) {
           console.error('Failed to fetch friends count:', error);
-          // Fallback to user.friendsCount
+          // Fallback to user.friendsCount on error
           setActualFriendsCount(null);
+        } finally {
+          setIsLoadingFriends(false);
         }
       }
     };
@@ -119,7 +123,11 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <Users className="w-3.5 h-3.5 text-neutral-400" />
                   <span className="text-xl font-semibold text-white">
-                    {actualFriendsCount !== null ? actualFriendsCount : user.friendsCount}
+                    {isLoadingFriends ? (
+                      <span className="inline-block w-6 h-6 bg-neutral-700/50 rounded animate-pulse" />
+                    ) : (
+                      actualFriendsCount !== null ? actualFriendsCount : user.friendsCount
+                    )}
                   </span>
                 </div>
                 <p className="text-xs text-neutral-500">Friends</p>
