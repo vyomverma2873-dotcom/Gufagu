@@ -162,7 +162,7 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
             title="Total Users"
-            value={stats?.totalUsers?.toLocaleString() || 0}
+            value={stats?.totalUsers?.toLocaleString() || '0'}
             icon={Users}
             change={stats?.userGrowth}
             link="/admin/users"
