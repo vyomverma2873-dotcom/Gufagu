@@ -110,7 +110,7 @@ export default function AdminDashboardPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <Spinner />
       </div>
     );
@@ -118,7 +118,7 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="bg-neutral-900/80 backdrop-blur-xl border border-red-500/30 rounded-2xl p-6 text-center">
           <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
           <p className="text-red-400">{error}</p>
