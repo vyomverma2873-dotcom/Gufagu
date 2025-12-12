@@ -684,7 +684,7 @@ export default function ConversationPage() {
                       {chatUser.displayName || chatUser.username}
                     </h2>
                     {/* Online status badge */}
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5 min-h-[24px]">
                       {isTyping ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-800/60 border border-neutral-700/40 rounded-full">
                           <span className="flex gap-1 items-center">
