@@ -182,7 +182,7 @@ export default function FriendsPage() {
               }`}
             >
               <Shield className="w-4 h-4" />
-              Blocked ({blockedUsers.length})
+              Blocked
             </button>
           </div>
 
