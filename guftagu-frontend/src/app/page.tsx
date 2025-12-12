@@ -1,11 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Users, Shield, Zap, MessageSquare, Globe, ArrowRight, Sparkles, Heart } from 'lucide-react';
+import { Users, Shield, Zap, MessageSquare, Globe, ArrowRight, Sparkles, Heart, Video, Plus, LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import CreateRoomModal from '@/components/room/CreateRoomModal';
+import JoinRoomModal from '@/components/room/JoinRoomModal';
 
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
   
   // Determine chat destination - if still loading, default to chat (will check auth there)
   const chatHref = authLoading ? '/chat' : (isAuthenticated ? '/chat' : '/login');
@@ -71,6 +76,24 @@ export default function Home() {
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </Link>
+                {isAuthenticated && (
+                  <>
+                    <button 
+                      onClick={() => setShowCreateRoomModal(true)}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl font-medium shadow-lg shadow-violet-600/20 hover:shadow-violet-600/30 hover:bg-violet-500 transition-all hover:scale-[1.02]"
+                    >
+                      <Video className="w-4 h-4" />
+                      Create Room
+                    </button>
+                    <button 
+                      onClick={() => setShowJoinRoomModal(true)}
+                      className="flex items-center justify-center gap-2 px-6 py-3 border border-neutral-700 text-white rounded-xl font-medium hover:bg-neutral-800 transition-all hover:scale-[1.02]"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      Join Room
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -164,6 +187,16 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Room Modals */}
+      <CreateRoomModal 
+        isOpen={showCreateRoomModal} 
+        onClose={() => setShowCreateRoomModal(false)} 
+      />
+      <JoinRoomModal 
+        isOpen={showJoinRoomModal} 
+        onClose={() => setShowJoinRoomModal(false)} 
+      />
     </div>
   );
 }

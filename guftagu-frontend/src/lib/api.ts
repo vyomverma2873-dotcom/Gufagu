@@ -143,4 +143,31 @@ export const contactApi = {
     api.post('/contact/submit', data),
 };
 
+// Rooms API
+export const roomsApi = {
+  createRoom: (data: {
+    roomName?: string;
+    maxParticipants?: number;
+    isPublic?: boolean;
+    password?: string;
+    settings?: {
+      videoEnabled?: boolean;
+      audioEnabled?: boolean;
+      screenShareEnabled?: boolean;
+      chatEnabled?: boolean;
+    };
+  }) => api.post('/rooms/create', data),
+  getRoomDetails: (code: string) => api.get(`/rooms/${code}`),
+  joinRoom: (code: string, password?: string) => 
+    api.post(`/rooms/${code}/join`, { password }),
+  leaveRoom: (code: string) => api.post(`/rooms/${code}/leave`),
+  deleteRoom: (code: string) => api.delete(`/rooms/${code}`),
+  kickParticipant: (code: string, userId: string) => 
+    api.post(`/rooms/${code}/kick`, { userId }),
+  muteParticipant: (code: string, userId: string, mute: boolean) => 
+    api.post(`/rooms/${code}/mute`, { userId, mute }),
+  getUserRooms: () => api.get('/rooms/my-rooms'),
+  getMeetingToken: (code: string) => api.post(`/rooms/${code}/token`),
+};
+
 export default api;

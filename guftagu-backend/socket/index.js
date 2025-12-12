@@ -151,6 +151,9 @@ const initializeSocket = (server) => {
     // Friend system
     require('./handlers/friends')(io, socket);
 
+    // Room/Group video chat
+    require('./handlers/room')(io, socket);
+
     // Disconnect handler
     socket.on('disconnect', async () => {
       const currentCount = getAccurateOnlineCount();

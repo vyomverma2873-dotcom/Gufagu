@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, MessageSquare, Bell, User, Settings, LogOut, Menu, X, Sparkles, Monitor, Shield } from 'lucide-react';
+import { Users, MessageSquare, Bell, User, Settings, LogOut, Menu, X, Sparkles, Monitor, Shield, Video, Plus, ArrowRight } from 'lucide-react';
 import { useState, useEffect, useTransition, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
@@ -10,6 +10,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import CreateRoomModal from '@/components/room/CreateRoomModal';
+import JoinRoomModal from '@/components/room/JoinRoomModal';
 import api from '@/lib/api';
 
 export default function Header() {
@@ -26,6 +28,8 @@ export default function Header() {
   const [sessionCount, setSessionCount] = useState<number>(0);
   const [showLogoutAllModal, setShowLogoutAllModal] = useState(false);
   const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
 
   // Fetch session count
   useEffect(() => {
@@ -100,6 +104,17 @@ export default function Header() {
     { href: '/friends', label: 'Friends', icon: Users },
     { href: '/messages', label: 'Messages', icon: Sparkles },
   ];
+
+  // Room action handlers
+  const handleCreateRoom = () => {
+    setUserMenuOpen(false);
+    setShowCreateRoomModal(true);
+  };
+
+  const handleJoinRoom = () => {
+    setUserMenuOpen(false);
+    setShowJoinRoomModal(true);
+  };
 
   return (
     <>
@@ -253,6 +268,29 @@ export default function Header() {
                             )}
                           </Link>
                         </div>
+                        {/* Video Rooms Section */}
+                        <div className="border-t border-neutral-800 py-1">
+                          <div className="px-4 py-2">
+                            <p className="text-xs text-neutral-500 font-medium flex items-center gap-2">
+                              <Video className="w-3 h-3" />
+                              VIDEO ROOMS
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleCreateRoom}
+                            className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:text-white hover:bg-neutral-800/60 w-full text-left"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Create Room</span>
+                          </button>
+                          <button
+                            onClick={handleJoinRoom}
+                            className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:text-white hover:bg-neutral-800/60 w-full text-left"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                            <span>Join Room</span>
+                          </button>
+                        </div>
                         <div className="border-t border-neutral-800 py-1">
                           <button
                             onClick={() => {
@@ -368,6 +406,18 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      {/* Create Room Modal */}
+      <CreateRoomModal 
+        isOpen={showCreateRoomModal} 
+        onClose={() => setShowCreateRoomModal(false)} 
+      />
+
+      {/* Join Room Modal */}
+      <JoinRoomModal 
+        isOpen={showJoinRoomModal} 
+        onClose={() => setShowJoinRoomModal(false)} 
+      />
     </>
   );
 }
