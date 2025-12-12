@@ -55,7 +55,6 @@ export default function RoomPage() {
   const [isHost, setIsHost] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showChat, setShowChat] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [mutedByHost, setMutedByHost] = useState(false);
@@ -440,12 +439,9 @@ export default function RoomPage() {
         audioEnabled={webrtc.audioEnabled}
         videoEnabled={webrtc.videoEnabled}
         isScreenSharing={webrtc.isScreenSharing}
-        chatEnabled={room?.settings.chatEnabled}
-        showChat={showChat}
         onToggleAudio={webrtc.toggleAudio}
         onToggleVideo={webrtc.toggleVideo}
         onToggleScreenShare={webrtc.toggleScreenShare}
-        onToggleChat={() => setShowChat(!showChat)}
         onLeave={() => setShowLeaveConfirm(true)}
       />
 

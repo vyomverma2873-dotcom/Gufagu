@@ -8,22 +8,17 @@ import {
   VideoOff, 
   MonitorUp,
   MonitorOff,
-  MessageSquare,
   Settings,
   PhoneOff,
-  MoreHorizontal
 } from 'lucide-react';
 
 interface ControlsBarProps {
   audioEnabled: boolean;
   videoEnabled: boolean;
   isScreenSharing: boolean;
-  chatEnabled?: boolean;
-  showChat?: boolean;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onToggleScreenShare: () => void;
-  onToggleChat?: () => void;
   onOpenSettings?: () => void;
   onLeave: () => void;
 }
@@ -32,12 +27,9 @@ export default function ControlsBar({
   audioEnabled,
   videoEnabled,
   isScreenSharing,
-  chatEnabled = true,
-  showChat = false,
   onToggleAudio,
   onToggleVideo,
   onToggleScreenShare,
-  onToggleChat,
   onOpenSettings,
   onLeave,
 }: ControlsBarProps) {
@@ -105,22 +97,6 @@ export default function ControlsBar({
             <MonitorUp className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </button>
-
-        {/* Chat toggle - Hidden on mobile */}
-        {chatEnabled && onToggleChat && (
-          <button
-            onClick={onToggleChat}
-            className={cn(
-              'hidden sm:flex p-3 sm:p-4 rounded-full transition-all duration-200',
-              showChat
-                ? 'bg-violet-600 hover:bg-violet-700 text-white'
-                : 'bg-neutral-800 hover:bg-neutral-700 text-white'
-            )}
-            title={showChat ? 'Close chat' : 'Open chat'}
-          >
-            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-        )}
 
         {/* Settings - Hidden on mobile */}
         {onOpenSettings && (

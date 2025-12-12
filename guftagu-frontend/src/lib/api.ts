@@ -152,13 +152,11 @@ export const roomsApi = {
   createRoom: (data: {
     roomName?: string;
     maxParticipants?: number;
-    isPublic?: boolean;
     password?: string;
     settings?: {
       videoEnabled?: boolean;
       audioEnabled?: boolean;
       screenShareEnabled?: boolean;
-      chatEnabled?: boolean;
     };
   }) => api.post('/rooms/create', data),
   getRoomDetails: (code: string) => api.get(`/rooms/${code}`),

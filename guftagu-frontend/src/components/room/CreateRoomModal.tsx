@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Video, Mic, Monitor, MessageSquare, Lock, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, Video, Mic, Monitor, Lock, Copy, Check, ExternalLink } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { roomsApi } from '@/lib/api';
 
@@ -15,7 +15,6 @@ interface RoomSettings {
   videoEnabled: boolean;
   audioEnabled: boolean;
   screenShareEnabled: boolean;
-  chatEnabled: boolean;
 }
 
 export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
@@ -24,16 +23,14 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
   const [isLoading, setIsLoading] = useState(false);
   
   // Form state
-  const [roomName, setRoomName] = useState('');
+  const [roomName, setRoomName] = useState('My Awesome Room');
   const [maxParticipants, setMaxParticipants] = useState(5);
-  const [isPublic, setIsPublic] = useState(true);
   const [password, setPassword] = useState('');
   const [enablePassword, setEnablePassword] = useState(false);
   const [settings, setSettings] = useState<RoomSettings>({
     videoEnabled: true,
     audioEnabled: true,
     screenShareEnabled: true,
-    chatEnabled: true,
   });
 
   // Success state
@@ -50,7 +47,6 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
       const response = await roomsApi.createRoom({
         roomName: roomName || undefined,
         maxParticipants,
-        isPublic,
         password: enablePassword ? password : undefined,
         settings,
       });
@@ -93,16 +89,14 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
 
   const handleClose = () => {
     setStep('create');
-    setRoomName('');
+    setRoomName('My Awesome Room');
     setMaxParticipants(5);
-    setIsPublic(true);
     setPassword('');
     setEnablePassword(false);
     setSettings({
       videoEnabled: true,
       audioEnabled: true,
       screenShareEnabled: true,
-      chatEnabled: true,
     });
     setCreatedRoom(null);
     onClose();
@@ -175,7 +169,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
                 <label className="block text-sm font-medium text-neutral-300 mb-3">
                   Room Settings
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <SettingToggle
                     icon={<Video className="w-4 h-4" />}
                     label="Video"
@@ -194,41 +188,6 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
                     checked={settings.screenShareEnabled}
                     onChange={(v) => setSettings({ ...settings, screenShareEnabled: v })}
                   />
-                  <SettingToggle
-                    icon={<MessageSquare className="w-4 h-4" />}
-                    label="Chat"
-                    checked={settings.chatEnabled}
-                    onChange={(v) => setSettings({ ...settings, chatEnabled: v })}
-                  />
-                </div>
-              </div>
-
-              {/* Privacy */}
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-neutral-300 mb-3">
-                  Privacy
-                </label>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setIsPublic(true)}
-                    className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
-                      isPublic
-                        ? 'bg-violet-600/20 border-violet-500 text-violet-400'
-                        : 'bg-neutral-800/50 border-neutral-700/50 text-neutral-400 hover:border-neutral-600'
-                    }`}
-                  >
-                    Public
-                  </button>
-                  <button
-                    onClick={() => setIsPublic(false)}
-                    className={`flex-1 px-4 py-3 rounded-lg border transition-colors ${
-                      !isPublic
-                        ? 'bg-violet-600/20 border-violet-500 text-violet-400'
-                        : 'bg-neutral-800/50 border-neutral-700/50 text-neutral-400 hover:border-neutral-600'
-                    }`}
-                  >
-                    Private
-                  </button>
                 </div>
               </div>
 
