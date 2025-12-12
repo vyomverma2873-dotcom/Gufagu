@@ -234,16 +234,21 @@ body {
 }
 
 /* Video chat active - hide navbar and footer for full-screen experience */
-.video-chat-active header,
-.video-chat-active nav,
-.video-chat-active footer,
-.video-chat-active header *,
-body.video-chat-active > div header,
-body.video-chat-active header {
+body.video-chat-active header,
+body.video-chat-active nav,
+body.video-chat-active footer,
+body.video-chat-active [data-header],
+body.video-chat-active [data-footer] {
   display: none !important;
   visibility: hidden !important;
-  opacity: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
   pointer-events: none !important;
+}
+
+/* Ensure room takes full height */
+body.video-chat-active {
+  overflow: hidden;
 }
 
 /* Chat specific - hide footer when in chat */

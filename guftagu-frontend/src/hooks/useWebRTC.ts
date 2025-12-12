@@ -353,25 +353,11 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
       }
     };
 
-    // Handle new peer joining
+    // Handle new peer joining - only add after WebRTC connection is established
     const handleParticipantJoined = (data: { socketId: string; user: Partial<Peer> }) => {
       console.log('New participant joined:', data);
-      // The new peer will send us an offer, so we just wait
-      setPeers(prev => {
-        const updated = new Map(prev);
-        updated.set(data.socketId, {
-          socketId: data.socketId,
-          _id: data.user._id || '',
-          username: data.user.username || '',
-          displayName: data.user.displayName,
-          profilePicture: data.user.profilePicture,
-          isHost: data.user.isHost || false,
-          isMuted: data.user.isMuted || false,
-          audioEnabled: true,
-          videoEnabled: true,
-        });
-        return updated;
-      });
+      // Don't add to peers yet - wait for WebRTC track event
+      // The peer will be added when we receive their stream via ontrack
     };
 
     // Handle peer leaving

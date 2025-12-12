@@ -59,6 +59,8 @@ export default function RoomPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [kickedModal, setKickedModal] = useState(false);
   const [mutedByHost, setMutedByHost] = useState(false);
+  const [permanentBan, setPermanentBan] = useState(false);
+  const [kickCount, setKickCount] = useState(0);
 
   // WebRTC hook - only initialize after joining
   const webrtc = useWebRTC({
@@ -97,6 +99,23 @@ export default function RoomPage() {
     }
   }, [code, isAuthenticated, authLoading, router]);
 
+  // Auto-join room after fetching (direct join flow)
+  useEffect(() => {
+    if (room && !hasJoined && !isJoining && !showPassword && !error) {
+      joinRoom();
+    }
+  }, [room, hasJoined, isJoining, showPassword, error]);
+
+  // Hide header/footer when in room (full-screen mode)
+  useEffect(() => {
+    if (hasJoined) {
+      document.body.classList.add('video-chat-active');
+    }
+    return () => {
+      document.body.classList.remove('video-chat-active');
+    };
+  }, [hasJoined]);
+
   // Join room
   const joinRoom = async () => {
     if (!room) return;
@@ -131,6 +150,8 @@ export default function RoomPage() {
 
     const handleHostAction = (data: any) => {
       if (data.action === 'kick') {
+        setPermanentBan(data.permanentBan || false);
+        setKickCount(data.kickCount || 1);
         setKickedModal(true);
       } else if (data.action === 'mute') {
         // Host muted us - toggle our audio off
@@ -292,48 +313,13 @@ export default function RoomPage() {
     );
   }
 
-  // Room preview (before joining)
+  // Room preview (before joining) - now shows joining state
   if (!hasJoined && room) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-950 px-4">
-        <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-8 max-w-md w-full">
-          <div className="text-center mb-6">
-            <div className="text-4xl mb-4">🎥</div>
-            <h1 className="text-2xl font-bold text-white mb-2">{room.roomName}</h1>
-            <p className="text-neutral-400">
-              Hosted by {room.host.displayName || room.host.username}
-            </p>
-          </div>
-
-          <div className="bg-neutral-800/50 rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-neutral-400">Room Code</span>
-              <button 
-                onClick={copyCode}
-                className="flex items-center gap-2 text-white font-mono bg-neutral-700/50 px-3 py-1 rounded-lg hover:bg-neutral-700 transition-colors"
-              >
-                {code}
-                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-neutral-400">Participants</span>
-              <span className="text-white">{room.currentParticipants}/{room.maxParticipants}</span>
-            </div>
-          </div>
-
-          {room.currentParticipants >= room.maxParticipants ? (
-            <div className="text-center">
-              <p className="text-yellow-400 mb-4">Room is full</p>
-              <Button variant="outline" onClick={() => router.push('/')}>
-                Go Back
-              </Button>
-            </div>
-          ) : (
-            <Button onClick={joinRoom} isLoading={isJoining} className="w-full">
-              Join Room
-            </Button>
-          )}
+        <div className="text-center">
+          <Spinner />
+          <p className="text-neutral-400 mt-4">Joining {room.roomName}...</p>
         </div>
       </div>
     );
@@ -490,10 +476,13 @@ export default function RoomPage() {
           setKickedModal(false);
           handleLeave();
         }}
-        title="Removed from Room"
-        message="You were removed from the room by the host."
+        title={permanentBan ? "Permanently Banned" : "Removed from Room"}
+        message={permanentBan 
+          ? "You have been permanently banned from this room for repeated violations."
+          : `You were removed from the room by the host. (Warning ${kickCount}/3)`
+        }
         confirmText="OK"
-        confirmVariant="primary"
+        confirmVariant={permanentBan ? "danger" : "primary"}
         showCancel={false}
       />
     </div>

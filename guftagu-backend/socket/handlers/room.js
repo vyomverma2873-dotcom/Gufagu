@@ -193,15 +193,22 @@ module.exports = (io, socket) => {
         return;
       }
 
-      // Update participant
+      // Get current kick count and increment
+      const currentKickCount = await RoomParticipant.getKickCount(roomCode, targetUserId);
+      const newKickCount = currentKickCount + 1;
+
+      // Update participant with incremented kick count
       await RoomParticipant.findOneAndUpdate(
         { roomCode, userId: targetUserId, leftAt: null },
-        { isKicked: true, leftAt: new Date() }
+        { isKicked: true, leftAt: new Date(), kickCount: newKickCount }
       );
 
       // Update room count
       room.currentParticipants = Math.max(0, room.currentParticipants - 1);
       await room.save();
+
+      // Determine if this is a permanent ban
+      const isPermanentBan = newKickCount >= 3;
 
       // Notify the kicked user
       const targetUser = await User.findById(targetUserId);
@@ -209,7 +216,11 @@ module.exports = (io, socket) => {
         io.to(targetUser.socketId).emit('room:host-action', {
           action: 'kick',
           roomCode,
-          message: 'You were removed from the room by the host',
+          message: isPermanentBan 
+            ? 'You have been permanently banned from this room' 
+            : `You were removed from the room by the host (${newKickCount}/3 warnings)`,
+          permanentBan: isPermanentBan,
+          kickCount: newKickCount,
         });
       }
 
@@ -221,7 +232,7 @@ module.exports = (io, socket) => {
         kicked: true,
       });
 
-      logger.info(`Host ${socket.username} kicked user ${targetUserId} from room ${roomCode}`);
+      logger.info(`Host ${socket.username} kicked user ${targetUserId} from room ${roomCode} (kick count: ${newKickCount})`);
     } catch (error) {
       logger.error(`Room kick error: ${error.message}`);
     }

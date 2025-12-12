@@ -38,6 +38,11 @@ const roomParticipantSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Kick count for protection (3 strikes = permanent ban from room)
+    kickCount: {
+      type: Number,
+      default: 0,
+    },
     isVideoOff: {
       type: Boolean,
       default: false,
@@ -59,7 +64,7 @@ const roomParticipantSchema = new mongoose.Schema(
 );
 
 // Compound index for efficient queries
-roomParticipantSchema.index({ roomCode: 1, userId: 1 }, { unique: true });
+roomParticipantSchema.index({ roomCode: 1, userId: 1 });
 roomParticipantSchema.index({ userId: 1, leftAt: 1 });
 roomParticipantSchema.index({ roomId: 1, isKicked: 1 });
 
@@ -81,6 +86,23 @@ roomParticipantSchema.statics.isUserInRoom = async function(roomCode, userId) {
     isKicked: false,
   });
   return !!participant;
+};
+
+// Static method to get user's kick count for a room
+roomParticipantSchema.statics.getKickCount = async function(roomCode, userId) {
+  const participants = await this.find({
+    roomCode,
+    userId,
+    isKicked: true,
+  });
+  // Sum up all kick counts
+  return participants.reduce((total, p) => total + (p.kickCount || 1), 0);
+};
+
+// Static method to check if user is permanently banned (3+ kicks)
+roomParticipantSchema.statics.isPermanentlyBanned = async function(roomCode, userId) {
+  const kickCount = await this.getKickCount(roomCode, userId);
+  return kickCount >= 3;
 };
 
 // Static method to get user's active rooms

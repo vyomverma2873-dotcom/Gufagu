@@ -198,15 +198,31 @@ const joinRoom = async (req, res, next) => {
       }
     }
 
-    // Check if user was kicked
-    const wasKicked = await RoomParticipant.findOne({
+    // Check if user is permanently banned (kicked 3+ times)
+    const isPermanentlyBanned = await RoomParticipant.isPermanentlyBanned(code, req.user._id);
+    if (isPermanentlyBanned) {
+      return res.status(403).json({ 
+        error: 'You have been permanently banned from this room',
+        permanentBan: true
+      });
+    }
+
+    // Check if user was recently kicked (but can still rejoin)
+    const kickedRecord = await RoomParticipant.findOne({
       roomCode: code,
       userId: req.user._id,
       isKicked: true,
-    });
+    }).sort({ updatedAt: -1 });
 
-    if (wasKicked) {
-      return res.status(403).json({ error: 'You were removed from this room' });
+    const kickCount = await RoomParticipant.getKickCount(code, req.user._id);
+    
+    // If kicked but under 3 times, allow rejoin with warning
+    if (kickedRecord && kickCount < 3) {
+      // Clear the kicked status to allow rejoin
+      await RoomParticipant.updateMany(
+        { roomCode: code, userId: req.user._id, isKicked: true },
+        { leftAt: new Date() }
+      );
     }
 
     // Check if user is already in the room
