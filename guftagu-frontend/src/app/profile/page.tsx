@@ -2,25 +2,43 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Copy, Edit, Users, Calendar, Check } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { formatDate, formatUserId } from '@/lib/utils';
-import { useState } from 'react';
+import { friendsApi } from '@/lib/api';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [actualFriendsCount, setActualFriendsCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // Fetch actual friends count from the friends API
+  useEffect(() => {
+    const fetchFriendsCount = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await friendsApi.getFriends();
+          setActualFriendsCount(response.data.friends?.length || 0);
+        } catch (error) {
+          console.error('Failed to fetch friends count:', error);
+          // Fallback to user.friendsCount
+          setActualFriendsCount(null);
+        }
+      }
+    };
+    fetchFriendsCount();
+  }, [isAuthenticated]);
 
   const copyUserId = () => {
     if (user?.userId) {
@@ -100,7 +118,9 @@ export default function ProfilePage() {
               <div className="p-4 bg-neutral-800/40 border border-neutral-700/50 rounded-xl text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <Users className="w-3.5 h-3.5 text-neutral-400" />
-                  <span className="text-xl font-semibold text-white">{user.friendsCount}</span>
+                  <span className="text-xl font-semibold text-white">
+                    {actualFriendsCount !== null ? actualFriendsCount : user.friendsCount}
+                  </span>
                 </div>
                 <p className="text-xs text-neutral-500">Friends</p>
               </div>

@@ -9,6 +9,9 @@ const logger = require('../utils/logger');
  */
 const getProfile = async (req, res, next) => {
   try {
+    // Get actual friends count from Friend collection
+    const actualFriendsCount = await Friend.countDocuments({ userId: req.user._id });
+
     res.json({
       user: {
         _id: req.user._id,
@@ -21,7 +24,7 @@ const getProfile = async (req, res, next) => {
         interests: req.user.interests,
         joinDate: req.user.joinDate,
         totalMatches: req.user.totalMatches,
-        friendsCount: req.user.friendsCount,
+        friendsCount: actualFriendsCount,
         privacy: req.user.privacy,
         isPremium: req.user.isPremium,
         isAdmin: req.user.isAdmin,
@@ -138,6 +141,9 @@ const getUserByUsername = async (req, res, next) => {
       }
     }
 
+    // Get actual friends count from Friend collection
+    const actualFriendsCount = await Friend.countDocuments({ userId: user._id });
+
     // Check privacy settings for non-friends
     const isOwnProfile = req.user && req.user._id.equals(user._id);
 
@@ -153,7 +159,7 @@ const getUserByUsername = async (req, res, next) => {
         joinDate: user.joinDate,
         isOnline: user.privacy.showOnlineStatus || isOwnProfile ? user.isOnline : undefined,
         totalMatches: user.privacy.showMatchCount || isOwnProfile ? user.totalMatches : undefined,
-        friendsCount: user.friendsCount,
+        friendsCount: actualFriendsCount,
       },
     });
   } catch (error) {
@@ -190,6 +196,9 @@ const getUserById = async (req, res, next) => {
       }
     }
 
+    // Get actual friends count from Friend collection
+    const actualFriendsCount = await Friend.countDocuments({ userId: user._id });
+
     const isOwnProfile = req.user && req.user._id.equals(user._id);
 
     res.json({
@@ -204,7 +213,7 @@ const getUserById = async (req, res, next) => {
         joinDate: user.joinDate,
         isOnline: user.privacy.showOnlineStatus || isOwnProfile ? user.isOnline : undefined,
         totalMatches: user.privacy.showMatchCount || isOwnProfile ? user.totalMatches : undefined,
-        friendsCount: user.friendsCount,
+        friendsCount: actualFriendsCount,
       },
     });
   } catch (error) {
@@ -242,6 +251,9 @@ const getUserByObjectId = async (req, res, next) => {
       }
     }
 
+    // Get actual friends count from Friend collection
+    const actualFriendsCount = await Friend.countDocuments({ userId: user._id });
+
     const isOwnProfile = req.user && req.user._id.equals(user._id);
 
     res.json({
@@ -256,7 +268,7 @@ const getUserByObjectId = async (req, res, next) => {
         joinDate: user.joinDate,
         isOnline: user.privacy?.showOnlineStatus || isOwnProfile ? user.isOnline : undefined,
         totalMatches: user.privacy?.showMatchCount || isOwnProfile ? user.totalMatches : undefined,
-        friendsCount: user.friendsCount,
+        friendsCount: actualFriendsCount,
         lastActive: user.lastActive,
       },
     });
