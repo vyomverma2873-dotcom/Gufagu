@@ -164,7 +164,6 @@ export default function AdminDashboardPage() {
             title="Total Users"
             value={stats?.totalUsers?.toLocaleString() || '0'}
             icon={Users}
-            change={stats?.userGrowth}
             link="/admin/users"
           />
           <StatCard
