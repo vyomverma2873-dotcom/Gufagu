@@ -276,12 +276,16 @@ export default function RoomPage() {
     }
   };
 
-  if (authLoading || isLoading) {
+  // Show connecting state for any loading/joining phase (before joined)
+  if ((authLoading || isLoading || (readyToJoin && !hasJoined)) && !error && !webrtc.error && !showPassword) {
     return (
       <>
         <GalaxyBackground />
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <Spinner />
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+          <div className="text-center">
+            <Spinner />
+            <p className="text-neutral-400 mt-4">Connecting to room...</p>
+          </div>
         </div>
       </>
     );
@@ -327,21 +331,6 @@ export default function RoomPage() {
                 Join Room
               </Button>
             </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Room preview (before joining) - show joining state with proper loading
-  if (!hasJoined && room && readyToJoin) {
-    return (
-      <>
-        <GalaxyBackground />
-        <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
-          <div className="text-center">
-            <Spinner />
-            <p className="text-neutral-400 mt-4">Connecting to {room.roomName}...</p>
           </div>
         </div>
       </>

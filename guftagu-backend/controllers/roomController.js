@@ -46,19 +46,6 @@ const createRoom = async (req, res, next) => {
       return res.status(400).json({ error: 'Room name is required' });
     }
 
-    // Rate limiting check (max 5 rooms per hour)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentRooms = await Room.countDocuments({
-      hostUserId: req.user._id,
-      createdAt: { $gte: oneHourAgo },
-    });
-
-    if (recentRooms >= 5) {
-      return res.status(429).json({
-        error: 'Rate limit exceeded. You can create maximum 5 rooms per hour.',
-      });
-    }
-
     // Generate unique room code
     const roomCode = await Room.generateRoomCode();
 
