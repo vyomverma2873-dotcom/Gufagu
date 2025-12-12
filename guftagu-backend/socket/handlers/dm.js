@@ -53,8 +53,29 @@ module.exports = (io, socket) => {
         toUserId: to,
       });
 
+      // Get receiver info first for immediate delivery
+      const receiver = await User.findById(to).select('socketId isOnline').lean();
+
+      // Send to receiver IMMEDIATELY if online (before other async operations)
+      if (receiver && receiver.socketId) {
+        io.to(receiver.socketId).emit('dm_receive', {
+          messageId: newMessage._id,
+          from: {
+            userId: socket.userId,
+            userId7Digit: socket.userId7Digit,
+            username: socket.username,
+            displayName: socket.displayName,
+            profilePicture: socket.profilePicture,
+          },
+          message,
+          timestamp: newMessage.timestamp,
+          conversationId: socket.userId.toString(),
+        });
+      }
+
+      // Do remaining async operations in background (non-blocking for receiver)
       // Update interaction stats
-      await Friend.updateMany(
+      Friend.updateMany(
         {
           $or: [
             { userId: socket.userId, friendId: to },
@@ -62,34 +83,13 @@ module.exports = (io, socket) => {
           ],
         },
         { lastInteraction: new Date(), $inc: { totalMessages: 1 } }
-      );
+      ).catch(err => logger.error('Friend stats update error:', err));
 
-      // Get sender info
-      const sender = await User.findById(socket.userId);
-
-      // Get receiver info
-      const receiver = await User.findById(to);
-
+      // Mark as delivered and send confirmation
       if (receiver && receiver.socketId) {
-        // Mark as delivered immediately if online
         newMessage.isDelivered = true;
         newMessage.deliveredAt = new Date();
-        await newMessage.save();
-
-        // Send to receiver
-        io.to(receiver.socketId).emit('dm_receive', {
-          messageId: newMessage._id,
-          from: {
-            userId: socket.userId,
-            userId7Digit: sender?.userId,
-            username: sender?.username,
-            displayName: sender?.displayName,
-            profilePicture: sender?.profilePicture,
-          },
-          message,
-          timestamp: newMessage.timestamp,
-          conversationId: socket.userId.toString(),
-        });
+        newMessage.save().catch(err => logger.error('Message delivery update error:', err));
 
         // Send delivery confirmation to sender
         socket.emit('dm_delivered', {

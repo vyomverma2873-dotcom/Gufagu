@@ -63,6 +63,8 @@ const initializeSocket = (server) => {
           socket.userId = user._id;
           socket.username = user.username;
           socket.userId7Digit = user.userId;
+          socket.displayName = user.displayName;
+          socket.profilePicture = user.profilePicture;
 
           // Update user status
           await User.findByIdAndUpdate(user._id, {
