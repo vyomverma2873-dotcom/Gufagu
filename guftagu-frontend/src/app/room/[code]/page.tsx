@@ -1,26 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import DailyIframe, { DailyCall } from '@daily-co/daily-js';
+import Script from 'next/script';
 import { 
   Copy, 
   Users, 
-  Settings, 
   LogOut, 
   Mic, 
   MicOff, 
-  Video, 
-  VideoOff,
-  MonitorUp,
-  MessageSquare,
-  UserPlus,
   Crown,
-  MoreVertical,
   X,
   Check,
   Share2,
-  Link as LinkIcon
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
@@ -28,7 +20,14 @@ import Spinner from '@/components/ui/Spinner';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
-import { roomsApi, friendsApi } from '@/lib/api';
+import { roomsApi } from '@/lib/api';
+
+// Declare Jitsi Meet API type
+declare global {
+  interface Window {
+    JitsiMeetExternalAPI: any;
+  }
+}
 
 interface Participant {
   _id: string;
@@ -76,11 +75,12 @@ export default function RoomPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   
-  // Daily.co state
-  const [callFrame, setCallFrame] = useState<DailyCall | null>(null);
-  const [dailyToken, setDailyToken] = useState<string | null>(null);
-  const [dailyUrl, setDailyUrl] = useState<string | null>(null);
-  const callContainerRef = useRef<HTMLDivElement>(null);
+  // Jitsi Meet state
+  const [jitsiApi, setJitsiApi] = useState<any>(null);
+  const [jitsiLoaded, setJitsiLoaded] = useState(false);
+  const [jitsiRoomName, setJitsiRoomName] = useState<string | null>(null);
+  const [jitsiDomain, setJitsiDomain] = useState<string>('meet.jit.si');
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
   
   // UI state
   const [showParticipants, setShowParticipants] = useState(false);
@@ -120,10 +120,10 @@ export default function RoomPage() {
     setIsJoining(true);
     try {
       const response = await roomsApi.joinRoom(code, password);
-      const { dailyCoRoomUrl, dailyToken: token, isHost: hostStatus } = response.data.room;
+      const { jitsiRoomName: roomName, jitsiDomain: domain, isHost: hostStatus } = response.data.room;
       
-      setDailyUrl(dailyCoRoomUrl);
-      setDailyToken(token);
+      setJitsiRoomName(roomName);
+      setJitsiDomain(domain || 'meet.jit.si');
       setIsHost(hostStatus);
       setHasJoined(true);
       
@@ -142,60 +142,66 @@ export default function RoomPage() {
     }
   };
 
-  // Initialize Daily.co call frame
+  // Initialize Jitsi Meet
   useEffect(() => {
-    if (!hasJoined || !dailyUrl || !callContainerRef.current) return;
+    if (!hasJoined || !jitsiLoaded || !jitsiRoomName || !jitsiContainerRef.current || jitsiApi) return;
 
-    const initDaily = async () => {
-      try {
-        const frame = DailyIframe.createFrame(callContainerRef.current!, {
-          iframeStyle: {
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            borderRadius: '12px',
-          },
-          showLeaveButton: false,
-          showFullscreenButton: true,
-          showLocalVideo: true,
-          showParticipantsBar: false,
-        });
+    try {
+      const domain = jitsiDomain;
+      const options = {
+        roomName: jitsiRoomName,
+        parentNode: jitsiContainerRef.current,
+        width: '100%',
+        height: '100%',
+        userInfo: {
+          displayName: user?.displayName || user?.username || 'Anonymous',
+        },
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: false,
+          prejoinPageEnabled: false,
+          disableDeepLinking: true,
+        },
+        interfaceConfigOverwrite: {
+          TOOLBAR_BUTTONS: [
+            'microphone', 'camera', 'desktop', 'fullscreen',
+            'fodeviceselection', 'hangup', 'chat', 'settings',
+            'raisehand', 'videoquality', 'tileview', 'mute-everyone',
+          ],
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+          DEFAULT_BACKGROUND: '#111111',
+          DISABLE_PRESENCE_STATUS: true,
+          MOBILE_APP_PROMO: false,
+        },
+      };
 
-        // Join the call
-        await frame.join({
-          url: dailyUrl,
-          token: dailyToken || undefined,
-          userName: user?.displayName || user?.username || 'Anonymous',
-        });
+      const api = new window.JitsiMeetExternalAPI(domain, options);
+      
+      api.addEventListener('videoConferenceLeft', () => {
+        handleLeave();
+      });
 
-        setCallFrame(frame);
+      api.addEventListener('participantJoined', () => {
+        console.log('Jitsi participant joined');
+      });
 
-        // Event listeners
-        frame.on('participant-joined', (event) => {
-          console.log('Participant joined:', event);
-        });
+      api.addEventListener('participantLeft', () => {
+        console.log('Jitsi participant left');
+      });
 
-        frame.on('participant-left', (event) => {
-          console.log('Participant left:', event);
-        });
-
-        frame.on('left-meeting', () => {
-          handleLeave();
-        });
-      } catch (err) {
-        console.error('Failed to initialize Daily call:', err);
-        setError('Failed to connect to video call');
-      }
-    };
-
-    initDaily();
+      setJitsiApi(api);
+    } catch (err) {
+      console.error('Failed to initialize Jitsi Meet:', err);
+      setError('Failed to connect to video call');
+    }
 
     return () => {
-      if (callFrame) {
-        callFrame.destroy();
+      if (jitsiApi) {
+        jitsiApi.dispose();
       }
     };
-  }, [hasJoined, dailyUrl, dailyToken]);
+  }, [hasJoined, jitsiLoaded, jitsiRoomName, jitsiDomain, user]);
 
   // Socket event listeners
   useEffect(() => {
@@ -260,9 +266,9 @@ export default function RoomPage() {
   // Leave room
   const handleLeave = async () => {
     try {
-      if (callFrame) {
-        await callFrame.leave();
-        callFrame.destroy();
+      if (jitsiApi) {
+        jitsiApi.dispose();
+        setJitsiApi(null);
       }
       
       await roomsApi.leaveRoom(code);
@@ -408,7 +414,15 @@ export default function RoomPage() {
 
   // In-call view
   return (
-    <div className="h-screen flex flex-col bg-neutral-950">
+    <>
+      {/* Load Jitsi Meet External API */}
+      <Script
+        src="https://meet.jit.si/external_api.js"
+        strategy="afterInteractive"
+        onLoad={() => setJitsiLoaded(true)}
+      />
+      
+      <div className="h-screen flex flex-col bg-neutral-950">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-3 bg-neutral-900/80 border-b border-neutral-800">
         <div className="flex items-center gap-3">
@@ -453,7 +467,7 @@ export default function RoomPage() {
         {/* Video Area */}
         <div className="flex-1 p-4">
           <div 
-            ref={callContainerRef} 
+            ref={jitsiContainerRef}
             className="w-full h-full bg-neutral-900 rounded-xl overflow-hidden"
           />
         </div>
@@ -521,6 +535,7 @@ export default function RoomPage() {
         cancelText="Stay"
         confirmVariant="danger"
       />
-    </div>
+      </div>
+    </>
   );
 }

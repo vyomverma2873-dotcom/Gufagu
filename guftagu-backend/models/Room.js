@@ -57,14 +57,18 @@ const roomSchema = new mongoose.Schema(
       default: null,
     },
 
-    // Daily.co integration
-    dailyCoRoomUrl: {
+    // Jitsi Meet integration (free, no API key needed)
+    jitsiRoomUrl: {
       type: String,
       default: null,
     },
-    dailyCoRoomName: {
+    jitsiRoomName: {
       type: String,
       default: null,
+    },
+    jitsiDomain: {
+      type: String,
+      default: 'meet.jit.si',
     },
 
     // Room settings

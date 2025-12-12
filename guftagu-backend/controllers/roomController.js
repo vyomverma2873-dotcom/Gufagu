@@ -4,115 +4,21 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const logger = require('../utils/logger');
 
-// Daily.co API configuration
-const DAILY_API_KEY = process.env.DAILY_API_KEY;
-const DAILY_API_URL = 'https://api.daily.co/v1';
+// Jitsi Meet configuration (free, no API key needed)
+const JITSI_DOMAIN = 'meet.jit.si';
 
 /**
- * Create Daily.co room
+ * Generate Jitsi Meet room URL
+ * Uses public Jitsi server - completely free, no registration needed
  */
-const createDailyRoom = async (roomCode, settings, maxParticipants) => {
-  if (!DAILY_API_KEY) {
-    logger.warn('Daily.co API key not configured');
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${DAILY_API_URL}/rooms`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: `guftagu-${roomCode}`,
-        privacy: 'private',
-        properties: {
-          max_participants: maxParticipants,
-          enable_screenshare: settings.screenShareEnabled,
-          enable_chat: settings.chatEnabled,
-          enable_knocking: false,
-          enable_prejoin_ui: false,
-          start_video_off: !settings.videoEnabled,
-          start_audio_off: !settings.audioEnabled,
-          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      logger.error('Daily.co room creation failed:', error);
-      return null;
-    }
-
-    const data = await response.json();
-    return {
-      url: data.url,
-      name: data.name,
-    };
-  } catch (error) {
-    logger.error('Daily.co API error:', error);
-    return null;
-  }
-};
-
-/**
- * Generate Daily.co meeting token
- */
-const generateDailyToken = async (roomName, userName, isOwner) => {
-  if (!DAILY_API_KEY) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${DAILY_API_URL}/meeting-tokens`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        properties: {
-          room_name: roomName,
-          user_name: userName,
-          is_owner: isOwner,
-          enable_recording: false,
-          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data.token;
-  } catch (error) {
-    logger.error('Daily.co token generation error:', error);
-    return null;
-  }
-};
-
-/**
- * Delete Daily.co room
- */
-const deleteDailyRoom = async (roomName) => {
-  if (!DAILY_API_KEY || !roomName) {
-    return;
-  }
-
-  try {
-    await fetch(`${DAILY_API_URL}/rooms/${roomName}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-      },
-    });
-  } catch (error) {
-    logger.error('Daily.co room deletion error:', error);
-  }
+const generateJitsiRoomUrl = (roomCode) => {
+  // Create a unique room name prefixed with guftagu
+  const jitsiRoomName = `guftagu-${roomCode}`;
+  return {
+    domain: JITSI_DOMAIN,
+    roomName: jitsiRoomName,
+    url: `https://${JITSI_DOMAIN}/${jitsiRoomName}`,
+  };
 };
 
 /**
@@ -159,8 +65,8 @@ const createRoom = async (req, res, next) => {
       chatEnabled: settings.chatEnabled !== false,
     };
 
-    // Create Daily.co room
-    const dailyRoom = await createDailyRoom(roomCode, roomSettings, maxParticipants);
+    // Generate Jitsi Meet room URL (no API call needed)
+    const jitsiRoom = generateJitsiRoomUrl(roomCode);
 
     // Create room in database
     const room = new Room({
@@ -170,8 +76,9 @@ const createRoom = async (req, res, next) => {
       maxParticipants: Math.min(Math.max(maxParticipants, 2), 10), // Clamp between 2-10
       isPublic,
       passwordHash,
-      dailyCoRoomUrl: dailyRoom?.url || null,
-      dailyCoRoomName: dailyRoom?.name || null,
+      jitsiRoomUrl: jitsiRoom.url,
+      jitsiRoomName: jitsiRoom.roomName,
+      jitsiDomain: jitsiRoom.domain,
       settings: roomSettings,
     });
 
@@ -188,7 +95,9 @@ const createRoom = async (req, res, next) => {
         isPublic: room.isPublic,
         hasPassword: !!room.passwordHash,
         settings: room.settings,
-        dailyCoRoomUrl: room.dailyCoRoomUrl,
+        jitsiRoomUrl: room.jitsiRoomUrl,
+        jitsiRoomName: room.jitsiRoomName,
+        jitsiDomain: room.jitsiDomain,
         createdAt: room.createdAt,
         expiresAt: room.expiresAt,
       },
@@ -311,20 +220,15 @@ const joinRoom = async (req, res, next) => {
     });
 
     if (existingParticipant) {
-      // User is already in room, generate new token
-      const token = await generateDailyToken(
-        room.dailyCoRoomName,
-        req.user.displayName || req.user.username,
-        existingParticipant.isHost
-      );
-
+      // User is already in room
       return res.json({
         message: 'Already in room',
         room: {
           roomCode: room.roomCode,
           roomName: room.roomName,
-          dailyCoRoomUrl: room.dailyCoRoomUrl,
-          dailyToken: token,
+          jitsiRoomUrl: room.jitsiRoomUrl,
+          jitsiRoomName: room.jitsiRoomName,
+          jitsiDomain: room.jitsiDomain,
           isHost: existingParticipant.isHost,
           settings: room.settings,
         },
@@ -346,13 +250,6 @@ const joinRoom = async (req, res, next) => {
     // Update participant count
     room.currentParticipants += 1;
     await room.save();
-
-    // Generate Daily.co token
-    const token = await generateDailyToken(
-      room.dailyCoRoomName,
-      req.user.displayName || req.user.username,
-      isHost
-    );
 
     // Emit socket event for participant joined
     const io = req.app.get('io');
@@ -376,8 +273,9 @@ const joinRoom = async (req, res, next) => {
       room: {
         roomCode: room.roomCode,
         roomName: room.roomName,
-        dailyCoRoomUrl: room.dailyCoRoomUrl,
-        dailyToken: token,
+        jitsiRoomUrl: room.jitsiRoomUrl,
+        jitsiRoomName: room.jitsiRoomName,
+        jitsiDomain: room.jitsiDomain,
         isHost,
         settings: room.settings,
         maxParticipants: room.maxParticipants,
@@ -466,9 +364,6 @@ const deleteRoom = async (req, res, next) => {
       { roomCode: code, leftAt: null },
       { leftAt: new Date() }
     );
-
-    // Delete Daily.co room
-    await deleteDailyRoom(room.dailyCoRoomName);
 
     // Emit socket event
     const io = req.app.get('io');
@@ -692,7 +587,7 @@ const getUserRooms = async (req, res, next) => {
 };
 
 /**
- * Get meeting token for a room
+ * Get Jitsi room info for a room
  * POST /api/rooms/:code/token
  */
 const getMeetingToken = async (req, res, next) => {
@@ -717,15 +612,11 @@ const getMeetingToken = async (req, res, next) => {
       return res.status(403).json({ error: 'You are not in this room' });
     }
 
-    const token = await generateDailyToken(
-      room.dailyCoRoomName,
-      req.user.displayName || req.user.username,
-      participant.isHost
-    );
-
     res.json({
-      token,
-      dailyCoRoomUrl: room.dailyCoRoomUrl,
+      jitsiRoomUrl: room.jitsiRoomUrl,
+      jitsiRoomName: room.jitsiRoomName,
+      jitsiDomain: room.jitsiDomain,
+      isHost: participant.isHost,
     });
   } catch (error) {
     next(error);
