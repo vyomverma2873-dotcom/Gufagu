@@ -288,7 +288,7 @@ export default function RoomPage() {
   };
 
   // Show connecting state for any loading/joining phase (before joined)
-  if ((authLoading || isLoading || (readyToJoin && !hasJoined)) && !error && !webrtc.error && !showPassword) {
+  if ((authLoading || isLoading || (readyToJoin && !hasJoined && !isJoining)) && !error && !webrtc.error && !showPassword) {
     return (
       <>
         <GalaxyBackground />

@@ -217,7 +217,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
               </div>
 
               {/* General Error Display */}
-              {error && error !== 'Room name is required' && (
+              {error && error !== 'Room name is required' && error !== 'Password is required when password protection is enabled' && (
                 <div className="mb-5 p-3 bg-red-900/30 border border-red-800/50 rounded-lg">
                   <p className="text-red-400 text-sm">{error}</p>
                 </div>
