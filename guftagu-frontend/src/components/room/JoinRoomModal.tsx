@@ -29,10 +29,10 @@ interface RoomPreview {
 
 export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
   const router = useRouter();
-  const [step, setStep] = useState<'code' | 'preview' | 'password'>('code');
+  const [step, setStep] = useState<'code' | 'preview'>('code');
   const [roomCode, setRoomCode] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roomPreview, setRoomPreview] = useState<RoomPreview | null>(null);
 
@@ -66,22 +66,24 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
   const handleJoin = async () => {
     if (!roomPreview) return;
 
+    // For password-protected rooms, navigate to room page and let it handle password
+    if (roomPreview.hasPassword) {
+      setIsJoining(true);
+      router.push(`/room/${roomCode}`);
+      // Don't close modal immediately - let navigation happen
+      return;
+    }
+
+    // For non-password rooms, join directly
     setIsLoading(true);
     setError(null);
 
     try {
-      await roomsApi.joinRoom(roomCode, password || undefined);
+      await roomsApi.joinRoom(roomCode);
       router.push(`/room/${roomCode}`);
       handleClose();
     } catch (err: any) {
-      if (err.response?.data?.requiresPassword) {
-        setStep('password');
-      } else if (err.response?.data?.error === 'Invalid password') {
-        setError('Incorrect password. Please try again.');
-        setPassword('');
-      } else {
-        setError(err.response?.data?.error || 'Failed to join room');
-      }
+      setError(err.response?.data?.error || 'Failed to join room');
     } finally {
       setIsLoading(false);
     }
@@ -90,9 +92,9 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
   const handleClose = () => {
     setStep('code');
     setRoomCode('');
-    setPassword('');
     setError(null);
     setRoomPreview(null);
+    setIsJoining(false);
     onClose();
   };
 
@@ -113,7 +115,6 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
           <h2 className="text-xl font-semibold text-white">
             {step === 'code' && 'Join a Room'}
             {step === 'preview' && 'Room Preview'}
-            {step === 'password' && 'Password Required'}
           </h2>
           <button
             onClick={handleClose}
@@ -183,7 +184,7 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
                 {roomPreview.hasPassword && (
                   <div className="flex items-center gap-2 text-amber-400 mt-3 pt-3 border-t border-neutral-700">
                     <Lock className="w-4 h-4" />
-                    <span className="text-sm">Password protected</span>
+                    <span className="text-sm">Password protected - you'll enter it on the next screen</span>
                   </div>
                 )}
               </div>
@@ -195,39 +196,6 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
                   </p>
                 </div>
               )}
-
-              {error && (
-                <div className="p-3 bg-red-900/30 border border-red-800/50 rounded-lg mb-4">
-                  <p className="text-red-400 text-sm text-center">{error}</p>
-                </div>
-              )}
-            </>
-          )}
-
-          {step === 'password' && (
-            <>
-              <div className="text-center mb-4">
-                <div className="inline-flex p-3 bg-amber-900/30 rounded-full mb-3">
-                  <Lock className="w-6 h-6 text-amber-400" />
-                </div>
-                <p className="text-neutral-400">
-                  This room requires a password to join.
-                </p>
-              </div>
-
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (error) setError(null);
-                }}
-                placeholder="Enter password"
-                className={`w-full px-4 py-3 bg-neutral-800/50 border rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4 ${
-                  error ? 'border-red-500' : 'border-neutral-700/50'
-                }`}
-                autoFocus
-              />
 
               {error && (
                 <div className="p-3 bg-red-900/30 border border-red-800/50 rounded-lg mb-4">
@@ -273,31 +241,11 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
               </Button>
               <Button 
                 onClick={handleJoin} 
-                isLoading={isLoading}
+                isLoading={isLoading || isJoining}
                 disabled={roomPreview ? roomPreview.currentParticipants >= roomPreview.maxParticipants : false}
                 className="flex-1"
               >
-                Join Room
-              </Button>
-            </>
-          )}
-
-          {step === 'password' && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={() => setStep('preview')} 
-                className="flex-1"
-              >
-                Back
-              </Button>
-              <Button 
-                onClick={handleJoin} 
-                isLoading={isLoading}
-                disabled={!password}
-                className="flex-1"
-              >
-                Join Room
+                {roomPreview?.hasPassword ? 'Continue' : 'Join Room'}
               </Button>
             </>
           )}
