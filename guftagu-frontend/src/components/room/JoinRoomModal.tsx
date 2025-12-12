@@ -99,7 +99,7 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70"
         onClick={handleClose}
       />
 
@@ -243,8 +243,13 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
                 disabled={roomCode.length !== 8}
                 className="flex-1"
               >
-                Find Room
-                <ArrowRight className="w-4 h-4 ml-2" />
+                {!isLoading && (
+                  <>
+                    Find Room
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+                {isLoading && 'Finding...'}
               </Button>
             </>
           )}
