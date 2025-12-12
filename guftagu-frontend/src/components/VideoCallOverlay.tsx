@@ -255,13 +255,13 @@ export default function VideoCallOverlay() {
     const currentStatus = callStatus;
     
     // Reset peer connection ready state when call ends or goes idle
-    if (currentStatus === 'idle' || currentStatus === 'ended') {
+    if (currentStatus === 'idle' || currentStatus === 'ended' || currentStatus === 'disconnected') {
       setIsPeerConnectionReady(false);
       setConnectionState('connecting'); // Also reset connection state for next call
     }
     
     // Reset connection state when a new call is initiated to ensure proper UI display
-    if (currentStatus === 'calling' && (prevStatus === 'idle' || prevStatus === 'ended' || prevStatus === null)) {
+    if (currentStatus === 'calling' && (prevStatus === 'idle' || prevStatus === 'ended' || prevStatus === 'disconnected' || prevStatus === null)) {
       console.log('[Call] New call initiated, resetting connectionState to connecting');
       setConnectionState('connecting');
     }
@@ -798,39 +798,31 @@ export default function VideoCallOverlay() {
     initLocalMedia();
   }, [callStatus, callType, localStream, setupAudioAnalyser, waitForTracksReady]);
 
+  // Ref to track if we've already initialized WebRTC for this call
+  const webrtcInitializedRef = useRef(false);
+  
   // Initialize WebRTC when connected and have peer socket
-  // KEY FIX: Create PC immediately when we have peerSocketId, don't wait for localStream
+  // KEY FIX: Don't depend on localStream to prevent re-initialization
   useEffect(() => {
     if (callStatus !== 'connected' || !socket || !peerSocketId) return;
-    if (peerConnectionRef.current) return; // Already have connection
+    if (peerConnectionRef.current || webrtcInitializedRef.current) return; // Already have connection
 
     const initWebRTC = async () => {
       try {
         console.log('[WebRTC] Initializing with peerSocketId:', peerSocketId);
-        console.log('[WebRTC] localStream available:', !!localStream);
         console.log('[WebRTC] isInitiator:', currentCall?.isInitiator);
+        
+        // Mark as initialized to prevent re-runs
+        webrtcInitializedRef.current = true;
 
-        // Create peer connection IMMEDIATELY, don't wait for local stream
+        // Create peer connection IMMEDIATELY
         const pc = new RTCPeerConnection(ICE_SERVERS);
         peerConnectionRef.current = pc;
         
-        // If we have local stream, add tracks now
-        if (localStream) {
-          // Ensure all local tracks are enabled before adding
-          localStream.getTracks().forEach(track => {
-            track.enabled = true;
-            console.log('[WebRTC] Enabling track before add:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
-          });
-
-          // Add local tracks to connection
-          console.log('[WebRTC] Adding', localStream.getTracks().length, 'local tracks');
-          localStream.getTracks().forEach(track => {
-            console.log('[WebRTC] Adding track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
-            pc.addTrack(track, localStream);
-          });
-        } else {
-          console.log('[WebRTC] No local stream yet, will add tracks when available');
-        }
+        // Mark PC as ready immediately for BOTH initiator and non-initiator
+        setIsPeerConnectionReady(true);
+        
+        // NOTE: Don't add tracks here - let the dedicated effect handle it
 
         // Handle incoming tracks
         pc.ontrack = (event) => {
@@ -1106,47 +1098,41 @@ export default function VideoCallOverlay() {
           }
         };
 
-        // Only initiator sends offer - but wait until we have tracks
+        // Offer will be sent by the track addition effect when tracks are ready
         if (currentCall?.isInitiator) {
-          if (localStream && localStream.getTracks().length > 0) {
-            console.log('[WebRTC] Creating offer as initiator (stream ready)...');
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit('friend_call_offer', {
-              to: peerSocketId,
-              offer: pc.localDescription,
-            });
-            console.log('[WebRTC] Sent offer to:', peerSocketId);
-          } else {
-            console.log('[WebRTC] Initiator waiting for local stream before sending offer...');
-          }
+          console.log('[WebRTC] Initiator PC ready, will send offer when tracks are added...');
         } else {
-          console.log('[WebRTC] Non-initiator ready, waiting for offer...');
-          // Mark PC as ready so pending offer effect can process buffered offers
-          setIsPeerConnectionReady(true);
+          console.log('[WebRTC] Non-initiator PC ready, waiting for offer...');
         }
 
       } catch (error) {
         console.error('[WebRTC] Error:', error);
         setConnectionState('failed');
+        webrtcInitializedRef.current = false;
       }
     };
 
     initWebRTC();
-
-    return () => {
-      // Cleanup
+  }, [callStatus, socket, peerSocketId, currentCall, setupAudioAnalyser]);
+  
+  // Cleanup WebRTC on call end
+  useEffect(() => {
+    if (callStatus === 'idle' || callStatus === 'ended' || callStatus === 'disconnected') {
+      console.log('[WebRTC] Call ended, cleaning up...');
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
       }
       setIsPeerConnectionReady(false);
-    };
-  }, [callStatus, socket, peerSocketId, currentCall, localStream, setupAudioAnalyser]);
+      webrtcInitializedRef.current = false;
+      iceCandidateBuffer.current = [];
+      setPendingOffer(null);
+    }
+  }, [callStatus]);
 
   // Add tracks to existing peer connection when local stream becomes available
   useEffect(() => {
-    if (!localStream || !peerConnectionRef.current) return;
+    if (!localStream || !peerConnectionRef.current || !socket || !peerSocketId) return;
     
     const pc = peerConnectionRef.current;
     const existingSenders = pc.getSenders();
@@ -1157,32 +1143,40 @@ export default function VideoCallOverlay() {
       return;
     }
     
-    console.log('[WebRTC] Adding late tracks to existing peer connection');
+    console.log('[WebRTC] Adding tracks to peer connection, stream id:', localStream.id);
     
-    // Add tracks
-    localStream.getTracks().forEach(track => {
-      track.enabled = true;
-      console.log('[WebRTC] Late adding track:', track.kind);
-      pc.addTrack(track, localStream);
-    });
-    
-    // If we're the initiator and haven't sent offer yet, send it now
-    if (currentCall?.isInitiator && pc.signalingState === 'stable' && !pc.localDescription) {
-      console.log('[WebRTC] Initiator sending delayed offer after tracks added');
-      (async () => {
-        try {
+    // Add tracks with proper handling
+    const addTracksAndOffer = async () => {
+      try {
+        // Add all tracks from local stream
+        localStream.getTracks().forEach(track => {
+          track.enabled = true;
+          console.log('[WebRTC] Adding track:', track.kind, 'enabled:', track.enabled, 'readyState:', track.readyState);
+          pc.addTrack(track, localStream);
+        });
+        
+        // Small delay to ensure tracks are properly registered
+        await new Promise(r => setTimeout(r, 100));
+        
+        // If we're the initiator and haven't sent offer yet, send it now
+        if (currentCall?.isInitiator && pc.signalingState === 'stable' && !pc.localDescription) {
+          console.log('[WebRTC] Initiator creating and sending offer...');
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
-          socket?.emit('friend_call_offer', {
+          socket.emit('friend_call_offer', {
             to: peerSocketId,
             offer: pc.localDescription,
           });
-          console.log('[WebRTC] Delayed offer sent');
-        } catch (e) {
-          console.error('[WebRTC] Error sending delayed offer:', e);
+          console.log('[WebRTC] Offer sent to:', peerSocketId);
+        } else if (!currentCall?.isInitiator) {
+          console.log('[WebRTC] Non-initiator: tracks added, waiting for offer...');
         }
-      })();
-    }
+      } catch (e) {
+        console.error('[WebRTC] Error in addTracksAndOffer:', e);
+      }
+    };
+    
+    addTracksAndOffer();
   }, [localStream, currentCall, peerSocketId, socket]);
 
   // Track refresh flag to prevent multiple refreshes
@@ -1287,14 +1281,19 @@ export default function VideoCallOverlay() {
 
   // Reset refresh flag when call ends
   useEffect(() => {
-    if (callStatus === 'idle' || callStatus === 'ended') {
+    if (callStatus === 'idle' || callStatus === 'ended' || callStatus === 'disconnected') {
       trackRefreshedRef.current = false;
     }
   }, [callStatus]);
 
-  // Process pending offer when PC is ready (separate effect to avoid race conditions)
+  // Process pending offer when PC is ready AND we have local stream
   useEffect(() => {
-    if (!pendingOffer || !peerConnectionRef.current || !socket || !isPeerConnectionReady) return;
+    if (!pendingOffer || !peerConnectionRef.current || !socket || !isPeerConnectionReady || !localStream) {
+      if (pendingOffer && !localStream) {
+        console.log('[WebRTC] Have pending offer but waiting for localStream...');
+      }
+      return;
+    }
     
     const processPendingOffer = async () => {
       const pc = peerConnectionRef.current;
@@ -1305,16 +1304,17 @@ export default function VideoCallOverlay() {
       setPendingOffer(null);
       
       try {
-        // Add local tracks if available and not already added
-        if (localStream) {
-          const existingSenders = pc.getSenders();
-          if (!existingSenders.some(s => s.track !== null)) {
-            console.log('[WebRTC] Adding tracks before processing offer');
-            localStream.getTracks().forEach(track => {
-              track.enabled = true;
-              pc.addTrack(track, localStream);
-            });
-          }
+        // Add local tracks first
+        const existingSenders = pc.getSenders();
+        if (!existingSenders.some(s => s.track !== null)) {
+          console.log('[WebRTC] Adding tracks before processing offer');
+          localStream.getTracks().forEach(track => {
+            track.enabled = true;
+            console.log('[WebRTC] Adding track for offer processing:', track.kind);
+            pc.addTrack(track, localStream);
+          });
+          // Small delay for tracks to register
+          await new Promise(r => setTimeout(r, 50));
         }
         
         console.log('[WebRTC] Setting remote description from pending offer...');
@@ -1339,6 +1339,13 @@ export default function VideoCallOverlay() {
           answer: pc.localDescription,
         });
         console.log('[WebRTC] Sent answer to:', offerData.from);
+        
+        // Ensure tracks are enabled
+        pc.getSenders().forEach(sender => {
+          if (sender.track) {
+            sender.track.enabled = true;
+          }
+        });
       } catch (error) {
         console.error('[WebRTC] Error processing pending offer:', error);
       }
@@ -1368,25 +1375,29 @@ export default function VideoCallOverlay() {
       console.log('[WebRTC] From socket:', data.from);
       console.log('[WebRTC] Offer type:', data.offer?.type);
       console.log('[WebRTC] PC exists:', !!peerConnectionRef.current);
+      console.log('[WebRTC] localStream exists:', !!localStream);
       
       const pc = peerConnectionRef.current;
-      if (!pc) {
-        console.log('[WebRTC] No peer connection yet, buffering offer');
+      
+      // Buffer offer if no PC or no localStream yet
+      if (!pc || !localStream) {
+        console.log('[WebRTC] Buffering offer - waiting for', !pc ? 'peer connection' : 'localStream');
         setPendingOffer(data);
         return;
       }
 
       try {
-        // Add local tracks if available and not already added
-        if (localStream) {
-          const existingSenders = pc.getSenders();
-          if (!existingSenders.some(s => s.track !== null)) {
-            console.log('[WebRTC] Adding tracks before handling offer');
-            localStream.getTracks().forEach(track => {
-              track.enabled = true;
-              pc.addTrack(track, localStream);
-            });
-          }
+        // Add local tracks if not already added
+        const existingSenders = pc.getSenders();
+        if (!existingSenders.some(s => s.track !== null)) {
+          console.log('[WebRTC] Adding tracks before handling offer');
+          localStream.getTracks().forEach(track => {
+            track.enabled = true;
+            console.log('[WebRTC] Adding track:', track.kind);
+            pc.addTrack(track, localStream);
+          });
+          // Small delay for tracks to register
+          await new Promise(r => setTimeout(r, 50));
         }
         
         console.log('[WebRTC] Setting remote description (offer)...');
