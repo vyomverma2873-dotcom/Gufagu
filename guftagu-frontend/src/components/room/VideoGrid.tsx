@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import VideoTile from './VideoTile';
 
@@ -50,7 +49,7 @@ export default function VideoGrid({
   // Total count includes local user
   const totalParticipants = participants.length + 1;
 
-  // Calculate grid layout based on participant count
+  // Calculate grid layout based on participant count (per groupcall.md lines 183-208)
   const getGridClass = () => {
     switch (totalParticipants) {
       case 1:
@@ -86,6 +85,7 @@ export default function VideoGrid({
       <div
         className={cn(
           'grid gap-3 w-full h-full',
+          'transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
           getGridClass(),
           totalParticipants === 1 && 'place-items-center'
         )}
@@ -117,7 +117,7 @@ export default function VideoGrid({
             audioEnabled={participant.audioEnabled}
             videoEnabled={participant.videoEnabled}
             isLocal={false}
-            showControls={isHost && !participant.isHost}
+            isCurrentUserHost={isHost}
             onMute={onMuteParticipant ? () => onMuteParticipant(participant._id, !participant.isMuted) : undefined}
             onKick={onKickParticipant ? () => onKickParticipant(participant._id) : undefined}
             onAddFriend={onAddFriend ? () => onAddFriend(participant._id) : undefined}

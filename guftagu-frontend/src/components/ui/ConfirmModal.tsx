@@ -13,6 +13,7 @@ interface ConfirmModalProps {
   cancelText?: string;
   confirmVariant?: 'danger' | 'primary';
   icon?: React.ReactNode;
+  showCancel?: boolean;
 }
 
 export default function ConfirmModal({
@@ -25,6 +26,7 @@ export default function ConfirmModal({
   cancelText = 'Cancel',
   confirmVariant = 'primary',
   icon,
+  showCancel = true,
 }: ConfirmModalProps) {
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -98,12 +100,14 @@ export default function ConfirmModal({
 
           {/* Actions */}
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-medium transition-colors"
-            >
-              {cancelText}
-            </button>
+            {showCancel && (
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-medium transition-colors"
+              >
+                {cancelText}
+              </button>
+            )}
             <button
               onClick={handleConfirm}
               className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all hover:scale-[1.02] ${

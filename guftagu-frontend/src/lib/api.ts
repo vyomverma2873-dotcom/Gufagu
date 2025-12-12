@@ -28,11 +28,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Don't logout if it's a password-required response for rooms
     if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+      const isPasswordRequired = error.response?.data?.requiresPassword;
+      if (!isPasswordRequired) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

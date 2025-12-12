@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Copy, Users, Check, Share2 } from 'lucide-react';
+import { Copy, Users, Check, Share2, Settings, LogOut, Crown, UserPlus } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import VideoGrid from '@/components/room/VideoGrid';
 import ControlsBar from '@/components/room/ControlsBar';
+import ParticipantsPanel from '@/components/room/ParticipantsPanel';
+import InviteModal from '@/components/room/InviteModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { useWebRTC } from '@/hooks/useWebRTC';
@@ -53,6 +55,10 @@ export default function RoomPage() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [kickedModal, setKickedModal] = useState(false);
+  const [mutedByHost, setMutedByHost] = useState(false);
 
   // WebRTC hook - only initialize after joining
   const webrtc = useWebRTC({
@@ -125,11 +131,16 @@ export default function RoomPage() {
 
     const handleHostAction = (data: any) => {
       if (data.action === 'kick') {
-        alert('You were removed from the room');
-        handleLeave();
+        setKickedModal(true);
       } else if (data.action === 'mute') {
         // Host muted us - toggle our audio off
-        webrtc.toggleAudio();
+        if (webrtc.audioEnabled) {
+          webrtc.toggleAudio();
+        }
+        setMutedByHost(true);
+        setTimeout(() => setMutedByHost(false), 3000);
+      } else if (data.action === 'unmute') {
+        setMutedByHost(false);
       }
     };
 
@@ -197,8 +208,13 @@ export default function RoomPage() {
 
   // Kick participant (host only)
   const kickParticipant = async (userId: string) => {
+    if (!isHost) return;
     try {
       await roomsApi.kickParticipant(code, userId);
+      // Also emit socket event for immediate UI update
+      if (socket) {
+        socket.emit('room:host-kick', { roomCode: code, targetUserId: userId });
+      }
     } catch (err) {
       console.error('Failed to remove participant');
     }
@@ -206,8 +222,13 @@ export default function RoomPage() {
 
   // Mute participant (host only)
   const muteParticipant = async (userId: string, mute: boolean) => {
+    if (!isHost) return;
     try {
       await roomsApi.muteParticipant(code, userId, mute);
+      // Also emit socket event for immediate UI update
+      if (socket) {
+        socket.emit('room:host-mute', { roomCode: code, targetUserId: userId, mute });
+      }
     } catch (err) {
       console.error('Failed to mute participant');
     }
@@ -321,10 +342,23 @@ export default function RoomPage() {
   // In-call view with custom WebRTC UI
   return (
     <div className="h-screen flex flex-col bg-neutral-950 relative">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-neutral-900/80 border-b border-neutral-800 z-10">
+      {/* Muted by host notification */}
+      {mutedByHost && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-4 py-2 rounded-xl animate-fade-in">
+          You were muted by the host
+        </div>
+      )}
+
+      {/* Top Bar (groupcall.md lines 155-158) */}
+      <div className="flex items-center justify-between px-4 py-3 bg-neutral-900/80 backdrop-blur-sm border-b border-neutral-800 z-10">
         <div className="flex items-center gap-3">
-          <span className="text-lg font-semibold text-white">{room?.roomName}</span>
+          {/* Room name with host badge */}
+          <div className="flex items-center gap-2">
+            {isHost && <Crown className="w-4 h-4 text-yellow-400" />}
+            <span className="text-lg font-semibold text-white">{room?.roomName}</span>
+          </div>
+          
+          {/* Copy Code button */}
           <button 
             onClick={copyCode}
             className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm bg-neutral-800/50 px-3 py-1.5 rounded-lg transition-colors"
@@ -333,23 +367,43 @@ export default function RoomPage() {
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
+
         <div className="flex items-center gap-2">
+          {/* Invite button */}
           <button 
-            onClick={copyLink}
+            onClick={() => setShowInvite(true)}
             className="flex items-center gap-2 text-neutral-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
           >
-            <Share2 className="w-4 h-4" />
+            <UserPlus className="w-4 h-4" />
             Invite
           </button>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-800/50 text-neutral-400">
+
+          {/* Participants button */}
+          <button 
+            onClick={() => setShowParticipants(!showParticipants)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+              showParticipants 
+                ? 'bg-violet-600 text-white' 
+                : 'bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-white'
+            }`}
+          >
             <Users className="w-4 h-4" />
             {webrtc.peers.length + 1}/{room?.maxParticipants || 10}
-          </div>
+          </button>
+
+          {/* Leave button */}
+          <button 
+            onClick={() => setShowLeaveConfirm(true)}
+            className="flex items-center gap-2 text-red-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-red-500 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Leave
+          </button>
         </div>
       </div>
 
       {/* Video Grid Area */}
-      <div className="flex-1 overflow-hidden pb-24">
+      <div className={`flex-1 overflow-hidden pb-24 transition-all duration-300 ${showParticipants ? 'mr-80' : ''}`}>
         <VideoGrid
           localStream={webrtc.localStream}
           localUser={{
@@ -383,6 +437,36 @@ export default function RoomPage() {
         onLeave={() => setShowLeaveConfirm(true)}
       />
 
+      {/* Participants Panel (groupcall.md lines 254-275) */}
+      <ParticipantsPanel
+        isOpen={showParticipants}
+        onClose={() => setShowParticipants(false)}
+        participants={webrtc.peers}
+        localUser={{
+          _id: user?._id || '',
+          username: user?.username || '',
+          displayName: user?.displayName,
+          profilePicture: user?.profilePicture,
+        }}
+        isLocalHost={isHost}
+        localAudioEnabled={webrtc.audioEnabled}
+        localVideoEnabled={webrtc.videoEnabled}
+        maxParticipants={room?.maxParticipants || 10}
+        onMuteParticipant={isHost ? muteParticipant : undefined}
+        onKickParticipant={isHost ? kickParticipant : undefined}
+        onAddFriend={addFriend}
+        onInvite={() => setShowInvite(true)}
+        currentUserId={user?._id || ''}
+      />
+
+      {/* Invite Modal (groupcall.md lines 276-296) */}
+      <InviteModal
+        isOpen={showInvite}
+        onClose={() => setShowInvite(false)}
+        roomCode={code}
+        roomName={room?.roomName || 'Room'}
+      />
+
       {/* Leave Confirmation Modal */}
       <ConfirmModal
         isOpen={showLeaveConfirm}
@@ -393,6 +477,24 @@ export default function RoomPage() {
         confirmText="Leave"
         cancelText="Stay"
         confirmVariant="danger"
+      />
+
+      {/* Kicked Modal */}
+      <ConfirmModal
+        isOpen={kickedModal}
+        onClose={() => {
+          setKickedModal(false);
+          handleLeave();
+        }}
+        onConfirm={() => {
+          setKickedModal(false);
+          handleLeave();
+        }}
+        title="Removed from Room"
+        message="You were removed from the room by the host."
+        confirmText="OK"
+        confirmVariant="primary"
+        showCancel={false}
       />
     </div>
   );

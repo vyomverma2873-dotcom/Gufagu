@@ -96,8 +96,8 @@ roomSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for 
 
 // Static method to generate unique room code
 roomSchema.statics.generateRoomCode = async function() {
-  // Characters that are easy to read (excluding confusing ones like 0/O, 1/I/l)
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  // Uppercase characters only (excluding confusing ones like 0/O, 1/I)
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code;
   let isUnique = false;
   
