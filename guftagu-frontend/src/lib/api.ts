@@ -28,10 +28,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Don't logout if it's a password-required response for rooms
+    // Handle 401 Unauthorized errors
     if (error.response?.status === 401) {
       const isPasswordRequired = error.response?.data?.requiresPassword;
-      if (!isPasswordRequired) {
+      const isInvalidPassword = error.response?.data?.error === 'Invalid password';
+      
+      // Only logout if it's a true auth token issue, not password-related room errors
+      if (!isPasswordRequired && !isInvalidPassword) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           localStorage.removeItem('user');

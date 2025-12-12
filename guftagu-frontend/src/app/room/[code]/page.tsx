@@ -51,6 +51,7 @@ export default function RoomPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [iceServers, setIceServers] = useState<RTCIceServer[]>([]);
   const [isHost, setIsHost] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -59,6 +60,7 @@ export default function RoomPage() {
   const [showInvite, setShowInvite] = useState(false);
   const [mutedByHost, setMutedByHost] = useState(false);
   const [readyToJoin, setReadyToJoin] = useState(false);
+  const [passwordAttempted, setPasswordAttempted] = useState(false);
 
   // WebRTC hook - only initialize after joining
   const webrtc = useWebRTC({
@@ -101,10 +103,10 @@ export default function RoomPage() {
 
   // Auto-join room after fetching (direct join flow)
   useEffect(() => {
-    if (room && readyToJoin && !hasJoined && !isJoining && !showPassword && !error) {
+    if (room && readyToJoin && !hasJoined && !isJoining && !showPassword && !passwordAttempted && !error) {
       joinRoom();
     }
-  }, [room, readyToJoin, hasJoined, isJoining, showPassword, error]);
+  }, [room, readyToJoin, hasJoined, isJoining, showPassword, passwordAttempted, error]);
 
   // Hide header/footer when in room (full-screen mode)
   useEffect(() => {
@@ -121,6 +123,7 @@ export default function RoomPage() {
     if (!room) return;
 
     setIsJoining(true);
+    setPasswordError(null);
     try {
       const response = await roomsApi.joinRoom(code, password);
       const { iceServers: servers, isHost: hostStatus } = response.data.room;
@@ -128,6 +131,9 @@ export default function RoomPage() {
       setIceServers(servers || []);
       setIsHost(hostStatus);
       setHasJoined(true);
+      setShowPassword(false);
+      setPassword('');
+      setPasswordAttempted(false);
       
       // Join socket room
       if (socket) {
@@ -136,6 +142,11 @@ export default function RoomPage() {
     } catch (err: any) {
       if (err.response?.data?.requiresPassword) {
         setShowPassword(true);
+        setPasswordAttempted(true);
+      } else if (err.response?.data?.error === 'Invalid password') {
+        setPasswordError('Incorrect password. Please try again.');
+        setPassword('');
+        setPasswordAttempted(true);
       } else {
         setError(err.response?.data?.error || 'Failed to join room');
       }
@@ -319,10 +330,21 @@ export default function RoomPage() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError(null);
+              }}
               placeholder="Enter password"
-              className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4"
+              className={`w-full px-4 py-3 bg-neutral-800/50 border rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4 ${
+                passwordError ? 'border-red-500' : 'border-neutral-700/50'
+              }`}
+              autoFocus
             />
+            {passwordError && (
+              <div className="p-3 bg-red-900/30 border border-red-800/50 rounded-lg mb-4">
+                <p className="text-red-400 text-sm">{passwordError}</p>
+              </div>
+            )}
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => router.push('/')} className="flex-1">
                 Cancel

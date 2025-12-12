@@ -76,6 +76,9 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
     } catch (err: any) {
       if (err.response?.data?.requiresPassword) {
         setStep('password');
+      } else if (err.response?.data?.error === 'Invalid password') {
+        setError('Incorrect password. Please try again.');
+        setPassword('');
       } else {
         setError(err.response?.data?.error || 'Failed to join room');
       }
@@ -215,9 +218,14 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError(null);
+                }}
                 placeholder="Enter password"
-                className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4"
+                className={`w-full px-4 py-3 bg-neutral-800/50 border rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4 ${
+                  error ? 'border-red-500' : 'border-neutral-700/50'
+                }`}
                 autoFocus
               />
 

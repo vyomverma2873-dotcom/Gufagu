@@ -50,6 +50,12 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
       return;
     }
 
+    // Validate password if enabled
+    if (enablePassword && !password.trim()) {
+      setError('Password is required when password protection is enabled');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
     try {
@@ -230,13 +236,23 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
                   <span className="text-sm text-neutral-300">Password Protection</span>
                 </label>
                 {enablePassword && (
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="w-full mt-3 px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  />
+                  <div>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (error === 'Password is required when password protection is enabled') setError('');
+                      }}
+                      placeholder="Enter password"
+                      className={`w-full mt-3 px-4 py-3 bg-neutral-800/50 border rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 ${
+                        error === 'Password is required when password protection is enabled' ? 'border-red-500' : 'border-neutral-700/50'
+                      }`}
+                    />
+                    {error === 'Password is required when password protection is enabled' && (
+                      <p className="text-red-400 text-sm mt-1">Password is required when password protection is enabled</p>
+                    )}
+                  </div>
                 )}
               </div>
             </>
