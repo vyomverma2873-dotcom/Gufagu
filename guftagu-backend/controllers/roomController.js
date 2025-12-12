@@ -35,7 +35,7 @@ const createRoom = async (req, res, next) => {
   try {
     const {
       roomName,
-      maxParticipants = 5,
+      maxParticipants = 6,
       isPublic = true,
       password,
       settings = {},
@@ -180,8 +180,9 @@ const joinRoom = async (req, res, next) => {
 
     // Check if room is full
     if (room.isFull()) {
+      const count = room.currentParticipants;
       return res.status(403).json({
-        error: 'Room is full',
+        error: `Room is full (${count}/${room.maxParticipants} participants)`,
         maxParticipants: room.maxParticipants,
         currentParticipants: room.currentParticipants,
       });

@@ -59,6 +59,7 @@ export default function RoomPage() {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [mutedByHost, setMutedByHost] = useState(false);
+  const [readyToJoin, setReadyToJoin] = useState(false);
 
   // WebRTC hook - only initialize after joining
   const webrtc = useWebRTC({
@@ -85,6 +86,8 @@ export default function RoomPage() {
       try {
         const response = await roomsApi.getRoomDetails(code);
         setRoom(response.data.room);
+        // Signal that we're ready to show joining state
+        setReadyToJoin(true);
       } catch (err: any) {
         setError(err.response?.data?.error || 'Room not found');
       } finally {
@@ -99,10 +102,10 @@ export default function RoomPage() {
 
   // Auto-join room after fetching (direct join flow)
   useEffect(() => {
-    if (room && !hasJoined && !isJoining && !showPassword && !error) {
+    if (room && readyToJoin && !hasJoined && !isJoining && !showPassword && !error) {
       joinRoom();
     }
-  }, [room, hasJoined, isJoining, showPassword, error]);
+  }, [room, readyToJoin, hasJoined, isJoining, showPassword, error]);
 
   // Hide header/footer when in room (full-screen mode)
   useEffect(() => {
@@ -331,15 +334,15 @@ export default function RoomPage() {
     );
   }
 
-  // Room preview (before joining) - now shows joining state
-  if (!hasJoined && room) {
+  // Room preview (before joining) - show joining state with proper loading
+  if (!hasJoined && room && readyToJoin) {
     return (
       <>
         <GalaxyBackground />
         <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
           <div className="text-center">
             <Spinner />
-            <p className="text-neutral-400 mt-4">Joining {room.roomName}...</p>
+            <p className="text-neutral-400 mt-4">Connecting to {room.roomName}...</p>
           </div>
         </div>
       </>
