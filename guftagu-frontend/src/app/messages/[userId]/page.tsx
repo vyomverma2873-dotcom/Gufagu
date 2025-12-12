@@ -541,7 +541,7 @@ export default function ConversationPage() {
       isOwn: true,
       isRead: false,
       isDelivered: false,
-      isNew: true,
+      isNew: false, // No animation for own messages - appear instantly
       status: 'sending',
       timestamp: new Date().toISOString(),
     };
@@ -867,12 +867,7 @@ export default function ConversationPage() {
                     return (
                       <div
                         key={message._id}
-                        className={`flex items-end gap-1.5 sm:gap-2 ${isOwn ? 'justify-end' : 'justify-start'} ${
-                          message.isNew ? 'animate-fade-in-up' : ''
-                        }`}
-                        style={message.isNew ? {
-                          animation: 'fadeInUp 0.3s ease-out forwards'
-                        } : undefined}
+                        className={`flex items-end gap-1.5 sm:gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}
                       >
                         {/* Other user's avatar - always visible */}
                         {!isOwn && (
@@ -896,16 +891,13 @@ export default function ConversationPage() {
                             </span>
                           )}
                           <div
-                            className={`max-w-[80%] sm:max-w-[70%] px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl transition-all duration-300 ${
+                            className={`max-w-[80%] sm:max-w-[70%] px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl ${
                               isOwn
                                 ? 'bg-white text-neutral-900 rounded-br-md shadow-lg shadow-white/10'
                                 : 'bg-neutral-800/80 border border-neutral-700/50 text-white rounded-bl-md'
                             } ${
-                              message.isNew ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
+                              !isOwn && message.isNew ? 'animate-message-in' : ''
                             }`}
-                            style={message.isNew ? {
-                              animation: 'scaleIn 0.3s ease-out 0.1s forwards'
-                            } : undefined}
                           >
                             <p className="break-words text-sm sm:text-base">{message.content}</p>
                             <div className={`flex items-center gap-1 mt-0.5 sm:mt-1 ${
