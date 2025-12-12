@@ -4,21 +4,27 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const logger = require('../utils/logger');
 
-// Jitsi Meet configuration (free, no API key needed)
-const JITSI_DOMAIN = 'meet.jit.si';
+// ICE Servers configuration for WebRTC (NAT traversal)
+// Uses free public STUN servers, can add TURN server for better connectivity
+const getIceServers = () => {
+  const iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+  ];
 
-/**
- * Generate Jitsi Meet room URL
- * Uses public Jitsi server - completely free, no registration needed
- */
-const generateJitsiRoomUrl = (roomCode) => {
-  // Create a unique room name prefixed with guftagu
-  const jitsiRoomName = `guftagu-${roomCode}`;
-  return {
-    domain: JITSI_DOMAIN,
-    roomName: jitsiRoomName,
-    url: `https://${JITSI_DOMAIN}/${jitsiRoomName}`,
-  };
+  // Add TURN server if configured (for better NAT traversal)
+  if (process.env.TURN_SERVER_URL) {
+    iceServers.push({
+      urls: process.env.TURN_SERVER_URL,
+      username: process.env.TURN_USERNAME || '',
+      credential: process.env.TURN_CREDENTIAL || '',
+    });
+  }
+
+  return iceServers;
 };
 
 /**
@@ -65,10 +71,7 @@ const createRoom = async (req, res, next) => {
       chatEnabled: settings.chatEnabled !== false,
     };
 
-    // Generate Jitsi Meet room URL (no API call needed)
-    const jitsiRoom = generateJitsiRoomUrl(roomCode);
-
-    // Create room in database
+    // Create room in database (no external API needed - pure WebRTC)
     const room = new Room({
       roomCode,
       roomName: roomName || `${req.user.displayName || req.user.username}'s Room`,
@@ -76,9 +79,6 @@ const createRoom = async (req, res, next) => {
       maxParticipants: Math.min(Math.max(maxParticipants, 2), 10), // Clamp between 2-10
       isPublic,
       passwordHash,
-      jitsiRoomUrl: jitsiRoom.url,
-      jitsiRoomName: jitsiRoom.roomName,
-      jitsiDomain: jitsiRoom.domain,
       settings: roomSettings,
     });
 
@@ -95,9 +95,7 @@ const createRoom = async (req, res, next) => {
         isPublic: room.isPublic,
         hasPassword: !!room.passwordHash,
         settings: room.settings,
-        jitsiRoomUrl: room.jitsiRoomUrl,
-        jitsiRoomName: room.jitsiRoomName,
-        jitsiDomain: room.jitsiDomain,
+        iceServers: getIceServers(),
         createdAt: room.createdAt,
         expiresAt: room.expiresAt,
       },
@@ -226,9 +224,7 @@ const joinRoom = async (req, res, next) => {
         room: {
           roomCode: room.roomCode,
           roomName: room.roomName,
-          jitsiRoomUrl: room.jitsiRoomUrl,
-          jitsiRoomName: room.jitsiRoomName,
-          jitsiDomain: room.jitsiDomain,
+          iceServers: getIceServers(),
           isHost: existingParticipant.isHost,
           settings: room.settings,
         },
@@ -273,9 +269,7 @@ const joinRoom = async (req, res, next) => {
       room: {
         roomCode: room.roomCode,
         roomName: room.roomName,
-        jitsiRoomUrl: room.jitsiRoomUrl,
-        jitsiRoomName: room.jitsiRoomName,
-        jitsiDomain: room.jitsiDomain,
+        iceServers: getIceServers(),
         isHost,
         settings: room.settings,
         maxParticipants: room.maxParticipants,
@@ -587,7 +581,7 @@ const getUserRooms = async (req, res, next) => {
 };
 
 /**
- * Get Jitsi room info for a room
+ * Get WebRTC config for a room
  * POST /api/rooms/:code/token
  */
 const getMeetingToken = async (req, res, next) => {
@@ -613,10 +607,9 @@ const getMeetingToken = async (req, res, next) => {
     }
 
     res.json({
-      jitsiRoomUrl: room.jitsiRoomUrl,
-      jitsiRoomName: room.jitsiRoomName,
-      jitsiDomain: room.jitsiDomain,
+      iceServers: getIceServers(),
       isHost: participant.isHost,
+      settings: room.settings,
     });
   } catch (error) {
     next(error);

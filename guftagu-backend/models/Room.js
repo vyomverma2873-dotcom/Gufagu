@@ -57,20 +57,6 @@ const roomSchema = new mongoose.Schema(
       default: null,
     },
 
-    // Jitsi Meet integration (free, no API key needed)
-    jitsiRoomUrl: {
-      type: String,
-      default: null,
-    },
-    jitsiRoomName: {
-      type: String,
-      default: null,
-    },
-    jitsiDomain: {
-      type: String,
-      default: 'meet.jit.si',
-    },
-
     // Room settings
     settings: {
       videoEnabled: {

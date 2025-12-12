@@ -1,42 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Script from 'next/script';
-import { 
-  Copy, 
-  Users, 
-  LogOut, 
-  Mic, 
-  MicOff, 
-  Crown,
-  X,
-  Check,
-  Share2,
-} from 'lucide-react';
+import { Copy, Users, Check, Share2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import Avatar from '@/components/ui/Avatar';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import VideoGrid from '@/components/room/VideoGrid';
+import ControlsBar from '@/components/room/ControlsBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
-import { roomsApi } from '@/lib/api';
-
-// Declare Jitsi Meet API type
-declare global {
-  interface Window {
-    JitsiMeetExternalAPI: any;
-  }
-}
-
-interface Participant {
-  _id: string;
-  username: string;
-  displayName?: string;
-  profilePicture?: string;
-  isHost: boolean;
-  isMuted: boolean;
-}
+import { useWebRTC } from '@/hooks/useWebRTC';
+import { roomsApi, friendsApi } from '@/lib/api';
 
 interface RoomData {
   roomCode: string;
@@ -57,7 +32,6 @@ interface RoomData {
     screenShareEnabled: boolean;
     chatEnabled: boolean;
   };
-  participants: Participant[];
 }
 
 export default function RoomPage() {
@@ -74,20 +48,25 @@ export default function RoomPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
-  
-  // Jitsi Meet state
-  const [jitsiApi, setJitsiApi] = useState<any>(null);
-  const [jitsiLoaded, setJitsiLoaded] = useState(false);
-  const [jitsiRoomName, setJitsiRoomName] = useState<string | null>(null);
-  const [jitsiDomain, setJitsiDomain] = useState<string>('meet.jit.si');
-  const jitsiContainerRef = useRef<HTMLDivElement>(null);
-  
-  // UI state
-  const [showParticipants, setShowParticipants] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [iceServers, setIceServers] = useState<RTCIceServer[]>([]);
   const [isHost, setIsHost] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+
+  // WebRTC hook - only initialize after joining
+  const webrtc = useWebRTC({
+    roomCode: code,
+    socket: hasJoined ? socket : null,
+    iceServers,
+    localUser: {
+      _id: user?._id || '',
+      username: user?.username || '',
+      displayName: user?.displayName,
+      profilePicture: user?.profilePicture,
+    },
+    isHost,
+  });
 
   // Fetch room details
   useEffect(() => {
@@ -100,7 +79,6 @@ export default function RoomPage() {
       try {
         const response = await roomsApi.getRoomDetails(code);
         setRoom(response.data.room);
-        setParticipants(response.data.room.participants);
       } catch (err: any) {
         setError(err.response?.data?.error || 'Room not found');
       } finally {
@@ -120,10 +98,9 @@ export default function RoomPage() {
     setIsJoining(true);
     try {
       const response = await roomsApi.joinRoom(code, password);
-      const { jitsiRoomName: roomName, jitsiDomain: domain, isHost: hostStatus } = response.data.room;
+      const { iceServers: servers, isHost: hostStatus } = response.data.room;
       
-      setJitsiRoomName(roomName);
-      setJitsiDomain(domain || 'meet.jit.si');
+      setIceServers(servers || []);
       setIsHost(hostStatus);
       setHasJoined(true);
       
@@ -142,135 +119,54 @@ export default function RoomPage() {
     }
   };
 
-  // Initialize Jitsi Meet
+  // Socket event listeners for room updates
   useEffect(() => {
-    if (!hasJoined || !jitsiLoaded || !jitsiRoomName || !jitsiContainerRef.current || jitsiApi) return;
-
-    try {
-      const domain = jitsiDomain;
-      const options = {
-        roomName: jitsiRoomName,
-        parentNode: jitsiContainerRef.current,
-        width: '100%',
-        height: '100%',
-        userInfo: {
-          displayName: user?.displayName || user?.username || 'Anonymous',
-        },
-        configOverwrite: {
-          startWithAudioMuted: false,
-          startWithVideoMuted: false,
-          prejoinPageEnabled: false,
-          disableDeepLinking: true,
-        },
-        interfaceConfigOverwrite: {
-          TOOLBAR_BUTTONS: [
-            'microphone', 'camera', 'desktop', 'fullscreen',
-            'fodeviceselection', 'hangup', 'chat', 'settings',
-            'raisehand', 'videoquality', 'tileview', 'mute-everyone',
-          ],
-          SHOW_JITSI_WATERMARK: false,
-          SHOW_WATERMARK_FOR_GUESTS: false,
-          DEFAULT_BACKGROUND: '#111111',
-          DISABLE_PRESENCE_STATUS: true,
-          MOBILE_APP_PROMO: false,
-        },
-      };
-
-      const api = new window.JitsiMeetExternalAPI(domain, options);
-      
-      api.addEventListener('videoConferenceLeft', () => {
-        handleLeave();
-      });
-
-      api.addEventListener('participantJoined', () => {
-        console.log('Jitsi participant joined');
-      });
-
-      api.addEventListener('participantLeft', () => {
-        console.log('Jitsi participant left');
-      });
-
-      setJitsiApi(api);
-    } catch (err) {
-      console.error('Failed to initialize Jitsi Meet:', err);
-      setError('Failed to connect to video call');
-    }
-
-    return () => {
-      if (jitsiApi) {
-        jitsiApi.dispose();
-      }
-    };
-  }, [hasJoined, jitsiLoaded, jitsiRoomName, jitsiDomain, user]);
-
-  // Socket event listeners
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleParticipantJoined = (data: any) => {
-      if (data.roomCode === code) {
-        setParticipants(prev => [...prev.filter(p => p._id !== data.user._id), {
-          _id: data.user._id,
-          username: data.user.username,
-          displayName: data.user.displayName,
-          profilePicture: data.user.profilePicture,
-          isHost: false,
-          isMuted: false,
-        }]);
-        if (room) {
-          setRoom(prev => prev ? { ...prev, currentParticipants: data.participantCount } : null);
-        }
-      }
-    };
-
-    const handleParticipantLeft = (data: any) => {
-      if (data.roomCode === code) {
-        setParticipants(prev => prev.filter(p => p._id !== data.userId));
-        if (room) {
-          setRoom(prev => prev ? { ...prev, currentParticipants: data.participantCount } : null);
-        }
-      }
-    };
+    if (!socket || !hasJoined) return;
 
     const handleHostAction = (data: any) => {
       if (data.action === 'kick') {
         alert('You were removed from the room');
         handleLeave();
       } else if (data.action === 'mute') {
-        console.log('You were muted by the host');
-      } else if (data.action === 'unmute') {
-        console.log('You were unmuted by the host');
+        // Host muted us - toggle our audio off
+        webrtc.toggleAudio();
       }
     };
 
     const handleRoomClosed = (data: any) => {
       if (data.roomCode === code) {
         alert('Room was closed by the host');
+        webrtc.cleanup();
         router.push('/');
       }
     };
 
-    socket.on('room:participant-joined', handleParticipantJoined);
-    socket.on('room:participant-left', handleParticipantLeft);
+    const handleParticipantUpdate = (data: any) => {
+      if (data.roomCode === code) {
+        setRoom(prev => prev ? { 
+          ...prev, 
+          currentParticipants: data.participantCount || prev.currentParticipants 
+        } : null);
+      }
+    };
+
     socket.on('room:host-action', handleHostAction);
     socket.on('room:closed', handleRoomClosed);
+    socket.on('room:participant-joined', handleParticipantUpdate);
+    socket.on('room:participant-left', handleParticipantUpdate);
 
     return () => {
-      socket.off('room:participant-joined', handleParticipantJoined);
-      socket.off('room:participant-left', handleParticipantLeft);
       socket.off('room:host-action', handleHostAction);
       socket.off('room:closed', handleRoomClosed);
+      socket.off('room:participant-joined', handleParticipantUpdate);
+      socket.off('room:participant-left', handleParticipantUpdate);
     };
-  }, [socket, code, room, router]);
+  }, [socket, hasJoined, code, router, webrtc]);
 
   // Leave room
-  const handleLeave = async () => {
+  const handleLeave = useCallback(async () => {
     try {
-      if (jitsiApi) {
-        jitsiApi.dispose();
-        setJitsiApi(null);
-      }
-      
+      webrtc.cleanup();
       await roomsApi.leaveRoom(code);
       
       if (socket) {
@@ -282,7 +178,7 @@ export default function RoomPage() {
       console.error('Error leaving room:', err);
       router.push('/');
     }
-  };
+  }, [code, socket, router, webrtc]);
 
   // Copy room code
   const copyCode = () => {
@@ -317,6 +213,16 @@ export default function RoomPage() {
     }
   };
 
+  // Add friend
+  const addFriend = async (userId: string) => {
+    try {
+      await friendsApi.sendRequest(userId);
+      alert('Friend request sent!');
+    } catch (err) {
+      console.error('Failed to send friend request');
+    }
+  };
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-950">
@@ -325,13 +231,13 @@ export default function RoomPage() {
     );
   }
 
-  if (error) {
+  if (error || webrtc.error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-950">
         <div className="text-center">
           <div className="text-6xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-white mb-2">Room Not Found</h1>
-          <p className="text-neutral-400 mb-6">{error}</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Error</h1>
+          <p className="text-neutral-400 mb-6">{error || webrtc.error}</p>
           <Button onClick={() => router.push('/')}>Go Home</Button>
         </div>
       </div>
@@ -412,19 +318,11 @@ export default function RoomPage() {
     );
   }
 
-  // In-call view
+  // In-call view with custom WebRTC UI
   return (
-    <>
-      {/* Load Jitsi Meet External API */}
-      <Script
-        src="https://meet.jit.si/external_api.js"
-        strategy="afterInteractive"
-        onLoad={() => setJitsiLoaded(true)}
-      />
-      
-      <div className="h-screen flex flex-col bg-neutral-950">
+    <div className="h-screen flex flex-col bg-neutral-950 relative">
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-neutral-900/80 border-b border-neutral-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-neutral-900/80 border-b border-neutral-800 z-10">
         <div className="flex items-center gap-3">
           <span className="text-lg font-semibold text-white">{room?.roomName}</span>
           <button 
@@ -443,86 +341,47 @@ export default function RoomPage() {
             <Share2 className="w-4 h-4" />
             Invite
           </button>
-          <button 
-            onClick={() => setShowParticipants(!showParticipants)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
-              showParticipants ? 'bg-violet-600 text-white' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-            }`}
-          >
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-800/50 text-neutral-400">
             <Users className="w-4 h-4" />
-            {room?.currentParticipants}/{room?.maxParticipants}
-          </button>
-          <button 
-            onClick={() => setShowLeaveConfirm(true)}
-            className="flex items-center gap-2 text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-900/30 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Leave
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Video Area */}
-        <div className="flex-1 p-4">
-          <div 
-            ref={jitsiContainerRef}
-            className="w-full h-full bg-neutral-900 rounded-xl overflow-hidden"
-          />
-        </div>
-
-        {/* Participants Panel */}
-        {showParticipants && (
-          <div className="w-80 bg-neutral-900/80 border-l border-neutral-800 p-4 overflow-y-auto">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Participants ({participants.length})
-            </h3>
-            <div className="space-y-3">
-              {participants.map((participant) => (
-                <div 
-                  key={participant._id}
-                  className="flex items-center gap-3 p-3 bg-neutral-800/50 rounded-xl"
-                >
-                  <Avatar 
-                    src={participant.profilePicture} 
-                    alt={participant.displayName || participant.username}
-                    size="sm"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-white font-medium truncate">
-                        {participant.displayName || participant.username}
-                      </span>
-                      {participant.isHost && (
-                        <Crown className="w-4 h-4 text-yellow-400" />
-                      )}
-                    </div>
-                    <span className="text-sm text-neutral-400">@{participant.username}</span>
-                  </div>
-                  {isHost && !participant.isHost && participant._id !== user?._id && (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => muteParticipant(participant._id, !participant.isMuted)}
-                        className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-700 rounded-lg transition-colors"
-                      >
-                        {participant.isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                      </button>
-                      <button
-                        onClick={() => kickParticipant(participant._id)}
-                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-lg transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            {webrtc.peers.length + 1}/{room?.maxParticipants || 10}
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Video Grid Area */}
+      <div className="flex-1 overflow-hidden pb-24">
+        <VideoGrid
+          localStream={webrtc.localStream}
+          localUser={{
+            _id: user?._id || '',
+            username: user?.username || '',
+            displayName: user?.displayName,
+            profilePicture: user?.profilePicture,
+          }}
+          isHost={isHost}
+          audioEnabled={webrtc.audioEnabled}
+          videoEnabled={webrtc.videoEnabled}
+          participants={webrtc.peers}
+          onMuteParticipant={isHost ? muteParticipant : undefined}
+          onKickParticipant={isHost ? kickParticipant : undefined}
+          onAddFriend={addFriend}
+          currentUserId={user?._id || ''}
+        />
+      </div>
+
+      {/* Bottom Controls Bar */}
+      <ControlsBar
+        audioEnabled={webrtc.audioEnabled}
+        videoEnabled={webrtc.videoEnabled}
+        isScreenSharing={webrtc.isScreenSharing}
+        chatEnabled={room?.settings.chatEnabled}
+        showChat={showChat}
+        onToggleAudio={webrtc.toggleAudio}
+        onToggleVideo={webrtc.toggleVideo}
+        onToggleScreenShare={webrtc.toggleScreenShare}
+        onToggleChat={() => setShowChat(!showChat)}
+        onLeave={() => setShowLeaveConfirm(true)}
+      />
 
       {/* Leave Confirmation Modal */}
       <ConfirmModal
@@ -535,7 +394,6 @@ export default function RoomPage() {
         cancelText="Stay"
         confirmVariant="danger"
       />
-      </div>
-    </>
+    </div>
   );
 }

@@ -3,6 +3,9 @@ const RoomParticipant = require('../../models/RoomParticipant');
 const User = require('../../models/User');
 const logger = require('../../utils/logger');
 
+// Track active WebRTC peers per room
+const roomPeers = new Map(); // Map<roomCode, Map<socketId, userInfo>>
+
 module.exports = (io, socket) => {
   // Join room socket channel
   socket.on('room:join', async (data) => {
@@ -29,19 +32,50 @@ module.exports = (io, socket) => {
 
       // Join socket room
       socket.join(`room:${roomCode}`);
+      socket.currentRoom = roomCode;
+
+      // Initialize room peers map if needed
+      if (!roomPeers.has(roomCode)) {
+        roomPeers.set(roomCode, new Map());
+      }
+
+      // Get participant info
+      const participant = await RoomParticipant.findOne({ 
+        roomCode, 
+        userId: socket.userId, 
+        leftAt: null 
+      });
+
+      const userInfo = {
+        _id: socket.userId,
+        username: socket.username,
+        displayName: socket.displayName,
+        profilePicture: socket.profilePicture,
+        isHost: participant?.isHost || false,
+        isMuted: participant?.isMuted || false,
+      };
+
+      // Add to room peers
+      roomPeers.get(roomCode).set(socket.id, userInfo);
 
       // Get current participants
       const participants = await RoomParticipant.getActiveParticipants(roomCode);
 
-      // Notify all room members
-      io.to(`room:${roomCode}`).emit('room:participant-joined', {
+      // Send existing peers to the new joiner (for WebRTC connections)
+      const existingPeers = [];
+      roomPeers.get(roomCode).forEach((peerInfo, socketId) => {
+        if (socketId !== socket.id) {
+          existingPeers.push({ socketId, ...peerInfo });
+        }
+      });
+
+      socket.emit('room:peers', { peers: existingPeers });
+
+      // Notify all room members about new peer
+      socket.to(`room:${roomCode}`).emit('room:participant-joined', {
         roomCode,
-        user: {
-          _id: socket.userId,
-          username: socket.username,
-          displayName: socket.displayName,
-          profilePicture: socket.profilePicture,
-        },
+        socketId: socket.id,
+        user: userInfo,
         participantCount: participants.length,
       });
 
@@ -59,8 +93,17 @@ module.exports = (io, socket) => {
 
       if (!socket.userId) return;
 
+      // Remove from room peers
+      if (roomPeers.has(roomCode)) {
+        roomPeers.get(roomCode).delete(socket.id);
+        if (roomPeers.get(roomCode).size === 0) {
+          roomPeers.delete(roomCode);
+        }
+      }
+
       // Leave socket room
       socket.leave(`room:${roomCode}`);
+      socket.currentRoom = null;
 
       // Update participant record
       await RoomParticipant.findOneAndUpdate(
@@ -74,9 +117,10 @@ module.exports = (io, socket) => {
         room.currentParticipants = Math.max(0, room.currentParticipants - 1);
         await room.save();
 
-        // Notify remaining participants
+        // Notify remaining participants (includes socketId for WebRTC cleanup)
         io.to(`room:${roomCode}`).emit('room:participant-left', {
           roomCode,
+          socketId: socket.id,
           userId: socket.userId,
           participantCount: room.currentParticipants,
         });
@@ -280,6 +324,93 @@ module.exports = (io, socket) => {
       logger.info(`User ${socket.username} sent room invite for ${roomCode} to ${targetUserIds.length} users`);
     } catch (error) {
       logger.error(`Room invite error: ${error.message}`);
+    }
+  });
+
+  // ================== WebRTC Signaling Events ==================
+
+  // Send WebRTC offer to specific peer
+  socket.on('webrtc:offer', (data) => {
+    const { targetSocketId, offer } = data;
+    if (!socket.userId || !targetSocketId || !offer) return;
+
+    io.to(targetSocketId).emit('webrtc:offer', {
+      fromSocketId: socket.id,
+      fromUserId: socket.userId,
+      offer,
+    });
+  });
+
+  // Send WebRTC answer to specific peer
+  socket.on('webrtc:answer', (data) => {
+    const { targetSocketId, answer } = data;
+    if (!socket.userId || !targetSocketId || !answer) return;
+
+    io.to(targetSocketId).emit('webrtc:answer', {
+      fromSocketId: socket.id,
+      fromUserId: socket.userId,
+      answer,
+    });
+  });
+
+  // Send ICE candidate to specific peer
+  socket.on('webrtc:ice-candidate', (data) => {
+    const { targetSocketId, candidate } = data;
+    if (!socket.userId || !targetSocketId || !candidate) return;
+
+    io.to(targetSocketId).emit('webrtc:ice-candidate', {
+      fromSocketId: socket.id,
+      candidate,
+    });
+  });
+
+  // Notify peers about media state changes (mute/video off)
+  socket.on('webrtc:media-state', (data) => {
+    const { roomCode, audioEnabled, videoEnabled } = data;
+    if (!socket.userId || !roomCode) return;
+
+    socket.to(`room:${roomCode}`).emit('webrtc:media-state', {
+      socketId: socket.id,
+      userId: socket.userId,
+      audioEnabled,
+      videoEnabled,
+    });
+  });
+
+  // Handle socket disconnect - cleanup WebRTC peers
+  socket.on('disconnect', async () => {
+    if (socket.currentRoom) {
+      const roomCode = socket.currentRoom;
+
+      // Remove from room peers
+      if (roomPeers.has(roomCode)) {
+        roomPeers.get(roomCode).delete(socket.id);
+        if (roomPeers.get(roomCode).size === 0) {
+          roomPeers.delete(roomCode);
+        }
+      }
+
+      // Update participant record
+      if (socket.userId) {
+        await RoomParticipant.findOneAndUpdate(
+          { roomCode, userId: socket.userId, leftAt: null },
+          { leftAt: new Date() }
+        );
+
+        const room = await Room.findOne({ roomCode });
+        if (room) {
+          room.currentParticipants = Math.max(0, room.currentParticipants - 1);
+          await room.save();
+
+          // Notify remaining participants
+          io.to(`room:${roomCode}`).emit('room:participant-left', {
+            roomCode,
+            socketId: socket.id,
+            userId: socket.userId,
+            participantCount: room.currentParticipants,
+          });
+        }
+      }
     }
   });
 };
