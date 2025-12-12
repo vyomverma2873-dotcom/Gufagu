@@ -41,6 +41,11 @@ const createRoom = async (req, res, next) => {
       settings = {},
     } = req.body;
 
+    // Validate room name
+    if (!roomName || !roomName.trim()) {
+      return res.status(400).json({ error: 'Room name is required' });
+    }
+
     // Rate limiting check (max 5 rooms per hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentRooms = await Room.countDocuments({
@@ -74,7 +79,7 @@ const createRoom = async (req, res, next) => {
     // Create room in database (no external API needed - pure WebRTC)
     const room = new Room({
       roomCode,
-      roomName: roomName || `${req.user.displayName || req.user.username}'s Room`,
+      roomName: roomName.trim(),
       hostUserId: req.user._id,
       maxParticipants: Math.min(Math.max(maxParticipants, 2), 5), // Clamp between 2-5
       isPublic,

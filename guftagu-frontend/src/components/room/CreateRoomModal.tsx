@@ -23,7 +23,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
   const [isLoading, setIsLoading] = useState(false);
   
   // Form state
-  const [roomName, setRoomName] = useState('My Awesome Room');
+  const [roomName, setRoomName] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(5);
   const [password, setPassword] = useState('');
   const [enablePassword, setEnablePassword] = useState(false);
@@ -32,6 +32,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
     audioEnabled: true,
     screenShareEnabled: true,
   });
+  const [error, setError] = useState('');
 
   // Success state
   const [createdRoom, setCreatedRoom] = useState<{
@@ -42,10 +43,17 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
   const [copiedLink, setCopiedLink] = useState(false);
 
   const handleCreate = async () => {
+    // Validate room name
+    if (!roomName.trim()) {
+      setError('Room name is required');
+      return;
+    }
+
     setIsLoading(true);
+    setError('');
     try {
       const response = await roomsApi.createRoom({
-        roomName: roomName || undefined,
+        roomName: roomName.trim(),
         maxParticipants,
         password: enablePassword ? password : undefined,
         settings,
@@ -57,7 +65,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
       });
       setStep('success');
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to create room');
+      setError(err.response?.data?.error || 'Failed to create room');
     } finally {
       setIsLoading(false);
     }
@@ -82,14 +90,14 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
 
   const joinRoom = () => {
     if (createdRoom) {
+      // Don't close modal - let room page handle the modal state
       router.push(`/room/${createdRoom.roomCode}`);
-      handleClose();
     }
   };
 
   const handleClose = () => {
     setStep('create');
-    setRoomName('My Awesome Room');
+    setRoomName('');
     setMaxParticipants(5);
     setPassword('');
     setEnablePassword(false);
@@ -98,6 +106,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
       audioEnabled: true,
       screenShareEnabled: true,
     });
+    setError('');
     setCreatedRoom(null);
     onClose();
   };
@@ -134,15 +143,23 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
               {/* Room Name */}
               <div className="mb-5">
                 <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Room Name (optional)
+                  Room Name <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  placeholder="My Awesome Room"
-                  className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  onChange={(e) => {
+                    setRoomName(e.target.value);
+                    if (error === 'Room name is required') setError('');
+                  }}
+                  placeholder="Enter room name"
+                  className={`w-full px-4 py-3 bg-neutral-800/50 border rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 ${
+                    error === 'Room name is required' ? 'border-red-500' : 'border-neutral-700/50'
+                  }`}
                 />
+                {error === 'Room name is required' && (
+                  <p className="text-red-400 text-sm mt-1">Room name is required</p>
+                )}
               </div>
 
               {/* Max Participants */}
@@ -190,6 +207,13 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
                   />
                 </div>
               </div>
+
+              {/* General Error Display */}
+              {error && error !== 'Room name is required' && (
+                <div className="mb-5 p-3 bg-red-900/30 border border-red-800/50 rounded-lg">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
 
               {/* Password */}
               <div className="mb-6">
