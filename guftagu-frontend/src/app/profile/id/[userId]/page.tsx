@@ -34,7 +34,19 @@ export default function ProfileByIdPage() {
         // Check friendship status if logged in
         if (isAuthenticated && response.data.user._id !== currentUser?._id) {
           const statusResponse = await friendsApi.checkFriendship(response.data.user._id);
-          setFriendshipStatus(statusResponse.data);
+          // Transform API response to FriendshipStatus format
+          const apiData = statusResponse.data;
+          if (apiData.isFriend) {
+            setFriendshipStatus({ status: 'friends' });
+          } else if (apiData.pendingRequest) {
+            setFriendshipStatus({
+              status: 'pending',
+              direction: apiData.pendingRequest.isSender ? 'sent' : 'received',
+              requestId: apiData.pendingRequest._id
+            });
+          } else {
+            setFriendshipStatus({ status: 'none' });
+          }
         }
       } catch (err: any) {
         setError(err.response?.data?.error || 'User not found');
