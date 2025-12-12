@@ -121,6 +121,8 @@ export default function VideoCallOverlay() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionMessage, setTransitionMessage] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [isRequestingCallAgainPermission, setIsRequestingCallAgainPermission] = useState(false);
+  const [callAgainPermissionError, setCallAgainPermissionError] = useState<string | null>(null);
   const prevCallStatusRef = useRef<string | null>(null);
   
   // Buffer for ICE candidates received before remote description is set
@@ -1609,7 +1611,7 @@ export default function VideoCallOverlay() {
     }, 3000);
   };
 
-  const handleCallAgain = () => {
+  const handleCallAgain = async () => {
     // Cancel any pending auto-dismiss timer
     if (autoDismissTimerRef.current) {
       clearTimeout(autoDismissTimerRef.current);
@@ -1624,21 +1626,64 @@ export default function VideoCallOverlay() {
     
     const { userId, username, profilePicture, callType: savedCallType } = savedPeerInfo;
     
-    setCallEnded(false);
-    endCall(); // Close current overlay
+    // Request permissions FIRST before re-initiating call
+    setIsRequestingCallAgainPermission(true);
+    setCallAgainPermissionError(null);
     
-    // Re-initiate call to the same user using saved values
-    setTimeout(() => {
-      console.log('[VideoCallOverlay] Calling again:', userId, username);
-      startCall(
-        userId,
-        {
-          username,
-          profilePicture
-        },
-        savedCallType
-      );
-    }, 500); // Small delay to ensure clean state
+    try {
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera/microphone not supported on this device');
+      }
+      
+      // Request permissions
+      const constraints: MediaStreamConstraints = {
+        audio: true,
+        video: savedCallType === 'video',
+      };
+      
+      console.log('[VideoCallOverlay] Requesting permissions for call again');
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Stop the test stream immediately - new call will request its own
+      stream.getTracks().forEach(track => track.stop());
+      
+      console.log('[VideoCallOverlay] Permission granted, calling again:', userId, username);
+      
+      setIsRequestingCallAgainPermission(false);
+      setCallEnded(false);
+      endCall(); // Close current overlay
+      
+      // Re-initiate call to the same user using saved values
+      setTimeout(() => {
+        startCall(
+          userId,
+          {
+            username,
+            profilePicture
+          },
+          savedCallType
+        );
+      }, 500); // Small delay to ensure clean state
+    } catch (error: any) {
+      console.error('[VideoCallOverlay] Call Again permission error:', error);
+      setIsRequestingCallAgainPermission(false);
+      
+      // Handle specific permission errors
+      let errorMessage = 'Failed to access camera/microphone.';
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Camera/microphone permission denied. Please allow access.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'No camera or microphone found.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Camera/microphone is in use by another app.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setCallAgainPermissionError(errorMessage);
+      setTimeout(() => setCallAgainPermissionError(null), 5000);
+    }
   };
 
   const handleCloseEndScreen = () => {
@@ -1740,17 +1785,34 @@ export default function VideoCallOverlay() {
               <PhoneOff className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">Call Ended</h2>
-            <p className="text-neutral-400 text-sm sm:text-base mb-6 sm:mb-8">Duration: {formatLongDuration(callEndDuration)}</p>
+            <p className="text-neutral-400 text-sm sm:text-base mb-4 sm:mb-6">Duration: {formatLongDuration(callEndDuration)}</p>
+            
+            {/* Permission error message */}
+            {callAgainPermissionError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                {callAgainPermissionError}
+              </div>
+            )}
+            
             <div className="flex gap-3 sm:gap-4 justify-center">
               <button
                 onClick={handleCallAgain}
-                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-white text-neutral-900 rounded-full hover:bg-neutral-200 active:bg-neutral-300 transition-all font-medium shadow-lg shadow-white/10"
+                disabled={isRequestingCallAgainPermission}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-white text-neutral-900 rounded-full hover:bg-neutral-200 active:bg-neutral-300 transition-all font-medium shadow-lg shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Call Again
+                {isRequestingCallAgainPermission ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Requesting...
+                  </>
+                ) : (
+                  'Call Again'
+                )}
               </button>
               <button
                 onClick={handleCloseEndScreen}
-                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-neutral-800 border border-neutral-700 text-white rounded-full hover:bg-neutral-700 active:bg-neutral-600 transition-all"
+                disabled={isRequestingCallAgainPermission}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-neutral-800 border border-neutral-700 text-white rounded-full hover:bg-neutral-700 active:bg-neutral-600 transition-all disabled:opacity-50"
               >
                 Close
               </button>
@@ -1767,19 +1829,36 @@ export default function VideoCallOverlay() {
               <PhoneOff className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" />
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">Call Declined</h2>
-            <p className="text-neutral-400 text-sm sm:text-base mb-6 sm:mb-8">
+            <p className="text-neutral-400 text-sm sm:text-base mb-4 sm:mb-6">
               {callEndReason || 'The user declined your call'}
             </p>
+            
+            {/* Permission error message */}
+            {callAgainPermissionError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                {callAgainPermissionError}
+              </div>
+            )}
+            
             <div className="flex gap-3 sm:gap-4 justify-center">
               <button
                 onClick={handleCallAgain}
-                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-white text-neutral-900 rounded-full hover:bg-neutral-200 active:bg-neutral-300 transition-all font-medium shadow-lg shadow-white/10"
+                disabled={isRequestingCallAgainPermission}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-white text-neutral-900 rounded-full hover:bg-neutral-200 active:bg-neutral-300 transition-all font-medium shadow-lg shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Call Again
+                {isRequestingCallAgainPermission ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Requesting...
+                  </>
+                ) : (
+                  'Call Again'
+                )}
               </button>
               <button
                 onClick={handleCloseEndScreen}
-                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-neutral-800 border border-neutral-700 text-white rounded-full hover:bg-neutral-700 active:bg-neutral-600 transition-all"
+                disabled={isRequestingCallAgainPermission}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-neutral-800 border border-neutral-700 text-white rounded-full hover:bg-neutral-700 active:bg-neutral-600 transition-all disabled:opacity-50"
               >
                 Close
               </button>

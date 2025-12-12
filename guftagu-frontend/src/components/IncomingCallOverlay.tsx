@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
-import { Phone, PhoneOff, Video } from 'lucide-react';
+import { Phone, PhoneOff, Video, Loader2, AlertCircle } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 
 // Generate ringtone using Web Audio API (works across all browsers)
@@ -73,6 +73,8 @@ export default function IncomingCallOverlay() {
   const { incomingCall, acceptCall, declineCall, callStatus } = useSocket();
   const audioContextRef = useRef<AudioContext | null>(null);
   const ringtoneRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   // Initialize and play ringtone when incoming call
   useEffect(() => {
@@ -106,13 +108,57 @@ export default function IncomingCallOverlay() {
     };
   }, [incomingCall]);
 
-  // Handle accept/decline to stop ringtone
-  const handleAccept = useCallback(() => {
-    if (ringtoneRef.current) {
-      ringtoneRef.current.stop();
+  // Handle accept - request camera/mic permission first
+  const handleAccept = useCallback(async () => {
+    if (!incomingCall) return;
+    
+    setIsRequestingPermission(true);
+    setPermissionError(null);
+    
+    try {
+      // Request camera/mic permissions BEFORE accepting the call
+      const constraints: MediaStreamConstraints = {
+        audio: true,
+        video: incomingCall.callType === 'video',
+      };
+      
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera/microphone not supported on this device');
+      }
+      
+      // Request permissions - this will show the browser permission prompt
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Stop the test stream immediately - VideoCallOverlay will request its own
+      stream.getTracks().forEach(track => track.stop());
+      
+      // Permission granted - stop ringtone and accept call
+      if (ringtoneRef.current) {
+        ringtoneRef.current.stop();
+      }
+      
+      setIsRequestingPermission(false);
+      acceptCall();
+    } catch (error: any) {
+      console.error('[IncomingCall] Permission error:', error);
+      setIsRequestingPermission(false);
+      
+      // Handle specific permission errors
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setPermissionError('Camera/microphone permission denied. Please allow access to answer the call.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        setPermissionError('No camera or microphone found on this device.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        setPermissionError('Camera/microphone is already in use by another application.');
+      } else {
+        setPermissionError(error.message || 'Failed to access camera/microphone.');
+      }
+      
+      // Clear error after 5 seconds
+      setTimeout(() => setPermissionError(null), 5000);
     }
-    acceptCall();
-  }, [acceptCall]);
+  }, [acceptCall, incomingCall]);
 
   const handleDecline = useCallback(() => {
     if (ringtoneRef.current) {
@@ -165,22 +211,43 @@ export default function IncomingCallOverlay() {
           <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
 
+        {/* Permission error message */}
+        {permissionError && (
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-2 text-red-400 text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{permissionError}</span>
+          </div>
+        )}
+
         <div className="flex justify-center gap-8">
           <button
             onClick={handleDecline}
-            className="p-4 bg-red-500 rounded-full text-white hover:bg-red-600 transition-all hover:scale-110 active:scale-95 shadow-lg shadow-red-500/30"
+            disabled={isRequestingPermission}
+            className="p-4 bg-red-500 rounded-full text-white hover:bg-red-600 transition-all hover:scale-110 active:scale-95 shadow-lg shadow-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             title="Decline"
           >
             <PhoneOff className="w-6 h-6" />
           </button>
           <button
             onClick={handleAccept}
-            className="p-4 bg-green-500 rounded-full text-white hover:bg-green-600 transition-all hover:scale-110 active:scale-95 shadow-lg shadow-green-500/30 animate-pulse"
+            disabled={isRequestingPermission}
+            className="p-4 bg-green-500 rounded-full text-white hover:bg-green-600 transition-all hover:scale-110 active:scale-95 shadow-lg shadow-green-500/30 animate-pulse disabled:opacity-50 disabled:cursor-not-allowed disabled:animate-none disabled:hover:scale-100"
             title="Accept"
           >
-            <Phone className="w-6 h-6" />
+            {isRequestingPermission ? (
+              <Loader2 className="w-6 h-6 animate-spin" />
+            ) : (
+              <Phone className="w-6 h-6" />
+            )}
           </button>
         </div>
+
+        {/* Permission request hint */}
+        {isRequestingPermission && (
+          <p className="mt-4 text-neutral-500 text-sm">
+            Please allow camera/microphone access...
+          </p>
+        )}
       </div>
     </div>
   );

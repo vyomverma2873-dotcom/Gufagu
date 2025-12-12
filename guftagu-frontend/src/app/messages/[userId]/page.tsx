@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, MoreVertical, Phone, Video, PhoneOff, X, PhoneCall, PhoneIncoming, PhoneOutgoing, PhoneMissed, Check, CheckCheck, Flag, UserX, UserMinus, Shield, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Send, MoreVertical, Phone, Video, PhoneOff, X, PhoneCall, PhoneIncoming, PhoneOutgoing, PhoneMissed, Check, CheckCheck, Flag, UserX, UserMinus, Shield, AlertTriangle, Loader2 } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
@@ -77,6 +77,8 @@ export default function ConversationPage() {
   // Local call state for this conversation
   const [localCallType, setLocalCallType] = useState<'voice' | 'video' | null>(null);
   const [isInitiatingCall, setIsInitiatingCall] = useState(false);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   
   // Action menu state
   const [showActionMenu, setShowActionMenu] = useState(false);
@@ -338,7 +340,7 @@ export default function ConversationPage() {
     };
   }, [socket, user, userId]);
 
-  const handleStartCall = (type: 'voice' | 'video') => {
+  const handleStartCall = async (type: 'voice' | 'video') => {
     if (!chatUser) {
       console.log('[Call] Cannot start - no chat user');
       return;
@@ -349,14 +351,61 @@ export default function ConversationPage() {
       return;
     }
     
-    console.log('[Call] Starting', type, 'call to', chatUser.username);
+    // Request camera/mic permissions FIRST before initiating call
+    setIsRequestingPermission(true);
+    setPermissionError(null);
     
-    // Use the new startCall from SocketContext - shows calling screen immediately
-    startCall(
-      chatUser._id,
-      { username: chatUser.displayName || chatUser.username, profilePicture: chatUser.profilePicture },
-      type
-    );
+    try {
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera/microphone not supported on this device');
+      }
+      
+      // Request permissions - this will show the browser permission prompt
+      const constraints: MediaStreamConstraints = {
+        audio: true,
+        video: type === 'video',
+      };
+      
+      console.log('[Call] Requesting permissions for', type, 'call');
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Stop the test stream immediately - VideoCallOverlay will request its own
+      stream.getTracks().forEach(track => track.stop());
+      
+      console.log('[Call] Permission granted, starting', type, 'call to', chatUser.username);
+      
+      setIsRequestingPermission(false);
+      
+      // Permission granted - now start the call
+      startCall(
+        chatUser._id,
+        { username: chatUser.displayName || chatUser.username, profilePicture: chatUser.profilePicture },
+        type
+      );
+    } catch (error: any) {
+      console.error('[Call] Permission error:', error);
+      setIsRequestingPermission(false);
+      
+      // Handle specific permission errors
+      let errorMessage = 'Failed to access camera/microphone.';
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Camera/microphone permission denied. Please allow access to make a call.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'No camera or microphone found on this device.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Camera/microphone is already in use by another application.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setPermissionError(errorMessage);
+      setActionError(errorMessage);
+      setTimeout(() => {
+        setPermissionError(null);
+        setActionError('');
+      }, 5000);
+    }
   };
 
   const handleEndCallLocal = () => {
@@ -668,19 +717,27 @@ export default function ConversationPage() {
                 <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 bg-neutral-800/60 rounded-xl p-1">
                   <button
                     onClick={() => handleStartCall('voice')}
-                    disabled={!chatUser.isOnline}
+                    disabled={!chatUser.isOnline || isRequestingPermission}
                     className="p-2 sm:p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={chatUser.isOnline ? 'Voice call' : 'User is offline'}
+                    title={!chatUser.isOnline ? 'User is offline' : isRequestingPermission ? 'Requesting permission...' : 'Voice call'}
                   >
-                    <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+                    {isRequestingPermission ? (
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    ) : (
+                      <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+                    )}
                   </button>
                   <button
                     onClick={() => handleStartCall('video')}
-                    disabled={!chatUser.isOnline}
+                    disabled={!chatUser.isOnline || isRequestingPermission}
                     className="p-2 sm:p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={chatUser.isOnline ? 'Video call' : 'User is offline'}
+                    title={!chatUser.isOnline ? 'User is offline' : isRequestingPermission ? 'Requesting permission...' : 'Video call'}
                   >
-                    <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+                    {isRequestingPermission ? (
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    ) : (
+                      <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+                    )}
                   </button>
                   <div className="w-px h-5 sm:h-6 bg-neutral-700 mx-0.5" />
                   <div className="relative" ref={actionMenuRef}>
