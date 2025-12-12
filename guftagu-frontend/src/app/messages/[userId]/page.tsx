@@ -630,10 +630,8 @@ export default function ConversationPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen pt-24 sm:pt-28 flex items-center justify-center">
-        <div className="bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-neutral-700/50 p-8">
-          <Spinner />
-        </div>
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <Spinner />
       </div>
     );
   }
