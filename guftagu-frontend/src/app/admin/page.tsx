@@ -159,7 +159,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <StatCard
             title="Total Users"
             value={stats?.totalUsers?.toLocaleString() || '0'}
@@ -172,11 +172,6 @@ export default function AdminDashboardPage() {
             icon={UserCheck}
           />
           <StatCard
-            title="This Month"
-            value={stats?.usersThisMonth || 0}
-            icon={TrendingUp}
-          />
-          <StatCard
             title="Banned Users"
             value={stats?.bannedUsers || 0}
             icon={UserX}
@@ -184,17 +179,7 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard
-            title="Total Matches"
-            value={stats?.totalMatches?.toLocaleString() || 0}
-            icon={Video}
-          />
-          <StatCard
-            title="Matches Today"
-            value={stats?.matchesToday || 0}
-            icon={BarChart3}
-          />
+        <div className="grid grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
           <StatCard
             title="Pending Reports"
             value={stats?.pendingReports || 0}
@@ -208,38 +193,8 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        {/* Bottom Grid - Quick Stats & Admin Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Quick Stats Card */}
-          <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2 bg-gradient-to-br from-white to-neutral-200 rounded-xl">
-                <Clock className="w-4 h-4 text-neutral-800" />
-              </div>
-              <h2 className="text-lg font-semibold text-white">Monthly Overview</h2>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-neutral-800/50 transition-colors">
-                <span className="text-neutral-400">Users this month</span>
-                <span className="text-white font-semibold bg-neutral-800 px-3 py-1 rounded-lg">{stats?.usersThisMonth || 0}</span>
-              </div>
-              <div className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-neutral-800/50 transition-colors">
-                <span className="text-neutral-400">Matches this month</span>
-                <span className="text-white font-semibold bg-neutral-800 px-3 py-1 rounded-lg">{stats?.matchesThisMonth || 0}</span>
-              </div>
-              <div className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-neutral-800/50 transition-colors">
-                <span className="text-neutral-400">Reports today</span>
-                <span className="text-white font-semibold bg-neutral-800 px-3 py-1 rounded-lg">{stats?.reportsToday || 0}</span>
-              </div>
-              <div className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-neutral-800/50 transition-colors">
-                <span className="text-neutral-400">Total reports</span>
-                <span className="text-white font-semibold bg-neutral-800 px-3 py-1 rounded-lg">{stats?.totalReports || 0}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Admin Actions Card */}
-          <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6">
+        {/* Admin Actions Card */}
+        <div className="bg-neutral-900/80 backdrop-blur-xl border border-neutral-700/50 rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="p-2 bg-gradient-to-br from-white to-neutral-200 rounded-xl">
                 <Shield className="w-4 h-4 text-neutral-800" />
@@ -299,7 +254,6 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
           </div>
-        </div>
       </div>
     </div>
   );

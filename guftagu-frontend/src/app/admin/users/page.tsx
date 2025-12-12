@@ -478,8 +478,6 @@ export default function AdminUsersPage() {
                         {formatDate(u.joinDate)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
-                        <span>{u.totalMatches} matches</span>
-                        <span className="mx-1">•</span>
                         <span>{u.friendsCount} friends</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -869,11 +867,7 @@ export default function AdminUsersPage() {
                   {activeTab === 'overview' && (
                     <div className="space-y-6">
                       {/* Stats Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-zinc-800/50 p-4 rounded-lg">
-                          <p className="text-zinc-400 text-sm">Total Matches</p>
-                          <p className="text-2xl font-bold text-white">{userDetails.stats.totalMatches}</p>
-                        </div>
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="bg-zinc-800/50 p-4 rounded-lg">
                           <p className="text-zinc-400 text-sm">Friends</p>
                           <p className="text-2xl font-bold text-white">{userDetails.stats.friendsCount}</p>
