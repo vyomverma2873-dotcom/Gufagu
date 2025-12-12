@@ -192,44 +192,34 @@ export default function ConversationPage() {
 
     // Listen for new messages - backend emits 'dm_receive'
     const handleNewMessage = (data: any) => {
-      console.log('[Chat Socket] Received dm_receive:', data);
-      console.log('[Chat Socket] Checking: from.userId:', data.from?.userId, 'conversationId:', data.conversationId, 'current userId:', userId);
-      
       // Check if message is from current chat user (compare as strings)
       const fromUserId = String(data.from?.userId || '');
       const conversationId = String(data.conversationId || '');
       const currentUserId = String(userId);
       
       if (fromUserId === currentUserId || conversationId === currentUserId) {
-        console.log('[Chat Socket] Message matches, adding to state');
         const newMsg = {
           _id: data.messageId || `msg-${Date.now()}`,
           senderId: data.from?.userId,
           content: data.message || data.content,
           isOwn: false,
           isRead: true,
-          isNew: false, // No animation delay - appear instantly
+          isNew: true, // Quick 0.1s animation
           timestamp: data.timestamp || new Date().toISOString(),
         };
         
+        // Update state immediately
         setMessages((prev) => {
-          // Prevent duplicates
-          if (prev.some(m => m._id === newMsg._id)) {
-            console.log('[Chat Socket] Duplicate message, skipping');
-            return prev;
-          }
+          if (prev.some(m => m._id === newMsg._id)) return prev;
           return [...prev, newMsg];
         });
         
-        // Also update timeline
         setTimeline((prev) => {
-          if (prev.some(m => m._id === newMsg._id)) {
-            return prev;
-          }
+          if (prev.some(m => m._id === newMsg._id)) return prev;
           return [...prev, newMsg as TimelineItem];
         });
         
-        // Mark as read via socket (non-blocking, no REST call)
+        // Mark as read via socket (non-blocking)
         if (data.messageId) {
           socket?.emit('dm_mark_read', { messageIds: [data.messageId], fromUserId: data.from?.userId });
         }
