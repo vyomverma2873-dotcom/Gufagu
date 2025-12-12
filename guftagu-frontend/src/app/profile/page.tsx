@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { Copy, Edit, Users, Video, Calendar, Check } from 'lucide-react';
+import { Copy, Edit, Users, Calendar, Check } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -53,7 +53,7 @@ export default function ProfilePage() {
                 src={user.profilePicture}
                 alt={user.displayName || user.username || ''}
                 size="xl"
-                className="w-20 h-20 border-4 border-neutral-900 rounded-xl"
+                className="w-20 h-20 border-4 border-neutral-900"
               />
               
               <div className="flex-1">
@@ -96,14 +96,7 @@ export default function ProfilePage() {
             )}
 
             {/* Stats Grid */}
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <div className="p-4 bg-neutral-800/40 border border-neutral-700/50 rounded-xl text-center">
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Video className="w-3.5 h-3.5 text-neutral-400" />
-                  <span className="text-xl font-semibold text-white">{user.totalMatches}</span>
-                </div>
-                <p className="text-xs text-neutral-500">Matches</p>
-              </div>
+            <div className="mt-6 grid grid-cols-2 gap-3">
               <div className="p-4 bg-neutral-800/40 border border-neutral-700/50 rounded-xl text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <Users className="w-3.5 h-3.5 text-neutral-400" />

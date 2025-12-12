@@ -26,22 +26,31 @@ export default function Avatar({ src, alt = '', size = 'md', isOnline, className
     xl: 'w-4 h-4',
   };
 
+  // Extract border classes from className to apply to inner elements
+  const borderClasses = className?.match(/border-\S+/g)?.join(' ') || '';
+  const sizeClasses = className?.match(/w-\S+\s+h-\S+/g)?.[0] || '';
+  const otherClasses = className?.replace(/border-\S+/g, '').replace(/w-\S+\s+h-\S+/g, '').trim() || '';
+
   return (
-    <div className={cn('relative inline-flex', className)}>
+    <div className={cn('relative inline-flex', otherClasses)}>
       {src ? (
         <img
           src={src}
           alt={alt}
           className={cn(
             'rounded-full object-cover bg-zinc-800',
-            sizes[size]
+            sizes[size],
+            sizeClasses,
+            borderClasses
           )}
         />
       ) : (
         <div
           className={cn(
             'rounded-full bg-gradient-to-br from-zinc-600 to-zinc-700 flex items-center justify-center text-white font-medium',
-            sizes[size]
+            sizes[size],
+            sizeClasses,
+            borderClasses
           )}
         >
           {getInitials(alt || 'U')}

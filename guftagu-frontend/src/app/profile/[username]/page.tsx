@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, UserPlus, MessageSquare, Video, Users, Calendar, Check, X, Clock } from 'lucide-react';
+import { ArrowLeft, UserPlus, MessageSquare, Users, Calendar, Check, X, Clock } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -203,14 +203,7 @@ export default function PublicProfilePage() {
             )}
 
             {/* Stats */}
-            <div className="mt-6 grid grid-cols-3 gap-4">
-              <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Video className="w-4 h-4 text-zinc-400" />
-                  <span className="text-2xl font-bold text-white">{user.totalMatches || 0}</span>
-                </div>
-                <p className="text-sm text-zinc-400">Matches</p>
-              </div>
+            <div className="mt-6 grid grid-cols-2 gap-4">
               <div className="p-4 bg-zinc-800/50 rounded-xl text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Users className="w-4 h-4 text-zinc-400" />
