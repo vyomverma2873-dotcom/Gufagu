@@ -397,7 +397,7 @@ export default function RoomPage() {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">{webrtc.peers.length + 1}/{room?.maxParticipants || 10}</span>
+            <span className="text-xs sm:text-sm">{webrtc.peers.length + 1}/{room?.maxParticipants || 5}</span>
           </button>
 
           {/* Leave button - Icon only on mobile */}
@@ -459,7 +459,7 @@ export default function RoomPage() {
         isLocalHost={isHost}
         localAudioEnabled={webrtc.audioEnabled}
         localVideoEnabled={webrtc.videoEnabled}
-        maxParticipants={room?.maxParticipants || 10}
+        maxParticipants={room?.maxParticipants || 5}
         onMuteParticipant={isHost ? muteParticipant : undefined}
         onKickParticipant={isHost ? kickParticipant : undefined}
         onAddFriend={addFriend}

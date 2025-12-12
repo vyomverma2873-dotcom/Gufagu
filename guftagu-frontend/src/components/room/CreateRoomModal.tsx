@@ -153,14 +153,14 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
                 <input
                   type="range"
                   min="2"
-                  max="10"
+                  max="5"
                   value={maxParticipants}
                   onChange={(e) => setMaxParticipants(parseInt(e.target.value))}
                   className="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-violet-500"
                 />
                 <div className="flex justify-between text-xs text-neutral-500 mt-1">
                   <span>2</span>
-                  <span>10</span>
+                  <span>5</span>
                 </div>
               </div>
 

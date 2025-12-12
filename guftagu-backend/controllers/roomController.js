@@ -35,7 +35,7 @@ const createRoom = async (req, res, next) => {
   try {
     const {
       roomName,
-      maxParticipants = 6,
+      maxParticipants = 5,
       isPublic = true,
       password,
       settings = {},
@@ -76,7 +76,7 @@ const createRoom = async (req, res, next) => {
       roomCode,
       roomName: roomName || `${req.user.displayName || req.user.username}'s Room`,
       hostUserId: req.user._id,
-      maxParticipants: Math.min(Math.max(maxParticipants, 2), 10), // Clamp between 2-10
+      maxParticipants: Math.min(Math.max(maxParticipants, 2), 5), // Clamp between 2-5
       isPublic,
       passwordHash,
       settings: roomSettings,

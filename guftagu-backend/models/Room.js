@@ -30,9 +30,9 @@ const roomSchema = new mongoose.Schema(
     // Room capacity
     maxParticipants: {
       type: Number,
-      default: 6,
+      default: 5,
       min: 2,
-      max: 10,
+      max: 5,
     },
     currentParticipants: {
       type: Number,
