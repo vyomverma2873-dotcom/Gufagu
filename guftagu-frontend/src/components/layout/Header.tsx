@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, MessageSquare, Bell, User, Settings, LogOut, Menu, X, Sparkles } from 'lucide-react';
+import { Users, MessageSquare, Bell, User, Settings, LogOut, Menu, X, Sparkles, Monitor, Shield } from 'lucide-react';
 import { useState, useEffect, useTransition, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
@@ -10,6 +10,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import api from '@/lib/api';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -22,6 +23,38 @@ export default function Header() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [sessionCount, setSessionCount] = useState<number>(0);
+  const [showLogoutAllModal, setShowLogoutAllModal] = useState(false);
+  const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
+
+  // Fetch session count
+  useEffect(() => {
+    const fetchSessionCount = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const response = await api.get('/sessions/count');
+        setSessionCount(response.data.activeCount || 0);
+      } catch (error) {
+        console.error('Failed to fetch session count:', error);
+      }
+    };
+
+    fetchSessionCount();
+  }, [isAuthenticated]);
+
+  // Handle logout from all devices
+  const handleLogoutAll = async () => {
+    setIsLoggingOutAll(true);
+    try {
+      await api.delete('/sessions/logout-all');
+      await logout();
+    } catch (error) {
+      console.error('Failed to logout from all devices:', error);
+    } finally {
+      setIsLoggingOutAll(false);
+      setShowLogoutAllModal(false);
+    }
+  };
 
   // Track page loading state
   useEffect(() => {
@@ -69,6 +102,7 @@ export default function Header() {
   ];
 
   return (
+    <>
     <header className="fixed top-0 left-0 right-0 z-50">
       {/* Loading bar */}
       {(isPageLoading || authLoading) && (
@@ -199,12 +233,27 @@ export default function Header() {
                               onClick={() => setUserMenuOpen(false)}
                               className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:text-white hover:bg-neutral-800/60"
                             >
-                              <Settings className="w-4 h-4" />
+                              <Shield className="w-4 h-4" />
                               <span>Admin Panel</span>
                             </Link>
                           )}
                         </div>
                         <div className="border-t border-neutral-800 py-1">
+                          <Link
+                            href="/sessions"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center justify-between gap-3 px-4 py-2.5 text-neutral-400 hover:text-white hover:bg-neutral-800/60"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Monitor className="w-4 h-4" />
+                              <span>Active Sessions</span>
+                            </div>
+                            {sessionCount > 0 && (
+                              <span className="text-xs bg-neutral-700 text-neutral-300 px-2 py-0.5 rounded-full">
+                                {sessionCount}
+                              </span>
+                            )}
+                          </Link>
                           <button
                             onClick={() => {
                               setUserMenuOpen(false);
@@ -214,6 +263,16 @@ export default function Header() {
                           >
                             <LogOut className="w-4 h-4" />
                             <span>Logout</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setUserMenuOpen(false);
+                              setShowLogoutAllModal(true);
+                            }}
+                            className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-neutral-800/60 w-full"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Logout from all devices</span>
                           </button>
                         </div>
                       </div>
@@ -274,5 +333,41 @@ export default function Header() {
         </div>
       )}
     </header>
+
+      {/* Logout from all devices confirmation modal */}
+      {showLogoutAllModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-xl font-semibold text-white mb-2">Logout from all devices?</h3>
+            <p className="text-neutral-400 mb-6">
+              This will log you out from all devices including this one. You will need to log in again.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLogoutAllModal(false)}
+                className="px-4 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all"
+                disabled={isLoggingOutAll}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogoutAll}
+                disabled={isLoggingOutAll}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoggingOutAll ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Logging out...</span>
+                  </>
+                ) : (
+                  <span>Logout from all devices</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

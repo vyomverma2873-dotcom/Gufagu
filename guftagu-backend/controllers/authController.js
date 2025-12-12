@@ -1,11 +1,16 @@
 const User = require('../models/User');
 const Ban = require('../models/Ban');
+const Session = require('../models/Session');
 const { generateOTP, isValidOTP } = require('../utils/otp');
 const { sendOTPEmail } = require('../utils/brevo');
 const { storeOTP, getOTP, deleteOTP } = require('../config/redis');
 const { generateToken } = require('../middleware/auth');
 const { generateUniqueUserId } = require('../utils/userId');
+const { parseUserAgent, getClientIP, getGeolocation, hashSessionToken } = require('../utils/session');
 const logger = require('../utils/logger');
+
+// Maximum active sessions per user
+const MAX_SESSIONS_PER_USER = 10;
 
 // Helper function to check and auto-unban expired bans
 const checkAndAutoUnban = async (user) => {
@@ -190,6 +195,58 @@ const verifyOTP = async (req, res, next) => {
     // Generate JWT token
     const token = generateToken(user._id);
 
+    // Create session record
+    try {
+      // Parse user agent
+      const userAgent = req.headers['user-agent'];
+      const deviceInfo = parseUserAgent(userAgent);
+      
+      // Get client IP and geolocation
+      const ipAddress = getClientIP(req);
+      const geoData = await getGeolocation(ipAddress);
+
+      // Hash the token for secure storage
+      const sessionToken = hashSessionToken(token);
+
+      // Create new session
+      await Session.create({
+        userId: user._id,
+        sessionToken,
+        ipAddress,
+        userAgent,
+        ...deviceInfo,
+        ...geoData,
+        loginTime: new Date(),
+        lastActivity: new Date(),
+      });
+
+      // Check and limit sessions (remove oldest if exceeds max)
+      const sessionCount = await Session.getActiveCount(user._id);
+      if (sessionCount > MAX_SESSIONS_PER_USER) {
+        const oldestSessions = await Session.find({
+          userId: user._id,
+          isActive: true,
+          sessionToken: { $ne: sessionToken },
+        })
+          .sort({ lastActivity: 1 })
+          .limit(sessionCount - MAX_SESSIONS_PER_USER);
+
+        for (const oldSession of oldestSessions) {
+          oldSession.isActive = false;
+          oldSession.revokedAt = new Date();
+          oldSession.revokeReason = 'expired';
+          await oldSession.save();
+        }
+        
+        logger.info(`Removed ${oldestSessions.length} old sessions for user ${user.email}`);
+      }
+
+      logger.info(`Session created for ${user.email} from ${ipAddress}`);
+    } catch (sessionError) {
+      // Log but don't fail login if session creation fails
+      logger.error(`Session creation failed for ${user.email}:`, sessionError);
+    }
+
     res.json({
       message: 'Login successful',
       token,
@@ -262,6 +319,22 @@ const logout = async (req, res, next) => {
         socketId: null,
         lastActive: new Date(),
       });
+
+      // Revoke current session
+      const authHeader = req.headers.authorization;
+      const currentToken = authHeader && authHeader.split(' ')[1];
+      if (currentToken) {
+        const sessionHash = hashSessionToken(currentToken);
+        await Session.findOneAndUpdate(
+          { userId: req.user._id, sessionToken: sessionHash, isActive: true },
+          { 
+            isActive: false, 
+            revokedAt: new Date(), 
+            revokeReason: 'user_logout' 
+          }
+        );
+        logger.info(`Session revoked on logout for user ${req.user._id}`);
+      }
     }
 
     res.json({ message: 'Logged out successfully' });

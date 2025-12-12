@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Ban = require('../models/Ban');
+const Session = require('../models/Session');
 
 // Helper function to check and auto-unban expired bans
 const checkAndAutoUnban = async (user) => {
@@ -51,6 +52,14 @@ const checkAndAutoUnban = async (user) => {
 };
 
 /**
+ * Hash a session token
+ */
+const hashSessionToken = (token) => {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+/**
  * Authenticate JWT token middleware
  */
 const authenticateToken = async (req, res, next) => {
@@ -85,7 +94,19 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    // Verify session is active and update last activity
+    const sessionHash = hashSessionToken(token);
+    const session = await Session.findOneAndUpdate(
+      { userId: user._id, sessionToken: sessionHash, isActive: true },
+      { lastActivity: new Date() }
+    );
+
+    if (!session) {
+      return res.status(401).json({ error: 'Session expired or revoked' });
+    }
+
     req.user = user;
+    req.sessionId = session._id;
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
