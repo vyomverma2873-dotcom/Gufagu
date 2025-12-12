@@ -127,6 +127,17 @@ const getUserByUsername = async (req, res, next) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Check if current user has blocked this user or vice versa
+    if (req.user) {
+      const currentUser = await User.findById(req.user._id);
+      const isBlockedByMe = currentUser?.blockedUsers?.includes(user._id.toString());
+      const hasBlockedMe = user.blockedUsers?.includes(req.user._id.toString());
+      
+      if (hasBlockedMe) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+    }
+
     // Check privacy settings for non-friends
     const isOwnProfile = req.user && req.user._id.equals(user._id);
 
@@ -168,6 +179,17 @@ const getUserById = async (req, res, next) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Check if current user has blocked this user or vice versa
+    if (req.user) {
+      const currentUser = await User.findById(req.user._id);
+      const isBlockedByMe = currentUser?.blockedUsers?.includes(user._id.toString());
+      const hasBlockedMe = user.blockedUsers?.includes(req.user._id.toString());
+      
+      if (hasBlockedMe) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+    }
+
     const isOwnProfile = req.user && req.user._id.equals(user._id);
 
     res.json({
@@ -207,6 +229,17 @@ const getUserByObjectId = async (req, res, next) => {
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if current user has blocked this user or vice versa
+    if (req.user) {
+      const currentUser = await User.findById(req.user._id);
+      const isBlockedByMe = currentUser?.blockedUsers?.includes(user._id.toString());
+      const hasBlockedMe = user.blockedUsers?.includes(req.user._id.toString());
+      
+      if (hasBlockedMe) {
+        return res.status(404).json({ error: 'User not found' });
+      }
     }
 
     const isOwnProfile = req.user && req.user._id.equals(user._id);
@@ -429,6 +462,8 @@ const reportUser = async (req, res, next) => {
 const blockUser = async (req, res, next) => {
   try {
     const { userId } = req.body;
+    const Message = require('../models/Message');
+    const FriendRequest = require('../models/FriendRequest');
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -450,22 +485,74 @@ const blockUser = async (req, res, next) => {
       return res.status(400).json({ error: 'User is already blocked' });
     }
 
+    // Check if they were friends first
+    const wasFriend = await Friend.findOne({
+      userId: req.user._id,
+      friendId: userId,
+    });
+
     // Add to blocked users list
     await User.findByIdAndUpdate(req.user._id, {
       $addToSet: { blockedUsers: userId },
     });
 
-    // Remove any existing friendship
-    await Friend.deleteMany({
+    // Remove any existing friendship (using correct field names)
+    const deleteResult = await Friend.deleteMany({
       $or: [
-        { user1: req.user._id, user2: userId },
-        { user1: userId, user2: req.user._id },
+        { userId: req.user._id, friendId: userId },
+        { userId: userId, friendId: req.user._id },
       ],
     });
 
-    // Update friends count for both users
-    await User.findByIdAndUpdate(req.user._id, { $inc: { friendsCount: -1 } });
-    await User.findByIdAndUpdate(userId, { $inc: { friendsCount: -1 } });
+    // Only update friend counts if there was actually a friendship
+    if (wasFriend || deleteResult.deletedCount > 0) {
+      await User.findByIdAndUpdate(req.user._id, { $inc: { friendsCount: -1 } });
+      await User.findByIdAndUpdate(userId, { $inc: { friendsCount: -1 } });
+    }
+
+    // Cancel any pending friend requests between users
+    await FriendRequest.deleteMany({
+      $or: [
+        { senderId: req.user._id, receiverId: userId, status: 'pending' },
+        { senderId: userId, receiverId: req.user._id, status: 'pending' },
+      ],
+    });
+
+    // Create system message in the conversation
+    const systemMessage = new Message({
+      senderId: req.user._id,
+      receiverId: userId,
+      content: 'You have been blocked',
+      messageType: 'system',
+      timestamp: new Date(),
+      isDelivered: true,
+      isRead: false,
+    });
+    await systemMessage.save();
+
+    // Emit socket event to blocked user if online
+    const io = req.app.get('io');
+    if (io && targetUser.socketId) {
+      io.to(targetUser.socketId).emit('user_blocked', {
+        blockedBy: req.user._id,
+        blockedByUsername: req.user.username,
+        timestamp: new Date(),
+      });
+      
+      // Send the system message via socket
+      io.to(targetUser.socketId).emit('dm_receive', {
+        messageId: systemMessage._id,
+        from: {
+          userId: req.user._id,
+          username: req.user.username,
+          displayName: req.user.displayName,
+        },
+        message: 'You have been blocked',
+        messageType: 'system',
+        timestamp: systemMessage.timestamp,
+        conversationId: req.user._id.toString(),
+      });
+    }
 
     logger.info(`User blocked: ${req.user.username} blocked ${targetUser.username}`);
 
@@ -482,6 +569,7 @@ const blockUser = async (req, res, next) => {
 const unblockUser = async (req, res, next) => {
   try {
     const { userId } = req.body;
+    const Message = require('../models/Message');
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -492,10 +580,51 @@ const unblockUser = async (req, res, next) => {
       return res.status(400).json({ error: 'User is not blocked' });
     }
 
+    // Get target user for socket notification
+    const targetUser = await User.findById(userId);
+
     // Remove from blocked users list
     await User.findByIdAndUpdate(req.user._id, {
       $pull: { blockedUsers: userId },
     });
+
+    // Create system message in the conversation
+    const systemMessage = new Message({
+      senderId: req.user._id,
+      receiverId: userId,
+      content: 'You have been unblocked',
+      messageType: 'system',
+      timestamp: new Date(),
+      isDelivered: true,
+      isRead: false,
+    });
+    await systemMessage.save();
+
+    // Emit socket event to unblocked user if online
+    const io = req.app.get('io');
+    if (io && targetUser && targetUser.socketId) {
+      io.to(targetUser.socketId).emit('user_unblocked', {
+        unblockedBy: req.user._id,
+        unblockedByUsername: req.user.username,
+        timestamp: new Date(),
+      });
+      
+      // Send the system message via socket
+      io.to(targetUser.socketId).emit('dm_receive', {
+        messageId: systemMessage._id,
+        from: {
+          userId: req.user._id,
+          username: req.user.username,
+          displayName: req.user.displayName,
+        },
+        message: 'You have been unblocked',
+        messageType: 'system',
+        timestamp: systemMessage.timestamp,
+        conversationId: req.user._id.toString(),
+      });
+    }
+
+    logger.info(`User unblocked: ${req.user.username} unblocked ${targetUser?.username || userId}`);
 
     res.json({ message: 'User unblocked successfully' });
   } catch (error) {

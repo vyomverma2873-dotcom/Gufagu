@@ -83,6 +83,17 @@ const getMessages = async (req, res, next) => {
     const { page = 1, limit = 50 } = req.query;
     const userId = req.user._id;
 
+    // Check if blocked
+    const currentUser = await User.findById(userId);
+    const targetUser = await User.findById(friendUserId);
+    
+    if (currentUser?.blockedUsers?.includes(friendUserId)) {
+      return res.status(403).json({ error: 'You have blocked this user' });
+    }
+    if (targetUser?.blockedUsers?.includes(userId.toString())) {
+      return res.status(403).json({ error: 'You cannot message this user' });
+    }
+
     // Check if friends
     const friendship = await Friend.findOne({
       userId,
@@ -225,6 +236,17 @@ const sendMessage = async (req, res, next) => {
 
     if (content.length > 2000) {
       return res.status(400).json({ error: 'Message is too long (max 2000 characters)' });
+    }
+
+    // Check if blocked
+    const currentUser = await User.findById(senderId);
+    const targetUser = await User.findById(receiverId);
+    
+    if (currentUser?.blockedUsers?.includes(receiverId)) {
+      return res.status(403).json({ error: 'You have blocked this user' });
+    }
+    if (targetUser?.blockedUsers?.includes(senderId.toString())) {
+      return res.status(403).json({ error: 'You cannot message this user' });
     }
 
     // Check if friends

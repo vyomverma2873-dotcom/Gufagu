@@ -63,6 +63,15 @@ const createFriendRequest = async (req, res, targetUser, message) => {
     return res.status(400).json({ error: 'You cannot send a friend request to yourself' });
   }
 
+  // Check if either user has blocked the other
+  const currentUser = await User.findById(senderId);
+  const isBlockedByMe = currentUser?.blockedUsers?.includes(targetUser._id.toString());
+  const hasBlockedMe = targetUser.blockedUsers?.includes(senderId.toString());
+  
+  if (isBlockedByMe || hasBlockedMe) {
+    return res.status(400).json({ error: 'Cannot send friend request to this user' });
+  }
+
   // Check privacy settings
   if (targetUser.privacy.allowFriendRequests === 'nobody') {
     return res.status(400).json({ error: 'This user is not accepting friend requests' });
@@ -454,9 +463,23 @@ const searchUsers = async (req, res, next) => {
       return res.json({ users: [] });
     }
 
+    // Get current user's blocked users list
+    const currentUser = await User.findById(req.user._id);
+    const blockedUserIds = currentUser?.blockedUsers || [];
+
+    // Also get users who have blocked the current user
+    const usersWhoBlockedMe = await User.find({
+      blockedUsers: req.user._id
+    }).select('_id');
+    const blockedByOthersIds = usersWhoBlockedMe.map(u => u._id);
+
+    // Combine all blocked user IDs
+    const allBlockedIds = [...blockedUserIds, ...blockedByOthersIds];
+
     const users = await User.find({
       $and: [
         { _id: { $ne: req.user._id } },
+        { _id: { $nin: allBlockedIds } },
         {
           $or: [
             { username: { $regex: q, $options: 'i' } },

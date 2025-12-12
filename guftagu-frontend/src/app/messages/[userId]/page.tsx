@@ -25,6 +25,7 @@ interface Message {
   timestamp?: string;
   isNew?: boolean; // For animation
   type?: 'message' | 'call';
+  messageType?: 'text' | 'image' | 'file' | 'system';
   status?: 'sending' | 'sent' | 'delivered' | 'read';
 }
 
@@ -206,6 +207,7 @@ export default function ConversationPage() {
           isRead: true,
           isNew: true, // Quick 0.1s animation
           timestamp: data.timestamp || new Date().toISOString(),
+          messageType: data.messageType || 'text',
         };
         
         // Update state immediately
@@ -219,8 +221,8 @@ export default function ConversationPage() {
           return [...prev, newMsg as TimelineItem];
         });
         
-        // Mark as read via socket (non-blocking)
-        if (data.messageId) {
+        // Mark as read via socket (non-blocking) - but not for system messages
+        if (data.messageId && data.messageType !== 'system') {
           socket?.emit('dm_mark_read', { messageIds: [data.messageId], fromUserId: data.from?.userId });
         }
       }
@@ -317,6 +319,24 @@ export default function ConversationPage() {
       // Could show error toast here
     };
 
+    // Listen for block/unblock events
+    const handleUserBlocked = (data: any) => {
+      if (data.blockedBy === userId) {
+        // The user we're chatting with has blocked us
+        setActionError('You have been blocked by this user');
+        setTimeout(() => {
+          router.push('/messages');
+        }, 2000);
+      }
+    };
+
+    const handleUserUnblocked = (data: any) => {
+      if (data.unblockedBy === userId) {
+        setActionSuccess('You have been unblocked by this user');
+        setTimeout(() => setActionSuccess(''), 3000);
+      }
+    };
+
     // Register all event listeners
     console.log('[Chat Socket] Registering event listeners for socket:', socket.id);
     socket.on('dm_receive', handleNewMessage);
@@ -331,6 +351,8 @@ export default function ConversationPage() {
     socket.on('dm_read', handleMessageRead);
     socket.on('dm_sent', handleMessageSent);
     socket.on('dm_error', handleDmError);
+    socket.on('user_blocked', handleUserBlocked);
+    socket.on('user_unblocked', handleUserUnblocked);
 
     // Note: Call events are now handled globally in SocketContext
 
@@ -347,11 +369,13 @@ export default function ConversationPage() {
       socket.off('dm_read', handleMessageRead);
       socket.off('dm_sent', handleMessageSent);
       socket.off('dm_error', handleDmError);
+      socket.off('user_blocked', handleUserBlocked);
+      socket.off('user_unblocked', handleUserUnblocked);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [socket, user, userId]);
+  }, [socket, user, userId, router]);
 
   const handleStartCall = async (type: 'voice' | 'video') => {
     if (!chatUser) {
@@ -838,6 +862,22 @@ export default function ConversationPage() {
                     
                     // Regular message
                     const message = item as Message;
+                    
+                    // System message (block/unblock notifications)
+                    if (message.messageType === 'system') {
+                      return (
+                        <div key={message._id} className="flex justify-center my-3">
+                          <div className="flex items-center gap-2 px-4 py-2.5 bg-neutral-800/60 border border-neutral-700/50 rounded-full">
+                            <Shield className="w-4 h-4 text-neutral-400" />
+                            <span className="text-sm text-neutral-400">{message.content}</span>
+                            <span className="text-xs text-neutral-500">
+                              {formatTime(message.timestamp || message.createdAt || '')}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
                     const isOwn = message.isOwn === true || message.senderId === user?._id;
                     const prevItem = dateItems[index - 1];
                     const showAvatar = index === 0 || 
