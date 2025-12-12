@@ -1706,8 +1706,8 @@ export default function VideoCallOverlay() {
   // Debug logging
   console.log('[VideoCallOverlay] Render check - callStatus:', callStatus, 'currentCall:', !!currentCall, 'incomingCall:', !!incomingCall);
 
-  // Show overlay when: calling, connected, declined, or showing call ended screen
-  if (callStatus !== 'connected' && callStatus !== 'calling' && callStatus !== 'declined' && !callEnded) {
+  // Show overlay when: calling, connected, declined, disconnected, or showing call ended screen
+  if (callStatus !== 'connected' && callStatus !== 'calling' && callStatus !== 'declined' && callStatus !== 'disconnected' && !callEnded) {
     return null;
   }
   
@@ -1831,6 +1831,52 @@ export default function VideoCallOverlay() {
             <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">Call Declined</h2>
             <p className="text-neutral-400 text-sm sm:text-base mb-4 sm:mb-6">
               {callEndReason || 'The user declined your call'}
+            </p>
+            
+            {/* Permission error message */}
+            {callAgainPermissionError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                {callAgainPermissionError}
+              </div>
+            )}
+            
+            <div className="flex gap-3 sm:gap-4 justify-center">
+              <button
+                onClick={handleCallAgain}
+                disabled={isRequestingCallAgainPermission}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-white text-neutral-900 rounded-full hover:bg-neutral-200 active:bg-neutral-300 transition-all font-medium shadow-lg shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isRequestingCallAgainPermission ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Requesting...
+                  </>
+                ) : (
+                  'Call Again'
+                )}
+              </button>
+              <button
+                onClick={handleCloseEndScreen}
+                disabled={isRequestingCallAgainPermission}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-neutral-800 border border-neutral-700 text-white rounded-full hover:bg-neutral-700 active:bg-neutral-600 transition-all disabled:opacity-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Call Disconnected Overlay */}
+      {callStatus === 'disconnected' && (
+        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center px-4 animate-fade-in">
+          <div className="bg-neutral-900/90 backdrop-blur-xl border border-orange-500/30 rounded-2xl p-8 text-center w-full max-w-sm shadow-2xl shadow-orange-500/10">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-full bg-orange-900/30 border border-orange-500/50 flex items-center justify-center">
+              <WifiOff className="w-8 h-8 sm:w-10 sm:h-10 text-orange-400" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-white mb-2">Call Disconnected</h2>
+            <p className="text-neutral-400 text-sm sm:text-base mb-4 sm:mb-6">
+              {callEndReason || 'The other participant disconnected'}
             </p>
             
             {/* Permission error message */}

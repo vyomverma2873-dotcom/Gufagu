@@ -7,6 +7,9 @@ const logger = require('../../utils/logger');
 // Store active calls in memory for quick access
 const activeCalls = new Map();
 
+// Export function to access activeCalls from other modules
+const getActiveCalls = () => activeCalls;
+
 module.exports = (io, socket) => {
   // Send direct message
   socket.on('dm_send', async (data) => {
@@ -443,3 +446,6 @@ module.exports = (io, socket) => {
     }
   });
 };
+
+// Export getActiveCalls function
+module.exports.getActiveCalls = getActiveCalls;

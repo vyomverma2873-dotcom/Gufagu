@@ -41,7 +41,7 @@ interface SocketContextType {
   declineCall: () => void;
   endCall: () => void;
   startCall: (friendId: string, friendInfo: { username: string; profilePicture?: string }, type: 'voice' | 'video') => void;
-  callStatus: 'idle' | 'calling' | 'ringing' | 'connected' | 'ended' | 'declined';
+  callStatus: 'idle' | 'calling' | 'ringing' | 'connected' | 'ended' | 'declined' | 'disconnected';
   callEndReason: string | null;
 }
 
@@ -55,7 +55,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [currentCall, setCurrentCall] = useState<CurrentCall | null>(null);
   const [peerSocketId, setPeerSocketId] = useState<string | null>(null);
   const [callType, setCallType] = useState<'voice' | 'video' | null>(null);
-  const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'ringing' | 'connected' | 'ended' | 'declined'>('idle');
+  const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'ringing' | 'connected' | 'ended' | 'declined' | 'disconnected'>('idle');
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [callEndReason, setCallEndReason] = useState<string | null>(null);
   const { token } = useAuth();
@@ -63,6 +63,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   // Refs to track status reset timers (so we can cancel them on new call)
   const callEndedTimerRef = useRef<NodeJS.Timeout | null>(null);
   const callDeclinedTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const callDisconnectedTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initial socket setup
   useEffect(() => {
@@ -192,6 +193,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     const handleCallEnded = (data: any) => {
       console.log('[Socket Global] Call ended:', data);
       setCallStatus('ended');
+      setCallEndReason(data.reason || null);
       setIncomingCall(null);
       setCurrentCall(null);
       setCurrentCallId(null);
@@ -200,8 +202,26 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       // Store timer ref so it can be cancelled if user starts new call
       callEndedTimerRef.current = setTimeout(() => {
         setCallStatus('idle');
+        setCallEndReason(null);
         callEndedTimerRef.current = null;
       }, 2000);
+    };
+
+    const handleCallDisconnected = (data: any) => {
+      console.log('[Socket Global] Call disconnected:', data);
+      setCallStatus('disconnected');
+      setCallEndReason(data.reason || 'Partner disconnected');
+      setIncomingCall(null);
+      setCurrentCall(null);
+      setCurrentCallId(null);
+      setPeerSocketId(null);
+      setCallType(null);
+      // Store timer ref so it can be cancelled if user starts new call
+      callDisconnectedTimerRef.current = setTimeout(() => {
+        setCallStatus('idle');
+        setCallEndReason(null);
+        callDisconnectedTimerRef.current = null;
+      }, 3000);
     };
 
     const handleCallError = (data: any) => {
@@ -232,6 +252,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socket.on('call_connected', handleCallConnected);
     socket.on('call_declined', handleCallDeclined);
     socket.on('call_ended', handleCallEnded);
+    socket.on('call_disconnected', handleCallDisconnected);
     socket.on('call_error', handleCallError);
     socket.on('call_initiated', handleCallInitiated);
 
@@ -241,6 +262,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socket.off('call_connected', handleCallConnected);
       socket.off('call_declined', handleCallDeclined);
       socket.off('call_ended', handleCallEnded);
+      socket.off('call_disconnected', handleCallDisconnected);
       socket.off('call_error', handleCallError);
       socket.off('call_initiated', handleCallInitiated);
     };
@@ -309,6 +331,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     if (callDeclinedTimerRef.current) {
       clearTimeout(callDeclinedTimerRef.current);
       callDeclinedTimerRef.current = null;
+    }
+    if (callDisconnectedTimerRef.current) {
+      clearTimeout(callDisconnectedTimerRef.current);
+      callDisconnectedTimerRef.current = null;
     }
     
     console.log('[Socket] Starting', type, 'call to', friendInfo.username);

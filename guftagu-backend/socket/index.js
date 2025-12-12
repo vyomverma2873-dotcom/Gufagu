@@ -168,6 +168,53 @@ const initializeSocket = (server) => {
           lastActive: new Date(),
         });
 
+        // Handle active friend calls on disconnect
+        const Call = require('../models/Call');
+        const activeCalls = require('./handlers/dm').getActiveCalls();
+        
+        // Find any active call where this user is involved
+        for (const [callId, callData] of activeCalls.entries()) {
+          if (callData.callerSocketId === socket.id || callData.receiverSocketId === socket.id) {
+            // Get the other party's socket ID
+            const otherSocketId = callData.callerSocketId === socket.id 
+              ? callData.receiverSocketId 
+              : callData.callerSocketId;
+            
+            // Calculate call duration if call was answered
+            let duration = 0;
+            if (callData.answeredAt) {
+              duration = Math.round((Date.now() - callData.answeredAt.getTime()) / 1000);
+            }
+            
+            // Update call record
+            await Call.findOneAndUpdate(
+              { callId },
+              { 
+                status: 'ended', 
+                endedAt: new Date(), 
+                endedBy: socket.userId,
+                duration,
+                endReason: 'disconnect'
+              }
+            );
+            
+            // Notify the other party that the call was disconnected
+            if (otherSocketId) {
+              io.to(otherSocketId).emit('call_disconnected', {
+                callId,
+                reason: 'Partner disconnected',
+                duration,
+                timestamp: new Date(),
+              });
+            }
+            
+            // Remove from active calls
+            activeCalls.delete(callId);
+            
+            logger.info(`Call ended due to disconnect: ${callId}, duration: ${duration}s`);
+          }
+        }
+
         // Notify friends that user is offline
         const friends = await Friend.find({ userId: socket.userId });
         for (const friend of friends) {
