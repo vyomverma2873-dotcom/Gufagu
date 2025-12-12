@@ -308,6 +308,33 @@ export default function ConversationPage() {
       }
     };
 
+    // Listen for message sent confirmation (socket-based sending)
+    const handleMessageSent = (data: any) => {
+      console.log('[Chat Socket] Message sent confirmation:', data);
+      if (data.tempId) {
+        setMessages((prev) => 
+          prev.map((msg) => 
+            msg._id === data.tempId 
+              ? { ...msg, _id: data.messageId, isNew: false, status: 'sent' }
+              : msg
+          )
+        );
+        setTimeline((prev) => 
+          prev.map((item) => 
+            item._id === data.tempId 
+              ? { ...item, _id: data.messageId, isNew: false, status: 'sent' } as TimelineItem
+              : item
+          )
+        );
+      }
+    };
+
+    // Listen for message send errors
+    const handleDmError = (data: any) => {
+      console.error('[Chat Socket] DM error:', data);
+      // Could show error toast here
+    };
+
     // Register all event listeners
     console.log('[Chat Socket] Registering event listeners for socket:', socket.id);
     socket.on('dm_receive', handleNewMessage);
@@ -320,6 +347,8 @@ export default function ConversationPage() {
     socket.on('friend_offline', handleFriendOffline);
     socket.on('dm_delivered', handleMessageDelivered);
     socket.on('dm_read', handleMessageRead);
+    socket.on('dm_sent', handleMessageSent);
+    socket.on('dm_error', handleDmError);
 
     // Note: Call events are now handled globally in SocketContext
 
@@ -334,6 +363,8 @@ export default function ConversationPage() {
       socket.off('friend_offline', handleFriendOffline);
       socket.off('dm_delivered', handleMessageDelivered);
       socket.off('dm_read', handleMessageRead);
+      socket.off('dm_sent', handleMessageSent);
+      socket.off('dm_error', handleDmError);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
@@ -498,11 +529,12 @@ export default function ConversationPage() {
     { value: 'other', label: 'Other' },
   ];
   
-    const handleSend = async () => {
-    if (!newMessage.trim() || isSending) return;
+  const handleSend = () => {
+    if (!newMessage.trim() || isSending || !socket) return;
 
+    const tempId = `temp-${Date.now()}`;
     const tempMessage: Message = {
-      _id: `temp-${Date.now()}`,
+      _id: tempId,
       senderId: user!._id,
       receiverId: userId,
       content: newMessage.trim(),
@@ -520,35 +552,17 @@ export default function ConversationPage() {
     setIsSending(true);
 
     // Stop typing indicator
-    socket?.emit('dm_typing_stop', { to: userId });
+    socket.emit('dm_typing_stop', { to: userId });
 
-    try {
-      const response = await messagesApi.sendMessage(userId, tempMessage.content);
-      
-      // Replace temp message with actual message, set status to 'sent'
-      setMessages((prev) => 
-        prev.map((msg) => 
-          msg._id === tempMessage._id 
-            ? { ...msg, _id: response.data.message._id, isNew: false, status: 'sent' }
-            : msg
-        )
-      );
-      setTimeline((prev) => 
-        prev.map((item) => 
-          item._id === tempMessage._id 
-            ? { ...item, _id: response.data.message._id, isNew: false, status: 'sent' } as TimelineItem
-            : item
-        )
-      );
-      // Note: REST API already handles real-time delivery via socket
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      // Remove temp message on error
-      setMessages((prev) => prev.filter((msg) => msg._id !== tempMessage._id));
-      setTimeline((prev) => prev.filter((item) => item._id !== tempMessage._id));
-    } finally {
-      setIsSending(false);
-    }
+    // Send via WebSocket for instant delivery
+    socket.emit('dm_send', {
+      to: userId,
+      message: tempMessage.content,
+      tempId: tempId,
+    });
+
+    // Reset sending state after a short delay (actual confirmation comes via dm_sent event)
+    setTimeout(() => setIsSending(false), 100);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

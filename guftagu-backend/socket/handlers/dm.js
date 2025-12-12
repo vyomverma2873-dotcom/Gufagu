@@ -45,6 +45,14 @@ module.exports = (io, socket) => {
         timestamp: new Date(),
       });
 
+      // Send confirmation to sender immediately
+      socket.emit('dm_sent', {
+        tempId: data.tempId,
+        messageId: newMessage._id,
+        timestamp: newMessage.timestamp,
+        toUserId: to,
+      });
+
       // Update interaction stats
       await Friend.updateMany(
         {
