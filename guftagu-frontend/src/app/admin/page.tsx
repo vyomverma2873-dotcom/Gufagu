@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Users, Video, AlertTriangle, Shield, TrendingUp, Activity, 
-  BarChart3, Clock, UserCheck, UserX, MessageSquare, Mail, ArrowRight, ChevronRight
+  BarChart3, Clock, UserX, MessageSquare, Mail, ArrowRight, ChevronRight
 } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -165,11 +165,6 @@ export default function AdminDashboardPage() {
             value={stats?.totalUsers?.toLocaleString() || '0'}
             icon={Users}
             link="/admin/users"
-          />
-          <StatCard
-            title="New Today"
-            value={stats?.usersToday || 0}
-            icon={UserCheck}
           />
           <StatCard
             title="Banned Users"
