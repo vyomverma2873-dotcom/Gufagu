@@ -6,6 +6,7 @@ import { Copy, Users, Check, Share2, Settings, LogOut, Crown, UserPlus } from 'l
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import GalaxyBackground from '@/components/layout/GalaxyBackground';
 import VideoGrid from '@/components/room/VideoGrid';
 import ControlsBar from '@/components/room/ControlsBar';
 import ParticipantsPanel from '@/components/room/ParticipantsPanel';
@@ -275,61 +276,73 @@ export default function RoomPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950">
-        <Spinner />
-      </div>
+      <>
+        <GalaxyBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <Spinner />
+        </div>
+      </>
     );
   }
 
   if (error || webrtc.error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950">
-        <div className="text-center">
-          <div className="text-6xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-white mb-2">Error</h1>
-          <p className="text-neutral-400 mb-6">{error || webrtc.error}</p>
-          <Button onClick={() => router.push('/')}>Go Home</Button>
+      <>
+        <GalaxyBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-6xl mb-4">❌</div>
+            <h1 className="text-2xl font-bold text-white mb-2">Error</h1>
+            <p className="text-neutral-400 mb-6">{error || webrtc.error}</p>
+            <Button onClick={() => router.push('/')}>Go Home</Button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // Password prompt
   if (showPassword && !hasJoined) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950 px-4">
-        <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-8 max-w-md w-full">
-          <h2 className="text-xl font-bold text-white mb-4">Password Required</h2>
-          <p className="text-neutral-400 mb-6">This room requires a password to join.</p>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
-            className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4"
-          />
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => router.push('/')} className="flex-1">
-              Cancel
-            </Button>
-            <Button onClick={joinRoom} isLoading={isJoining} className="flex-1">
-              Join Room
-            </Button>
+      <>
+        <GalaxyBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+          <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-8 max-w-md w-full">
+            <h2 className="text-xl font-bold text-white mb-4">Password Required</h2>
+            <p className="text-neutral-400 mb-6">This room requires a password to join.</p>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password"
+              className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700/50 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-500 mb-4"
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => router.push('/')} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={joinRoom} isLoading={isJoining} className="flex-1">
+                Join Room
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // Room preview (before joining) - now shows joining state
   if (!hasJoined && room) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-950 px-4">
-        <div className="text-center">
-          <Spinner />
-          <p className="text-neutral-400 mt-4">Joining {room.roomName}...</p>
+      <>
+        <GalaxyBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+          <div className="text-center">
+            <Spinner />
+            <p className="text-neutral-400 mt-4">Joining {room.roomName}...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 

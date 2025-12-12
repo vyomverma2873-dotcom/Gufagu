@@ -49,10 +49,17 @@ export default function VideoTile({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showOverlay, setShowOverlay] = useState(false);
 
-  // Attach stream to video element
+  // Attach stream to video element - force update when stream changes
   useEffect(() => {
     if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+      // Force srcObject update to prevent black screen
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+        // Ensure video plays after stream change
+        videoRef.current.play().catch(err => console.log('Video play error:', err));
+      }
+    } else if (videoRef.current && !stream) {
+      videoRef.current.srcObject = null;
     }
   }, [stream]);
 
