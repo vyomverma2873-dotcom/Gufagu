@@ -57,10 +57,7 @@ export default function RoomPage() {
   const [showChat, setShowChat] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
-  const [kickedModal, setKickedModal] = useState(false);
   const [mutedByHost, setMutedByHost] = useState(false);
-  const [permanentBan, setPermanentBan] = useState(false);
-  const [kickCount, setKickCount] = useState(0);
 
   // WebRTC hook - only initialize after joining
   const webrtc = useWebRTC({
@@ -150,9 +147,20 @@ export default function RoomPage() {
 
     const handleHostAction = (data: any) => {
       if (data.action === 'kick') {
-        setPermanentBan(data.permanentBan || false);
-        setKickCount(data.kickCount || 1);
-        setKickedModal(true);
+        // Immediately leave room and cleanup
+        webrtc.cleanup();
+        
+        if (socket) {
+          socket.emit('room:leave', { roomCode: code });
+        }
+        
+        // Show message based on ban status
+        const message = data.permanentBan
+          ? 'You have been permanently banned from this room'
+          : `You were removed from the room by the host (${data.kickCount || 1}/3 warnings)`;
+        
+        alert(message);
+        router.push('/');
       } else if (data.action === 'mute') {
         // Host muted us - toggle our audio off
         if (webrtc.audioEnabled) {
@@ -329,9 +337,9 @@ export default function RoomPage() {
   return (
     <div className="fixed inset-0 flex flex-col bg-neutral-950">
       {/* Muted by host notification */}
-      {mutedByHost && (
+      {(mutedByHost || webrtc.mutedByHost) && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-4 py-2 rounded-xl animate-fade-in">
-          You were muted by the host
+          You were muted by the host - You cannot unmute yourself
         </div>
       )}
 
@@ -465,27 +473,6 @@ export default function RoomPage() {
         confirmText="Leave"
         cancelText="Stay"
         confirmVariant="danger"
-      />
-
-      {/* Kicked Modal */}
-      <ConfirmModal
-        isOpen={kickedModal}
-        onClose={() => {
-          setKickedModal(false);
-          handleLeave();
-        }}
-        onConfirm={() => {
-          setKickedModal(false);
-          handleLeave();
-        }}
-        title={permanentBan ? "Permanently Banned" : "Removed from Room"}
-        message={permanentBan 
-          ? "You have been permanently banned from this room for repeated violations."
-          : `You were removed from the room by the host. (Warning ${kickCount}/3)`
-        }
-        confirmText="OK"
-        confirmVariant={permanentBan ? "danger" : "primary"}
-        showCancel={false}
       />
     </div>
   );

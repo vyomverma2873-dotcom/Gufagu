@@ -36,6 +36,7 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mutedByHost, setMutedByHost] = useState(false);
 
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -228,6 +229,11 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
 
   // Toggle audio
   const toggleAudio = useCallback(() => {
+    // Prevent self-unmute if muted by host
+    if (mutedByHost && !audioEnabled) {
+      return;
+    }
+    
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
@@ -244,23 +250,72 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
         }
       }
     }
-  }, [socket, roomCode, videoEnabled]);
+  }, [socket, roomCode, videoEnabled, mutedByHost, audioEnabled]);
 
   // Toggle video
-  const toggleVideo = useCallback(() => {
+  const toggleVideo = useCallback(async () => {
     if (localStreamRef.current) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
       if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setVideoEnabled(videoTrack.enabled);
+        const willEnable = !videoTrack.enabled;
         
-        // Notify peers
-        if (socket) {
-          socket.emit('webrtc:media-state', {
-            roomCode,
-            audioEnabled,
-            videoEnabled: videoTrack.enabled,
-          });
+        if (willEnable && videoTrack.readyState === 'ended') {
+          // Track ended - need to get a new stream
+          try {
+            const newStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user',
+              },
+              audio: false,
+            });
+            
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            
+            // Replace old video track with new one
+            const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+            if (oldVideoTrack) {
+              localStreamRef.current.removeTrack(oldVideoTrack);
+              oldVideoTrack.stop();
+            }
+            localStreamRef.current.addTrack(newVideoTrack);
+            
+            // Replace track in all peer connections
+            peerConnectionsRef.current.forEach(pc => {
+              const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+              if (sender) {
+                sender.replaceTrack(newVideoTrack);
+              }
+            });
+            
+            setLocalStream(localStreamRef.current);
+            setVideoEnabled(true);
+            
+            // Notify peers
+            if (socket) {
+              socket.emit('webrtc:media-state', {
+                roomCode,
+                audioEnabled,
+                videoEnabled: true,
+              });
+            }
+          } catch (err) {
+            console.error('Failed to restart video:', err);
+          }
+        } else {
+          // Just toggle the existing track
+          videoTrack.enabled = willEnable;
+          setVideoEnabled(willEnable);
+          
+          // Notify peers
+          if (socket) {
+            socket.emit('webrtc:media-state', {
+              roomCode,
+              audioEnabled,
+              videoEnabled: willEnable,
+            });
+          }
         }
       }
     }
@@ -364,10 +419,41 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
     const handleParticipantLeft = (data: { socketId: string }) => {
       removePeer(data.socketId);
     };
+    
+    // Handle participant mute updates from host
+    const handleParticipantUpdated = (data: { userId: string; isMuted?: boolean }) => {
+      const { userId, isMuted } = data;
+      
+      // If this is about the local user, update host mute state
+      if (userId === localUser._id && isMuted !== undefined) {
+        setMutedByHost(isMuted);
+        
+        // If muted by host, force audio off
+        if (isMuted && localStreamRef.current) {
+          const audioTrack = localStreamRef.current.getAudioTracks()[0];
+          if (audioTrack && audioTrack.enabled) {
+            audioTrack.enabled = false;
+            setAudioEnabled(false);
+          }
+        }
+      }
+      
+      // Update peer mute state for UI display
+      setPeers(prev => {
+        const updated = new Map(prev);
+        for (const [socketId, peer] of updated) {
+          if (peer._id === userId && isMuted !== undefined) {
+            updated.set(socketId, { ...peer, isMuted });
+          }
+        }
+        return updated;
+      });
+    };
 
     socket.on('room:peers', handlePeers);
     socket.on('room:participant-joined', handleParticipantJoined);
     socket.on('room:participant-left', handleParticipantLeft);
+    socket.on('room:participant-updated', handleParticipantUpdated);
     socket.on('webrtc:offer', handleOffer);
     socket.on('webrtc:answer', handleAnswer);
     socket.on('webrtc:ice-candidate', handleIceCandidate);
@@ -377,12 +463,13 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
       socket.off('room:peers', handlePeers);
       socket.off('room:participant-joined', handleParticipantJoined);
       socket.off('room:participant-left', handleParticipantLeft);
+      socket.off('room:participant-updated', handleParticipantUpdated);
       socket.off('webrtc:offer', handleOffer);
       socket.off('webrtc:answer', handleAnswer);
       socket.off('webrtc:ice-candidate', handleIceCandidate);
       socket.off('webrtc:media-state', handleMediaState);
     };
-  }, [socket, initializeMedia, createOffer, handleOffer, handleAnswer, handleIceCandidate, handleMediaState, removePeer]);
+  }, [socket, initializeMedia, createOffer, handleOffer, handleAnswer, handleIceCandidate, handleMediaState, removePeer, localUser._id]);
 
   return {
     localStream,
@@ -391,6 +478,7 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
     videoEnabled,
     isScreenSharing,
     error,
+    mutedByHost,
     toggleAudio,
     toggleVideo,
     toggleScreenShare,

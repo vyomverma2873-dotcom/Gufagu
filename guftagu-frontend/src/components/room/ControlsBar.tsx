@@ -47,8 +47,12 @@ export default function ControlsBar({
         {/* Microphone toggle */}
         <button
           onClick={onToggleAudio}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onToggleAudio();
+          }}
           className={cn(
-            'p-3 sm:p-4 rounded-full transition-all duration-200',
+            'p-3 sm:p-4 rounded-full transition-all duration-200 touch-manipulation active:scale-95',
             audioEnabled
               ? 'bg-neutral-800 hover:bg-neutral-700 text-white'
               : 'bg-red-500 hover:bg-red-600 text-white'
@@ -65,8 +69,12 @@ export default function ControlsBar({
         {/* Camera toggle */}
         <button
           onClick={onToggleVideo}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onToggleVideo();
+          }}
           className={cn(
-            'p-3 sm:p-4 rounded-full transition-all duration-200',
+            'p-3 sm:p-4 rounded-full transition-all duration-200 touch-manipulation active:scale-95',
             videoEnabled
               ? 'bg-neutral-800 hover:bg-neutral-700 text-white'
               : 'bg-red-500 hover:bg-red-600 text-white'
@@ -131,7 +139,11 @@ export default function ControlsBar({
         {/* Leave call button */}
         <button
           onClick={onLeave}
-          className="px-4 sm:px-6 py-3 sm:py-4 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex items-center gap-2"
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onLeave();
+          }}
+          className="px-4 sm:px-6 py-3 sm:py-4 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex items-center gap-2 touch-manipulation active:scale-95"
           title="Leave room"
         >
           <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
