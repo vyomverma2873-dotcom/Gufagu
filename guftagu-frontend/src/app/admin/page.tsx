@@ -47,7 +47,7 @@ function StatCard({
         <div className="p-2.5 bg-gradient-to-br from-white to-neutral-200 rounded-xl shadow-sm">
           <Icon className="w-5 h-5 text-neutral-800" />
         </div>
-        {change && (
+        {change !== undefined && change !== null && (
           <span className={`text-xs font-medium px-2 py-1 rounded-lg ${parseFloat(change) >= 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>
             {parseFloat(change) >= 0 ? '+' : ''}{change}%
           </span>
