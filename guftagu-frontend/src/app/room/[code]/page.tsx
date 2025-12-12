@@ -104,7 +104,14 @@ export default function RoomPage() {
   // Auto-join room after fetching (direct join flow)
   useEffect(() => {
     if (room && readyToJoin && !hasJoined && !isJoining && !showPassword && !passwordAttempted && !error) {
-      joinRoom();
+      // If room requires password, show password prompt directly (no API call needed)
+      if (room.hasPassword) {
+        setShowPassword(true);
+        setPasswordAttempted(true);
+      } else {
+        // Non-password rooms: join directly
+        joinRoom();
+      }
     }
   }, [room, readyToJoin, hasJoined, isJoining, showPassword, passwordAttempted, error]);
 
@@ -289,7 +296,8 @@ export default function RoomPage() {
 
   // Show connecting state for any loading/joining phase (before joined)
   // Don't show if we're about to or currently showing password prompt
-  if ((authLoading || isLoading || (readyToJoin && !hasJoined && !isJoining && !passwordAttempted)) && !error && !webrtc.error && !showPassword) {
+  // Also show when isJoining is true (API call in progress) to prevent footer flash
+  if ((authLoading || isLoading || isJoining || (readyToJoin && !hasJoined && !passwordAttempted)) && !error && !webrtc.error && !showPassword) {
     return (
       <>
         <GalaxyBackground />
