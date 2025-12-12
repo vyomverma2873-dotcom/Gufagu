@@ -127,14 +127,14 @@ export default function SessionsPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-white animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
