@@ -21,6 +21,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
   const router = useRouter();
   const [step, setStep] = useState<'create' | 'success'>('create');
   const [isLoading, setIsLoading] = useState(false);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
   
   // Form state
   const [roomName, setRoomName] = useState('');
@@ -90,6 +91,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
 
   const joinRoom = () => {
     if (createdRoom) {
+      setIsJoiningRoom(true);
       // Don't close modal - let room page handle the modal state
       router.push(`/room/${createdRoom.roomCode}`);
     }
@@ -288,7 +290,7 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
               <Button variant="outline" onClick={handleClose} className="flex-1">
                 Close
               </Button>
-              <Button onClick={joinRoom} className="flex-1">
+              <Button onClick={joinRoom} isLoading={isJoiningRoom} className="flex-1">
                 Join Room Now
               </Button>
             </>
