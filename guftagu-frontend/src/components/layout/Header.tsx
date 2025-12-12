@@ -237,8 +237,6 @@ export default function Header() {
                               <span>Admin Panel</span>
                             </Link>
                           )}
-                        </div>
-                        <div className="border-t border-neutral-800 py-1">
                           <Link
                             href="/sessions"
                             onClick={() => setUserMenuOpen(false)}
@@ -254,12 +252,14 @@ export default function Header() {
                               </span>
                             )}
                           </Link>
+                        </div>
+                        <div className="border-t border-neutral-800 py-1">
                           <button
                             onClick={() => {
                               setUserMenuOpen(false);
                               logout();
                             }}
-                            className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-neutral-800/60 w-full"
+                            className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-neutral-800/60 w-full text-left"
                           >
                             <LogOut className="w-4 h-4" />
                             <span>Logout</span>
@@ -269,7 +269,7 @@ export default function Header() {
                               setUserMenuOpen(false);
                               setShowLogoutAllModal(true);
                             }}
-                            className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-neutral-800/60 w-full"
+                            className="flex items-center gap-3 px-4 py-2.5 text-red-400 hover:text-red-300 hover:bg-neutral-800/60 w-full text-left"
                           >
                             <LogOut className="w-4 h-4" />
                             <span>Logout from all devices</span>
