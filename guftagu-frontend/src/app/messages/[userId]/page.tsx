@@ -77,7 +77,7 @@ export default function ConversationPage() {
   // Local call state for this conversation
   const [localCallType, setLocalCallType] = useState<'voice' | 'video' | null>(null);
   const [isInitiatingCall, setIsInitiatingCall] = useState(false);
-  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const [requestingPermissionFor, setRequestingPermissionFor] = useState<'voice' | 'video' | null>(null);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   
   // Action menu state
@@ -352,7 +352,7 @@ export default function ConversationPage() {
     }
     
     // Request camera/mic permissions FIRST before initiating call
-    setIsRequestingPermission(true);
+    setRequestingPermissionFor(type);
     setPermissionError(null);
     
     try {
@@ -375,7 +375,7 @@ export default function ConversationPage() {
       
       console.log('[Call] Permission granted, starting', type, 'call to', chatUser.username);
       
-      setIsRequestingPermission(false);
+      setRequestingPermissionFor(null);
       
       // Permission granted - now start the call
       startCall(
@@ -385,7 +385,7 @@ export default function ConversationPage() {
       );
     } catch (error: any) {
       console.error('[Call] Permission error:', error);
-      setIsRequestingPermission(false);
+      setRequestingPermissionFor(null);
       
       // Handle specific permission errors
       let errorMessage = 'Failed to access camera/microphone.';
@@ -717,11 +717,11 @@ export default function ConversationPage() {
                 <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 bg-neutral-800/60 rounded-xl p-1">
                   <button
                     onClick={() => handleStartCall('voice')}
-                    disabled={!chatUser.isOnline || isRequestingPermission}
+                    disabled={!chatUser.isOnline || requestingPermissionFor !== null}
                     className="p-2 sm:p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={!chatUser.isOnline ? 'User is offline' : isRequestingPermission ? 'Requesting permission...' : 'Voice call'}
+                    title={!chatUser.isOnline ? 'User is offline' : requestingPermissionFor ? 'Requesting permission...' : 'Voice call'}
                   >
-                    {isRequestingPermission ? (
+                    {requestingPermissionFor === 'voice' ? (
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                     ) : (
                       <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -729,11 +729,11 @@ export default function ConversationPage() {
                   </button>
                   <button
                     onClick={() => handleStartCall('video')}
-                    disabled={!chatUser.isOnline || isRequestingPermission}
+                    disabled={!chatUser.isOnline || requestingPermissionFor !== null}
                     className="p-2 sm:p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-700/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    title={!chatUser.isOnline ? 'User is offline' : isRequestingPermission ? 'Requesting permission...' : 'Video call'}
+                    title={!chatUser.isOnline ? 'User is offline' : requestingPermissionFor ? 'Requesting permission...' : 'Video call'}
                   >
-                    {isRequestingPermission ? (
+                    {requestingPermissionFor === 'video' ? (
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                     ) : (
                       <Video className="w-4 h-4 sm:w-5 sm:h-5" />
