@@ -42,13 +42,13 @@ export default function ControlsBar({
   onLeave,
 }: ControlsBarProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-neutral-900/90 backdrop-blur-sm border-t border-neutral-800">
-      <div className="flex items-center justify-center gap-2 py-4 px-6">
+    <div className="fixed bottom-0 left-0 right-0 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800 z-30 safe-area-bottom">
+      <div className="flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4 px-3 sm:px-6">
         {/* Microphone toggle */}
         <button
           onClick={onToggleAudio}
           className={cn(
-            'p-4 rounded-full transition-all duration-200',
+            'p-3 sm:p-4 rounded-full transition-all duration-200',
             audioEnabled
               ? 'bg-neutral-800 hover:bg-neutral-700 text-white'
               : 'bg-red-500 hover:bg-red-600 text-white'
@@ -56,9 +56,9 @@ export default function ControlsBar({
           title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
         >
           {audioEnabled ? (
-            <Mic className="w-6 h-6" />
+            <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
           ) : (
-            <MicOff className="w-6 h-6" />
+            <MicOff className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </button>
 
@@ -66,7 +66,7 @@ export default function ControlsBar({
         <button
           onClick={onToggleVideo}
           className={cn(
-            'p-4 rounded-full transition-all duration-200',
+            'p-3 sm:p-4 rounded-full transition-all duration-200',
             videoEnabled
               ? 'bg-neutral-800 hover:bg-neutral-700 text-white'
               : 'bg-red-500 hover:bg-red-600 text-white'
@@ -74,17 +74,17 @@ export default function ControlsBar({
           title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
         >
           {videoEnabled ? (
-            <Video className="w-6 h-6" />
+            <Video className="w-5 h-5 sm:w-6 sm:h-6" />
           ) : (
-            <VideoOff className="w-6 h-6" />
+            <VideoOff className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </button>
 
-        {/* Screen share toggle */}
+        {/* Screen share toggle - Hidden on mobile */}
         <button
           onClick={onToggleScreenShare}
           className={cn(
-            'p-4 rounded-full transition-all duration-200',
+            'hidden sm:flex p-3 sm:p-4 rounded-full transition-all duration-200',
             isScreenSharing
               ? 'bg-violet-600 hover:bg-violet-700 text-white'
               : 'bg-neutral-800 hover:bg-neutral-700 text-white'
@@ -92,50 +92,50 @@ export default function ControlsBar({
           title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
         >
           {isScreenSharing ? (
-            <MonitorOff className="w-6 h-6" />
+            <MonitorOff className="w-5 h-5 sm:w-6 sm:h-6" />
           ) : (
-            <MonitorUp className="w-6 h-6" />
+            <MonitorUp className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </button>
 
-        {/* Chat toggle */}
+        {/* Chat toggle - Hidden on mobile */}
         {chatEnabled && onToggleChat && (
           <button
             onClick={onToggleChat}
             className={cn(
-              'p-4 rounded-full transition-all duration-200',
+              'hidden sm:flex p-3 sm:p-4 rounded-full transition-all duration-200',
               showChat
                 ? 'bg-violet-600 hover:bg-violet-700 text-white'
                 : 'bg-neutral-800 hover:bg-neutral-700 text-white'
             )}
             title={showChat ? 'Close chat' : 'Open chat'}
           >
-            <MessageSquare className="w-6 h-6" />
+            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         )}
 
-        {/* Settings */}
+        {/* Settings - Hidden on mobile */}
         {onOpenSettings && (
           <button
             onClick={onOpenSettings}
-            className="p-4 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-all duration-200"
+            className="hidden sm:flex p-3 sm:p-4 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-all duration-200"
             title="Settings"
           >
-            <Settings className="w-6 h-6" />
+            <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         )}
 
-        {/* Divider */}
-        <div className="w-px h-10 bg-neutral-700 mx-2" />
+        {/* Divider - Hidden on mobile */}
+        <div className="hidden sm:block w-px h-10 bg-neutral-700 mx-2" />
 
         {/* Leave call button */}
         <button
           onClick={onLeave}
-          className="px-6 py-4 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex items-center gap-2"
+          className="px-4 sm:px-6 py-3 sm:py-4 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex items-center gap-2"
           title="Leave room"
         >
-          <PhoneOff className="w-6 h-6" />
-          <span className="font-medium">Leave</span>
+          <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
+          <span className="font-medium text-sm sm:text-base">Leave</span>
         </button>
       </div>
     </div>

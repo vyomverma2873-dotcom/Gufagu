@@ -67,22 +67,29 @@ export default function ParticipantsPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 w-80 bg-neutral-900/95 backdrop-blur-sm border-l border-neutral-800 z-50 flex flex-col animate-slide-in-right">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-neutral-800">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-neutral-400" />
-          <h2 className="text-lg font-semibold text-white">
-            Participants ({totalParticipants}/{maxParticipants})
-          </h2>
+    <>
+      {/* Mobile backdrop overlay */}
+      <div 
+        className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fade-in"
+        onClick={onClose}
+      />
+      
+      <div className="fixed right-0 top-0 bottom-0 w-full sm:w-96 lg:w-80 bg-neutral-900/95 backdrop-blur-sm border-l border-neutral-800 z-50 flex flex-col animate-slide-in-right">
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-neutral-800">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400" />
+            <h2 className="text-base sm:text-lg font-semibold text-white">
+              Participants ({totalParticipants}/{maxParticipants})
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className="p-2 hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400 hover:text-white"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
 
       {/* Participants List */}
       <div className="flex-1 overflow-y-auto p-2">
@@ -238,5 +245,6 @@ export default function ParticipantsPanel({
         </div>
       )}
     </div>
+    </>
   );
 }

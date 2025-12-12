@@ -327,69 +327,71 @@ export default function RoomPage() {
 
   // In-call view with custom WebRTC UI
   return (
-    <div className="h-screen flex flex-col bg-neutral-950 relative">
+    <div className="fixed inset-0 flex flex-col bg-neutral-950">
       {/* Muted by host notification */}
       {mutedByHost && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-4 py-2 rounded-xl animate-fade-in">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-4 py-2 rounded-xl animate-fade-in">
           You were muted by the host
         </div>
       )}
 
-      {/* Top Bar (groupcall.md lines 155-158) */}
-      <div className="flex items-center justify-between px-4 py-3 bg-neutral-900/80 backdrop-blur-sm border-b border-neutral-800 z-10">
-        <div className="flex items-center gap-3">
+      {/* Top Bar - Responsive height and spacing */}
+      <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 bg-neutral-900/90 backdrop-blur-sm border-b border-neutral-800 z-20">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-hidden">
           {/* Room name with host badge */}
-          <div className="flex items-center gap-2">
-            {isHost && <Crown className="w-4 h-4 text-yellow-400" />}
-            <span className="text-lg font-semibold text-white">{room?.roomName}</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            {isHost && <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400 flex-shrink-0" />}
+            <span className="text-sm sm:text-lg font-semibold text-white truncate">{room?.roomName}</span>
           </div>
           
-          {/* Copy Code button */}
+          {/* Copy Code button - Hidden on mobile */}
           <button 
             onClick={copyCode}
-            className="flex items-center gap-2 text-neutral-400 hover:text-white text-sm bg-neutral-800/50 px-3 py-1.5 rounded-lg transition-colors"
+            className="hidden sm:flex items-center gap-2 text-neutral-400 hover:text-white text-sm bg-neutral-800/50 px-3 py-1.5 rounded-lg transition-colors"
           >
             Code: {code}
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Invite button */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Invite button - Icon only on mobile */}
           <button 
             onClick={() => setShowInvite(true)}
-            className="flex items-center gap-2 text-neutral-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
+            className="flex items-center gap-2 text-neutral-400 hover:text-white px-2 sm:px-3 py-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
           >
             <UserPlus className="w-4 h-4" />
-            Invite
+            <span className="hidden sm:inline">Invite</span>
           </button>
 
           {/* Participants button */}
           <button 
             onClick={() => setShowParticipants(!showParticipants)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg transition-colors text-sm ${
               showParticipants 
                 ? 'bg-violet-600 text-white' 
                 : 'bg-neutral-800/50 text-neutral-400 hover:bg-neutral-800 hover:text-white'
             }`}
           >
             <Users className="w-4 h-4" />
-            {webrtc.peers.length + 1}/{room?.maxParticipants || 10}
+            <span className="text-xs sm:text-sm">{webrtc.peers.length + 1}/{room?.maxParticipants || 10}</span>
           </button>
 
-          {/* Leave button */}
+          {/* Leave button - Icon only on mobile */}
           <button 
             onClick={() => setShowLeaveConfirm(true)}
-            className="flex items-center gap-2 text-red-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-red-500 transition-colors"
+            className="flex items-center gap-2 text-red-400 hover:text-white px-2 sm:px-3 py-1.5 rounded-lg hover:bg-red-500 transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Leave
+            <span className="hidden sm:inline">Leave</span>
           </button>
         </div>
       </div>
 
-      {/* Video Grid Area */}
-      <div className={`flex-1 overflow-hidden pb-24 transition-all duration-300 ${showParticipants ? 'mr-80' : ''}`}>
+      {/* Video Grid Area - Responsive with proper spacing */}
+      <div className={`flex-1 overflow-hidden relative transition-all duration-300 ${
+        showParticipants ? 'lg:mr-80' : ''
+      }`}>
         <VideoGrid
           localStream={webrtc.localStream}
           localUser={{

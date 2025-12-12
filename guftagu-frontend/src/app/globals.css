@@ -246,6 +246,12 @@ body.video-chat-active [data-footer] {
   pointer-events: none !important;
 }
 
+/* Remove main padding when in video chat */
+body.video-chat-active main {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 /* Ensure room takes full height and prevents scrolling */
 body.video-chat-active,
 body.video-chat-active html {

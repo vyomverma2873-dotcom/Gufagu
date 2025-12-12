@@ -55,20 +55,20 @@ export default function VideoGrid({
       case 1:
         return 'grid-cols-1';
       case 2:
-        return 'grid-cols-2';
+        return 'grid-cols-1 sm:grid-cols-2';
       case 3:
-        return 'grid-cols-3';
+        return 'grid-cols-1 sm:grid-cols-3';
       case 4:
         return 'grid-cols-2 grid-rows-2';
       case 5:
       case 6:
-        return 'grid-cols-3 grid-rows-2';
+        return 'grid-cols-2 sm:grid-cols-3 grid-rows-2';
       case 7:
       case 8:
       case 9:
-        return 'grid-cols-3 grid-rows-3';
+        return 'grid-cols-2 sm:grid-cols-3 grid-rows-3';
       default:
-        return 'grid-cols-4';
+        return 'grid-cols-2 sm:grid-cols-4';
     }
   };
 
@@ -81,10 +81,10 @@ export default function VideoGrid({
   };
 
   return (
-    <div className="w-full h-full p-4 flex items-center justify-center">
+    <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-4 overflow-auto">
       <div
         className={cn(
-          'video-grid grid gap-3 w-full h-full',
+          'video-grid grid gap-2 sm:gap-3 w-full h-full',
           getGridClass(),
           totalParticipants === 1 && 'place-items-center'
         )}
