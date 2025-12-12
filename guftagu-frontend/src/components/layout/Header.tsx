@@ -230,14 +230,16 @@ export default function Header() {
                 </div>
               )}
 
-              {/* Mobile Menu Button */}
-              <button
-                ref={mobileMenuButtonRef}
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-all"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
+              {/* Mobile Menu Button - Only for authenticated users */}
+              {isAuthenticated && (
+                <button
+                  ref={mobileMenuButtonRef}
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="md:hidden p-2.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-all"
+                >
+                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
+              )}
             </div>
           </div>
         </div>
