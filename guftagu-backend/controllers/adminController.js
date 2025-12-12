@@ -80,6 +80,8 @@ exports.getUsers = async (req, res) => {
       sort = '-joinDate' 
     } = req.query;
 
+    const Friend = require('../models/Friend');
+
     const query = {};
 
     if (search) {
@@ -103,10 +105,21 @@ exports.getUsers = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
+    // Get actual friend counts for all users
+    const usersWithActualCounts = await Promise.all(
+      users.map(async (user) => {
+        const actualFriendsCount = await Friend.countDocuments({ userId: user._id });
+        return {
+          ...user.toObject(),
+          friendsCount: actualFriendsCount
+        };
+      })
+    );
+
     const total = await User.countDocuments(query);
 
     res.json({
-      users,
+      users: usersWithActualCounts,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
