@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Search, MoreVertical, Ban, Shield, Eye, ChevronLeft, ChevronRight, X, AlertTriangle, Download, MessageSquare, FileText, Users } from 'lucide-react';
+import { ArrowLeft, Search, MoreVertical, Ban, Shield, Eye, ChevronLeft, ChevronRight, X, AlertTriangle, Download, MessageSquare, FileText, Users, Monitor, Smartphone, Tablet, Globe, Clock } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -77,6 +77,19 @@ interface UserDetailsData {
   banHistory: any[];
 }
 
+interface SessionData {
+  id: string;
+  deviceType: 'desktop' | 'mobile' | 'tablet' | 'unknown';
+  deviceName: string;
+  browser: string | null;
+  os: string | null;
+  ipAddress: string;
+  location: string;
+  loginTime: string;
+  lastActivity: string;
+  isActive: boolean;
+}
+
 interface Message {
   _id: string;
   senderId: { _id: string; username: string; displayName: string; userId: string };
@@ -140,10 +153,12 @@ export default function AdminUsersPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetailsData | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'friends' | 'reports'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'friends' | 'reports' | 'sessions'>('overview');
   const [activeFriendId, setActiveFriendId] = useState<string | null>(null);
   const [friendMessages, setFriendMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [userSessions, setUserSessions] = useState<SessionData[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user?.isAdmin)) {
@@ -270,6 +285,7 @@ export default function AdminUsersPage() {
     setActiveTab('overview');
     setActiveFriendId(null);
     setFriendMessages([]);
+    setUserSessions([]);
     setActionMenuOpen(null);
     
     setIsLoadingDetails(true);
@@ -305,6 +321,21 @@ export default function AdminUsersPage() {
       console.error('Failed to load messages:', error);
     } finally {
       setIsLoadingMessages(false);
+    }
+  };
+
+  // Load user sessions
+  const loadUserSessions = async () => {
+    if (!selectedUserId) return;
+    
+    setIsLoadingSessions(true);
+    try {
+      const response = await adminApi.getUserSessions(selectedUserId);
+      setUserSessions(response.data.sessions || []);
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    } finally {
+      setIsLoadingSessions(false);
     }
   };
 
@@ -859,6 +890,22 @@ export default function AdminUsersPage() {
                       <FileText className="w-4 h-4" />
                       Reports ({userDetails.stats.reportsMade + userDetails.stats.reportsReceived})
                     </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('sessions');
+                        if (userSessions.length === 0) {
+                          loadUserSessions();
+                        }
+                      }}
+                      className={`px-4 py-3 border-b-2 transition flex items-center gap-2 ${
+                        activeTab === 'sessions'
+                          ? 'border-blue-500 text-white'
+                          : 'border-transparent text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <Monitor className="w-4 h-4" />
+                      Sessions
+                    </button>
                   </div>
                 </div>
 
@@ -1171,6 +1218,60 @@ export default function AdminUsersPage() {
                           </div>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'sessions' && (
+                    <div className="space-y-4">
+                      {isLoadingSessions ? (
+                        <div className="flex justify-center py-8">
+                          <Spinner />
+                        </div>
+                      ) : userSessions.length === 0 ? (
+                        <div className="text-center py-8 text-zinc-400">
+                          <Monitor className="w-12 h-12 mx-auto mb-3 text-zinc-600" />
+                          <p>No active sessions found</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {userSessions.map((session) => (
+                            <div
+                              key={session.id}
+                              className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4"
+                            >
+                              <div className="flex items-start gap-4">
+                                {/* Device Icon */}
+                                <div className="p-3 rounded-xl bg-zinc-700/50 text-zinc-400">
+                                  {session.deviceType === 'mobile' ? (
+                                    <Smartphone className="w-5 h-5" />
+                                  ) : session.deviceType === 'tablet' ? (
+                                    <Tablet className="w-5 h-5" />
+                                  ) : (
+                                    <Monitor className="w-5 h-5" />
+                                  )}
+                                </div>
+
+                                {/* Session Info */}
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-white font-medium truncate">{session.deviceName}</h4>
+                                  <div className="space-y-1 mt-1 text-sm text-zinc-400">
+                                    <div className="flex items-center gap-2">
+                                      <Globe className="w-4 h-4 flex-shrink-0" />
+                                      <span className="truncate">{session.ipAddress} • {session.location}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4 flex-shrink-0" />
+                                      <span>
+                                        Logged in {formatDate(session.loginTime)} • Last active {formatDate(session.lastActivity)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

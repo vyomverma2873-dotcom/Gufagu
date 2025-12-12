@@ -6,6 +6,7 @@ const Match = require('../models/Match');
 const OnlineUser = require('../models/OnlineUser');
 const Message = require('../models/Message');
 const ContactQuery = require('../models/ContactQuery');
+const Session = require('../models/Session');
 const mongoose = require('mongoose');
 const { sendBanNotificationEmail } = require('../utils/brevo');
 const { sendEmail } = require('../utils/email');
@@ -953,6 +954,44 @@ exports.getChatStats = async (req, res) => {
   } catch (error) {
     logger.error('Get chat stats error:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get user sessions for admin
+exports.getUserSessions = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const sessions = await Session.find({
+      userId,
+      isActive: true,
+    }).sort({ lastActivity: -1 });
+
+    res.json({
+      sessions: sessions.map(session => ({
+        id: session._id,
+        deviceType: session.deviceType,
+        deviceName: session.browser ? `${session.browser} on ${session.os || 'Unknown OS'}` : session.os || 'Unknown Device',
+        browser: session.browser,
+        browserVersion: session.browserVersion,
+        os: session.os,
+        osVersion: session.osVersion,
+        deviceVendor: session.deviceVendor,
+        deviceModel: session.deviceModel,
+        ipAddress: session.ipAddress,
+        city: session.city,
+        country: session.country,
+        countryCode: session.countryCode,
+        location: session.city && session.country ? `${session.city}, ${session.country}` : session.country || 'Unknown',
+        loginTime: session.loginTime,
+        lastActivity: session.lastActivity,
+        isActive: session.isActive,
+      })),
+      totalActive: sessions.length,
+    });
+  } catch (error) {
+    console.error('Error fetching user sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch user sessions' });
   }
 };
 

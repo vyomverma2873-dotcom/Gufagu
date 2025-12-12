@@ -115,6 +115,7 @@ export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),
   getUsers: (params?: any) => api.get('/admin/users', { params }),
   getUserDetails: (userId: string) => api.get(`/admin/users/${userId}`),
+  getUserSessions: (userId: string) => api.get(`/admin/users/${userId}/sessions`),
   getUserMessages: (userId: string, friendId: string, params?: any) => 
     api.get(`/admin/users/${userId}/messages/${friendId}`, { params }),
   banUser: (userId: string, data: { reason: string; duration?: number; type: 'temporary' | 'permanent'; description?: string }) =>
