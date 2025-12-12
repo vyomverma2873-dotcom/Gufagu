@@ -49,18 +49,30 @@ export default function VideoTile({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showOverlay, setShowOverlay] = useState(false);
 
-  // Attach stream to video element - force update when stream changes
+  // Attach stream to video element - keep video element always mounted
   useEffect(() => {
-    if (videoRef.current && stream) {
-      // Force srcObject update to prevent black screen
-      if (videoRef.current.srcObject !== stream) {
-        videoRef.current.srcObject = stream;
-        // Ensure video plays after stream change
-        videoRef.current.play().catch(err => console.log('Video play error:', err));
-      }
-    } else if (videoRef.current && !stream) {
-      videoRef.current.srcObject = null;
+    const videoElement = videoRef.current;
+    if (videoElement && stream) {
+      // Always set srcObject when stream exists
+      videoElement.srcObject = stream;
+      
+      // Handle video play
+      const playVideo = async () => {
+        try {
+          await videoElement.play();
+        } catch (err) {
+          console.log('Video autoplay prevented, user interaction may be needed');
+        }
+      };
+      
+      playVideo();
     }
+    
+    return () => {
+      if (videoElement) {
+        videoElement.srcObject = null;
+      }
+    };
   }, [stream]);
 
   const name = displayName || username;
@@ -78,18 +90,23 @@ export default function VideoTile({
       onMouseEnter={() => setShowOverlay(true)}
       onMouseLeave={() => setShowOverlay(false)}
     >
-      {/* Video element */}
-      {stream && videoEnabled ? (
+      {/* Video element - ALWAYS mounted to prevent black screen on toggle */}
+      {stream && (
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted={isLocal}
-          className="w-full h-full object-cover"
+          className={cn(
+            'w-full h-full object-cover',
+            !videoEnabled && 'hidden'
+          )}
         />
-      ) : (
-        /* Avatar placeholder when video is off */
-        <div className="w-full h-full flex items-center justify-center bg-neutral-800">
+      )}
+      
+      {/* Avatar placeholder when video is off */}
+      {(!stream || !videoEnabled) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
           <Avatar
             src={profilePicture}
             alt={name}
