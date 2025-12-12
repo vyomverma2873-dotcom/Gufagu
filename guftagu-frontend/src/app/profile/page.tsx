@@ -7,42 +7,44 @@ import Link from 'next/link';
 import { Copy, Edit, Users, Calendar, Check } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
+import Spinner from '@/components/ui/Spinner';
 import { formatDate, formatUserId } from '@/lib/utils';
 import { friendsApi } from '@/lib/api';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [actualFriendsCount, setActualFriendsCount] = useState<number | null>(null);
-  const [isLoadingFriends, setIsLoadingFriends] = useState(true);
+  const [friendsCount, setFriendsCount] = useState<number>(0);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router]);
 
   // Fetch actual friends count from the friends API
   useEffect(() => {
     const fetchFriendsCount = async () => {
-      if (isAuthenticated) {
-        setIsLoadingFriends(true);
+      if (isAuthenticated && user) {
         try {
           const response = await friendsApi.getFriends();
-          setActualFriendsCount(response.data.friends?.length || 0);
+          setFriendsCount(response.data.friends?.length || 0);
         } catch (error) {
           console.error('Failed to fetch friends count:', error);
           // Fallback to user.friendsCount on error
-          setActualFriendsCount(null);
+          setFriendsCount(user.friendsCount || 0);
         } finally {
-          setIsLoadingFriends(false);
+          setIsLoadingData(false);
         }
       }
     };
-    fetchFriendsCount();
-  }, [isAuthenticated]);
+    
+    if (isAuthenticated && user) {
+      fetchFriendsCount();
+    }
+  }, [isAuthenticated, user]);
 
   const copyUserId = () => {
     if (user?.userId) {
@@ -52,10 +54,10 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading || !user) {
+  if (authLoading || !user || isLoadingData) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+        <Spinner />
       </div>
     );
   }
@@ -122,13 +124,7 @@ export default function ProfilePage() {
               <div className="p-4 bg-neutral-800/40 border border-neutral-700/50 rounded-xl text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <Users className="w-3.5 h-3.5 text-neutral-400" />
-                  <span className="text-xl font-semibold text-white">
-                    {isLoadingFriends ? (
-                      <span className="inline-block w-6 h-6 bg-neutral-700/50 rounded animate-pulse" />
-                    ) : (
-                      actualFriendsCount !== null ? actualFriendsCount : user.friendsCount
-                    )}
-                  </span>
+                  <span className="text-xl font-semibold text-white">{friendsCount}</span>
                 </div>
                 <p className="text-xs text-neutral-500">Friends</p>
               </div>
