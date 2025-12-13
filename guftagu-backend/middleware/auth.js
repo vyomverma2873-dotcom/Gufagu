@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Ban = require('../models/Ban');
 const Session = require('../models/Session');
+const crypto = require('crypto');
 
 // Helper function to check and auto-unban expired bans
 const checkAndAutoUnban = async (user) => {
@@ -95,14 +96,36 @@ const authenticateToken = async (req, res, next) => {
     }
 
     // Verify session is active and update last activity
+    // If session not found but JWT is valid, auto-create a new session (graceful handling)
     const sessionHash = hashSessionToken(token);
-    const session = await Session.findOneAndUpdate(
+    let session = await Session.findOneAndUpdate(
       { userId: user._id, sessionToken: sessionHash, isActive: true },
       { lastActivity: new Date() }
     );
 
     if (!session) {
-      return res.status(401).json({ error: 'Session expired or revoked' });
+      // Session not found - auto-create a new session for valid JWT
+      // This ensures users stay logged in even if their session was lost
+      try {
+        session = await Session.create({
+          userId: user._id,
+          sessionToken: sessionHash,
+          ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
+          userAgent: req.headers['user-agent'] || 'unknown',
+          deviceType: 'unknown',
+          loginTime: new Date(),
+          lastActivity: new Date(),
+          isActive: true,
+        });
+        console.log(`[Auth] Auto-created session for user ${user.email} (session was missing)`);
+      } catch (sessionError) {
+        // If session creation fails (e.g., duplicate key), try to find existing
+        session = await Session.findOne({ sessionToken: sessionHash });
+        if (!session) {
+          console.error(`[Auth] Failed to create/find session for user ${user.email}:`, sessionError.message);
+          // Still allow access - JWT is valid
+        }
+      }
     }
 
     req.user = user;
@@ -151,7 +174,7 @@ const generateToken = (userId) => {
   return jwt.sign(
     { userId },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '365d' } // 1 year for persistent login
   );
 };
 

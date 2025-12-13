@@ -9,8 +9,8 @@ const { generateUniqueUserId } = require('../utils/userId');
 const { parseUserAgent, getClientIP, getGeolocation, hashSessionToken } = require('../utils/session');
 const logger = require('../utils/logger');
 
-// Maximum active sessions per user
-const MAX_SESSIONS_PER_USER = 10;
+// Maximum active sessions per user (increased for persistent login across many devices)
+const MAX_SESSIONS_PER_USER = 50;
 
 // Helper function to check and auto-unban expired bans
 const checkAndAutoUnban = async (user) => {
