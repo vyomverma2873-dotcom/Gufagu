@@ -42,7 +42,7 @@ interface ParticipantsPanelProps {
   maxParticipants: number;
   onMuteParticipant?: (userId: string, mute: boolean) => void;
   onKickParticipant?: (userId: string) => void;
-  onAddFriend?: (userId: string) => void;
+  onAddFriend?: (username: string) => void;
   onInvite?: () => void;
   currentUserId: string;
 }
@@ -183,7 +183,7 @@ export default function ParticipantsPanel({
                 {/* Add Friend - Available to all users */}
                 {onAddFriend && participant._id !== currentUserId && (
                   <button
-                    onClick={() => onAddFriend(participant._id)}
+                    onClick={() => onAddFriend(participant.username)}
                     className="p-2 hover:bg-violet-600 text-neutral-400 hover:text-white rounded-lg transition-colors"
                     title="Add Friend"
                   >
