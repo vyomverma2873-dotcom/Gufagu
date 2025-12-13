@@ -148,7 +148,7 @@ export default function VideoGrid({
   );
 
   return (
-    <div className="video-grid-root absolute inset-0 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+    <div className="video-grid-root absolute inset-0 flex items-center justify-center p-2 sm:p-4 pb-20 sm:pb-24 overflow-hidden">
       <style jsx global>{`
         /* Smooth grid transition animations */
         .video-grid-container {

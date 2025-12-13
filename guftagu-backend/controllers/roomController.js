@@ -185,13 +185,25 @@ const joinRoom = async (req, res, next) => {
       return res.status(410).json({ error: 'Room has expired' });
     }
 
-    // Check if room is full
-    if (room.isFull()) {
-      const count = room.currentParticipants;
+    // Get actual participant count from RoomParticipant records (more reliable than stored counter)
+    const actualParticipantCount = await RoomParticipant.countDocuments({
+      roomCode: code,
+      leftAt: null,
+      isKicked: false,
+    });
+
+    // Sync the stored count if it's out of sync
+    if (room.currentParticipants !== actualParticipantCount) {
+      room.currentParticipants = actualParticipantCount;
+      await room.save();
+    }
+
+    // Check if room is full using actual count
+    if (actualParticipantCount >= room.maxParticipants) {
       return res.status(403).json({
-        error: `Room is full (${count}/${room.maxParticipants} participants)`,
+        error: `Room is full (${actualParticipantCount}/${room.maxParticipants} participants)`,
         maxParticipants: room.maxParticipants,
-        currentParticipants: room.currentParticipants,
+        currentParticipants: actualParticipantCount,
       });
     }
 
