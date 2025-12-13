@@ -63,6 +63,23 @@ export default function RoomPage() {
   const [mutedByHost, setMutedByHost] = useState(false);
   const [readyToJoin, setReadyToJoin] = useState(false);
   const [passwordAttempted, setPasswordAttempted] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  // Smooth transition to home page
+  const navigateToHome = useCallback((message?: string) => {
+    if (isLeaving) return; // Prevent multiple calls
+    
+    if (message) {
+      alert(message);
+    }
+    
+    setIsLeaving(true);
+    
+    // Wait for fade-out animation to complete before navigating
+    setTimeout(() => {
+      router.push('/');
+    }, 300); // Match the CSS transition duration
+  }, [isLeaving, router]);
 
   // WebRTC hook - only initialize after joining
   const webrtc = useWebRTC({
@@ -182,8 +199,7 @@ export default function RoomPage() {
           ? 'You have been permanently banned from this room'
           : `You were removed from the room by the host (${data.kickCount || 1}/3 warnings)`;
         
-        alert(message);
-        router.push('/');
+        navigateToHome(message);
       } else if (data.action === 'mute') {
         // Host muted us - toggle our audio off
         if (webrtc.audioEnabled) {
@@ -198,9 +214,8 @@ export default function RoomPage() {
 
     const handleRoomClosed = (data: any) => {
       if (data.roomCode === code) {
-        alert('Room was closed by the host');
         webrtc.cleanup();
-        router.push('/');
+        navigateToHome('Room was closed by the host');
       }
     };
 
@@ -228,6 +243,8 @@ export default function RoomPage() {
 
   // Leave room
   const handleLeave = useCallback(async () => {
+    if (isLeaving) return;
+    
     try {
       webrtc.cleanup();
       await roomsApi.leaveRoom(code);
@@ -236,12 +253,12 @@ export default function RoomPage() {
         socket.emit('room:leave', { roomCode: code });
       }
       
-      router.push('/');
+      navigateToHome();
     } catch (err) {
       console.error('Error leaving room:', err);
-      router.push('/');
+      navigateToHome();
     }
-  }, [code, socket, router, webrtc]);
+  }, [code, socket, webrtc, isLeaving, navigateToHome]);
 
   // Copy room code
   const copyCode = () => {
@@ -315,24 +332,28 @@ export default function RoomPage() {
 
   if (error || webrtc.error) {
     return (
-      <>
+      <div className={`transition-all duration-300 ease-out ${
+        isLeaving ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+      }`}>
         <GalaxyBackground />
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="text-6xl mb-4">❌</div>
             <h1 className="text-2xl font-bold text-white mb-2">Error</h1>
             <p className="text-neutral-400 mb-6">{error || webrtc.error}</p>
-            <Button onClick={() => router.push('/')}>Go Home</Button>
+            <Button onClick={() => navigateToHome()}>Go Home</Button>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   // Password prompt
   if (showPassword && !hasJoined) {
     return (
-      <>
+      <div className={`transition-all duration-300 ease-out ${
+        isLeaving ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+      }`}>
         <GalaxyBackground />
         <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
           <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-8 max-w-md w-full">
@@ -357,7 +378,7 @@ export default function RoomPage() {
               </div>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => router.push('/')} className="flex-1">
+              <Button variant="outline" onClick={() => navigateToHome()} className="flex-1">
                 Cancel
               </Button>
               <Button onClick={joinRoom} isLoading={isJoining} className="flex-1">
@@ -366,13 +387,15 @@ export default function RoomPage() {
             </div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   // In-call view with custom WebRTC UI
   return (
-    <div className="fixed inset-0 flex flex-col bg-neutral-950">
+    <div className={`fixed inset-0 flex flex-col bg-neutral-950 transition-all duration-300 ease-out ${
+      isLeaving ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+    }`}>
       {/* Muted by host notification */}
       {(mutedByHost || webrtc.mutedByHost) && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-4 py-2 rounded-xl animate-fade-in">
@@ -403,8 +426,7 @@ export default function RoomPage() {
             <ExpirationTimer 
               expiresAt={room.expiresAt} 
               onExpired={() => {
-                alert('This room has expired and will be closed.');
-                router.push('/');
+                navigateToHome('This room has expired and will be closed.');
               }}
             />
           )}
