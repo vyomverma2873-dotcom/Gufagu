@@ -149,10 +149,22 @@ export function useWebRTC({ roomCode, socket, iceServers, localUser, isHost }: U
   }, [createPeerConnection, socket]);
 
   // Handle incoming offer
-  const handleOffer = useCallback(async (data: { fromSocketId: string; fromUserId: string; offer: RTCSessionDescriptionInit }) => {
-    const { fromSocketId, fromUserId, offer } = data;
+  const handleOffer = useCallback(async (data: { 
+    fromSocketId: string; 
+    fromUserId: string; 
+    fromUsername?: string;
+    fromDisplayName?: string;
+    fromProfilePicture?: string;
+    offer: RTCSessionDescriptionInit 
+  }) => {
+    const { fromSocketId, fromUserId, fromUsername, fromDisplayName, fromProfilePicture, offer } = data;
     
-    const pc = createPeerConnection(fromSocketId, { _id: fromUserId });
+    const pc = createPeerConnection(fromSocketId, { 
+      _id: fromUserId,
+      username: fromUsername || '',
+      displayName: fromDisplayName,
+      profilePicture: fromProfilePicture,
+    });
     
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));

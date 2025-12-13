@@ -443,6 +443,18 @@ export default function RoomPage() {
 
   // Add friend
   const addFriend = async (username: string) => {
+    // Validate username
+    if (!username || username.trim() === '') {
+      console.error('Cannot send friend request: username is empty');
+      setFriendRequestToast({
+        show: true,
+        message: 'Cannot send friend request: user info not available',
+        type: 'error'
+      });
+      setTimeout(() => setFriendRequestToast(prev => ({...prev, show: false})), 3000);
+      return;
+    }
+
     // Find participant by username to get their _id for loading state
     const participant = webrtc.peers.find(p => p.username === username);
     const participantId = participant?._id || username;

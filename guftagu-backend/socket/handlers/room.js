@@ -357,6 +357,9 @@ module.exports = (io, socket) => {
     io.to(targetSocketId).emit('webrtc:offer', {
       fromSocketId: socket.id,
       fromUserId: socket.userId,
+      fromUsername: socket.username,
+      fromDisplayName: socket.displayName,
+      fromProfilePicture: socket.profilePicture,
       offer,
     });
   });
