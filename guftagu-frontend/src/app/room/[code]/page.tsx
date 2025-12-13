@@ -70,6 +70,7 @@ export default function RoomPage() {
   const [showDeviceConflict, setShowDeviceConflict] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [friendRequestToast, setFriendRequestToast] = useState<{show: boolean; message: string; type: 'success' | 'error'}>({show: false, message: '', type: 'success'});
+    const [exitMessage, setExitMessage] = useState<string | null>(null);
     
     // Loading states for action buttons
     const [loadingActions, setLoadingActions] = useState<{
@@ -96,16 +97,17 @@ export default function RoomPage() {
   const navigateToHome = useCallback((message?: string) => {
     if (isLeaving) return; // Prevent multiple calls
     
+    // Show exit message as in-app notification (no browser alert)
     if (message) {
-      alert(message);
+      setExitMessage(message);
     }
     
     setIsLeaving(true);
     
-    // Wait for fade-out animation to complete before navigating
+    // Wait for fade-out animation and message display before navigating
     setTimeout(() => {
       router.push('/');
-    }, 300); // Match the CSS transition duration
+    }, message ? 1500 : 300); // Longer delay if showing message
   }, [isLeaving, router]);
 
   // WebRTC hook - only initialize after joining
@@ -610,6 +612,17 @@ export default function RoomPage() {
             : 'bg-red-500/20 border border-red-500/50 text-red-400'
         }`}>
           {friendRequestToast.message}
+        </div>
+      )}
+
+      {/* Exit message overlay (kick, room closed, etc.) */}
+      {exitMessage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 animate-fade-in">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-8 max-w-md mx-4 text-center animate-scale-in">
+            <div className="text-4xl mb-4">👋</div>
+            <p className="text-white text-lg font-medium mb-2">{exitMessage}</p>
+            <p className="text-neutral-400 text-sm">Redirecting to home...</p>
+          </div>
         </div>
       )}
 

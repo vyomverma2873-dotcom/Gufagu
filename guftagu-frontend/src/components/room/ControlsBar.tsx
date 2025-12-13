@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { 
   Mic, 
@@ -33,8 +34,44 @@ export default function ControlsBar({
   onOpenSettings,
   onLeave,
 }: ControlsBarProps) {
+  const [screenShareSupported, setScreenShareSupported] = useState(true);
+  const [showUnsupportedMessage, setShowUnsupportedMessage] = useState(false);
+
+  // Check if screen sharing is supported
+  useEffect(() => {
+    const checkScreenShareSupport = () => {
+      // Check if getDisplayMedia is available
+      const hasGetDisplayMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+      
+      // Check if it's a mobile device (screen share often fails on mobile even if API exists)
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // iOS Safari doesn't support screen sharing at all
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      
+      setScreenShareSupported(hasGetDisplayMedia && !isIOS);
+    };
+    
+    checkScreenShareSupport();
+  }, []);
+
+  const handleScreenShare = () => {
+    if (!screenShareSupported) {
+      setShowUnsupportedMessage(true);
+      setTimeout(() => setShowUnsupportedMessage(false), 3000);
+      return;
+    }
+    onToggleScreenShare();
+  };
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800 z-30 safe-area-bottom">
+      {/* Screen share not supported message */}
+      {showUnsupportedMessage && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-2 bg-amber-500/20 border border-amber-500/50 text-amber-400 rounded-xl text-sm whitespace-nowrap animate-fade-in">
+          Screen sharing is not supported on this device
+        </div>
+      )}
+      
       <div className="flex items-center justify-center gap-2 sm:gap-3 py-3 sm:py-4 px-3 sm:px-6">
         {/* Microphone toggle */}
         <button
@@ -82,18 +119,20 @@ export default function ControlsBar({
 
         {/* Screen share toggle */}
         <button
-          onClick={onToggleScreenShare}
+          onClick={handleScreenShare}
           onTouchEnd={(e) => {
             e.preventDefault();
-            onToggleScreenShare();
+            handleScreenShare();
           }}
           className={cn(
             'p-3 sm:p-4 rounded-full transition-all duration-200 touch-manipulation active:scale-95',
-            isScreenSharing
-              ? 'bg-violet-600 hover:bg-violet-700 text-white'
-              : 'bg-neutral-800 hover:bg-neutral-700 text-white'
+            !screenShareSupported
+              ? 'bg-neutral-800/50 text-neutral-500 cursor-not-allowed'
+              : isScreenSharing
+                ? 'bg-violet-600 hover:bg-violet-700 text-white'
+                : 'bg-neutral-800 hover:bg-neutral-700 text-white'
           )}
-          title={isScreenSharing ? 'Stop sharing' : 'Share screen'}
+          title={!screenShareSupported ? 'Screen sharing not supported on this device' : isScreenSharing ? 'Stop sharing' : 'Share screen'}
         >
           {isScreenSharing ? (
             <MonitorOff className="w-5 h-5 sm:w-6 sm:h-6" />
