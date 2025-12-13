@@ -465,6 +465,175 @@ App runs on `http://localhost:3000`
 
 ---
 
+## 🎥 Group Video Call (Room-Based)
+
+Guftagu supports room-based group video calls where users can create private rooms and invite others to join.
+
+### Room Features
+- **Private Rooms** - Create rooms with unique 6-character codes
+- **Up to 8 Participants** - Support for multi-user video conferencing
+- **Host Controls** - Room creator can kick participants
+- **WebRTC Mesh** - Full mesh topology for peer connections
+- **Real-time Chat** - In-room text messaging
+- **Screen Sharing** - Share screen with all participants (desktop only)
+
+### Room Creation Flow
+```
+1. User clicks "Create Room"
+2. Backend generates unique 6-character room code
+3. Room document created in MongoDB
+4. Creator becomes the host with elevated permissions
+5. Room code can be shared for others to join
+```
+
+### Room Code System
+- **Format**: 6 uppercase alphanumeric characters (e.g., `ABC123`)
+- **Case-Insensitive**: Codes work regardless of input case
+- **Unique**: No duplicate active room codes
+- **Expiry**: Rooms expire after all participants leave
+
+### WebRTC Mesh Architecture
+```
+Participant A ←→ Participant B
+     ↕               ↕
+Participant C ←→ Participant D
+```
+Each participant maintains peer connections with all other participants.
+
+### Socket Events (Room)
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `room:create` | Client→Server | Create new room |
+| `room:join` | Client→Server | Join existing room |
+| `room:leave` | Client→Server | Leave room |
+| `room:user-joined` | Server→Room | New participant joined |
+| `room:user-left` | Server→Room | Participant left |
+| `room:kick` | Client→Server | Host kicks participant |
+| `room:kicked` | Server→Client | You were kicked |
+| `room:chat` | Bidirectional | In-room messages |
+| `webrtc:offer` | Bidirectional | WebRTC offer with user metadata |
+| `webrtc:answer` | Bidirectional | WebRTC answer |
+| `webrtc:ice-candidate` | Bidirectional | ICE candidate exchange |
+
+### Room Database Schema
+```javascript
+{
+  code: String,           // 6-char unique code
+  host: ObjectId,         // Room creator (User ref)
+  participants: [{        // Current participants
+    user: ObjectId,
+    socketId: String,
+    joinedAt: Date
+  }],
+  maxParticipants: Number, // Default: 8
+  isActive: Boolean,
+  createdAt: Date,
+  endedAt: Date
+}
+```
+
+### Host Privileges
+- **Kick Participants**: Remove any user from the room
+- **Room Persistence**: Room stays active as long as host is present
+- **Transfer**: Host privileges transfer if host leaves (oldest participant)
+
+### Screen Sharing
+- **Desktop**: Full support via `getDisplayMedia` API
+- **iOS Safari**: Not supported (shows "not supported" message)
+- **Android Chrome**: Supported on most devices
+
+---
+
+## 🔐 Session Tracking System
+
+Guftagu implements IP-based session tracking for security and device management.
+
+### Session Features
+- **Device Tracking** - Track login devices with IP and user agent
+- **Active Sessions** - View all active sessions in profile
+- **Session Termination** - Remotely logout from other devices
+- **Login History** - Complete history of login events
+- **Security Alerts** - Notifications for new device logins
+
+### How It Works
+```
+1. User logs in via OTP
+2. Backend captures IP address and user agent
+3. Session document created with device fingerprint
+4. JWT token issued (365-day expiry)
+5. Session linked to token for tracking
+```
+
+### Session Database Schema
+```javascript
+{
+  user: ObjectId,          // User reference
+  token: String,           // JWT token (hashed)
+  ipAddress: String,       // Login IP
+  userAgent: String,       // Browser/device info
+  deviceType: String,      // 'mobile' | 'desktop' | 'tablet'
+  browser: String,         // Chrome, Safari, etc.
+  os: String,              // iOS, Android, Windows, etc.
+  isActive: Boolean,       // Currently active
+  lastActivity: Date,      // Last API request
+  createdAt: Date,         // Login time
+  expiresAt: Date          // Token expiry
+}
+```
+
+### Login Tracking Schema
+```javascript
+{
+  user: ObjectId,
+  ipAddress: String,
+  userAgent: String,
+  deviceInfo: {
+    deviceType: String,
+    browser: String,
+    os: String
+  },
+  location: {              // GeoIP (optional)
+    country: String,
+    city: String
+  },
+  success: Boolean,        // Login succeeded
+  failureReason: String,   // If failed
+  timestamp: Date
+}
+```
+
+### Session Management API
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/auth/sessions` | Get all active sessions |
+| DELETE | `/api/auth/sessions/:id` | Terminate specific session |
+| DELETE | `/api/auth/sessions` | Terminate all other sessions |
+| GET | `/api/auth/login-history` | Get login history |
+
+### Token & Session Lifecycle
+- **JWT Expiry**: 365 days
+- **Session Update**: `lastActivity` updated on each API request
+- **Auto-Cleanup**: Expired sessions pruned daily
+- **Logout**: Session deactivated, token invalidated
+
+### Security Considerations
+- IP addresses stored for security auditing
+- User agent parsing for device identification
+- New device login triggers notification
+- Suspicious activity detection (multiple failed logins)
+
+### Cold Start Behavior (Render Free Tier)
+On Render's free tier, the backend may cold start after inactivity:
+1. User opens app after inactivity
+2. Frontend calls `getMe()` to validate session
+3. Backend is still spinning up → request fails
+4. Frontend clears token on any auth error
+5. User appears "logged out"
+
+**Mitigation**: Frontend has retry logic for transient failures.
+
+---
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
