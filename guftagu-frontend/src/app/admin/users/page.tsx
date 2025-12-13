@@ -307,12 +307,6 @@ export default function AdminUsersPage() {
     try {
       const response = await adminApi.getUserDetails(selectedUserId);
       setUserDetails(response.data);
-      
-      // Also refresh messages if a friend is selected
-      if (activeFriendId) {
-        const msgResponse = await adminApi.getUserMessages(selectedUserId, activeFriendId);
-        setFriendMessages(msgResponse.data.messages || []);
-      }
     } catch (error) {
       console.error('Failed to refresh user details:', error);
     } finally {
@@ -320,13 +314,36 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Auto-refresh when friends tab is active (every 10 seconds)
+  // Refresh messages for the selected friend (for real-time chat sync)
+  const refreshMessages = async () => {
+    if (!selectedUserId || !activeFriendId) return;
+    
+    try {
+      const msgResponse = await adminApi.getUserMessages(selectedUserId, activeFriendId);
+      setFriendMessages(msgResponse.data.messages || []);
+    } catch (error) {
+      console.error('Failed to refresh messages:', error);
+    }
+  };
+
+  // Auto-refresh friends list when friends tab is active (every 15 seconds)
   useEffect(() => {
     if (!detailsModalOpen || activeTab !== 'friends' || !selectedUserId) return;
     
     const interval = setInterval(() => {
       refreshUserDetails(true); // Silent refresh
-    }, 10000); // Refresh every 10 seconds
+    }, 15000); // Refresh every 15 seconds
+    
+    return () => clearInterval(interval);
+  }, [detailsModalOpen, activeTab, selectedUserId]);
+
+  // Auto-refresh messages when a friend chat is selected (every 3 seconds for real-time feel)
+  useEffect(() => {
+    if (!detailsModalOpen || activeTab !== 'friends' || !selectedUserId || !activeFriendId) return;
+    
+    const interval = setInterval(() => {
+      refreshMessages();
+    }, 3000); // Refresh messages every 3 seconds
     
     return () => clearInterval(interval);
   }, [detailsModalOpen, activeTab, selectedUserId, activeFriendId]);
@@ -1066,30 +1083,41 @@ export default function AdminUsersPage() {
                       <div className="bg-zinc-800/30 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-semibold text-white">Chat History</h4>
-                          {activeFriendId && friendMessages.length > 0 && (
-                            <div className="flex gap-2">
+                          <div className="flex gap-2">
+                            {activeFriendId && (
                               <button
-                                onClick={() => {
-                                  const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
-                                  if (friend) exportChatMessages(friend.friendId.displayName, friendMessages);
-                                }}
-                                className="flex items-center gap-1 px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white transition"
+                                onClick={() => refreshMessages()}
+                                className="flex items-center gap-1 px-2 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-zinc-300 transition"
+                                title="Refresh messages"
                               >
-                                <Download className="w-3 h-3" />
-                                TXT
+                                <RefreshCw className="w-3 h-3" />
                               </button>
-                              <button
-                                onClick={() => {
-                                  const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
-                                  if (friend) exportChatMessagesCSV(friend, friendMessages);
-                                }}
-                                className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white transition"
-                              >
-                                <Download className="w-3 h-3" />
-                                CSV
-                              </button>
-                            </div>
-                          )}
+                            )}
+                            {activeFriendId && friendMessages.length > 0 && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
+                                    if (friend) exportChatMessages(friend.friendId.displayName, friendMessages);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white transition"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  TXT
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const friend = userDetails.friends.find(f => f.friendId._id === activeFriendId);
+                                    if (friend) exportChatMessagesCSV(friend, friendMessages);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white transition"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  CSV
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                         {!activeFriendId ? (
                           <p className="text-zinc-400 text-sm text-center py-8">Select a friend to view messages</p>
