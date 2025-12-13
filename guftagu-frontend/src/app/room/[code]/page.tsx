@@ -100,14 +100,20 @@ export default function RoomPage() {
     // Show exit message as in-app notification (no browser alert)
     if (message) {
       setExitMessage(message);
+      // Keep message visible for 3 seconds, then start fade-out and redirect
+      setTimeout(() => {
+        setIsLeaving(true);
+        setTimeout(() => {
+          router.push('/');
+        }, 500); // 500ms for fade-out animation
+      }, 3000); // 3 seconds to read the message
+    } else {
+      // No message - immediate smooth transition
+      setIsLeaving(true);
+      setTimeout(() => {
+        router.push('/');
+      }, 300);
     }
-    
-    setIsLeaving(true);
-    
-    // Wait for fade-out animation and message display before navigating
-    setTimeout(() => {
-      router.push('/');
-    }, message ? 3500 : 300); // 3.5 seconds for message display, 300ms for normal exit
   }, [isLeaving, router]);
 
   // WebRTC hook - only initialize after joining
