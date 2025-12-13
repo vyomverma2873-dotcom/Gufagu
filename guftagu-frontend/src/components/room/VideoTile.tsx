@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { 
   Mic, 
@@ -30,7 +30,7 @@ interface VideoTileProps {
   className?: string;
 }
 
-export default function VideoTile({
+function VideoTile({
   stream,
   username,
   displayName,
@@ -48,6 +48,7 @@ export default function VideoTile({
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
 
   // Attach stream to video element - keep video element always mounted
   useEffect(() => {
@@ -55,6 +56,13 @@ export default function VideoTile({
     if (videoElement && stream) {
       // Always set srcObject when stream exists
       videoElement.srcObject = stream;
+      
+      // Handle video ready state
+      const handleCanPlay = () => {
+        setIsVideoReady(true);
+      };
+      
+      videoElement.addEventListener('canplay', handleCanPlay);
       
       // Handle video play
       const playVideo = async () => {
@@ -66,6 +74,12 @@ export default function VideoTile({
       };
       
       playVideo();
+      
+      return () => {
+        videoElement.removeEventListener('canplay', handleCanPlay);
+      };
+    } else {
+      setIsVideoReady(false);
     }
     
     return () => {
@@ -85,6 +99,7 @@ export default function VideoTile({
       className={cn(
         'participant-card relative bg-neutral-900 rounded-xl overflow-hidden aspect-video group',
         'border border-neutral-800/50 shadow-lg',
+        'transform-gpu', // Hardware acceleration
         className
       )}
       onMouseEnter={() => setShowOverlay(true)}
@@ -98,23 +113,28 @@ export default function VideoTile({
           playsInline
           muted={isLocal}
           className={cn(
-            'w-full h-full object-cover',
-            !videoEnabled && 'hidden'
+            'absolute inset-0 w-full h-full object-contain bg-neutral-900',
+            'transition-opacity duration-300 ease-out',
+            (!videoEnabled || !isVideoReady) && 'opacity-0'
           )}
         />
       )}
       
-      {/* Avatar placeholder when video is off */}
-      {(!stream || !videoEnabled) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
-          <Avatar
-            src={profilePicture}
-            alt={name}
-            size="xl"
-            className="w-24 h-24 text-3xl"
-          />
-        </div>
-      )}
+      {/* Avatar placeholder when video is off or not ready */}
+      <div 
+        className={cn(
+          'absolute inset-0 flex items-center justify-center bg-neutral-800',
+          'transition-opacity duration-300 ease-out',
+          (stream && videoEnabled && isVideoReady) ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        )}
+      >
+        <Avatar
+          src={profilePicture}
+          alt={name}
+          size="xl"
+          className="w-16 h-16 sm:w-24 sm:h-24 text-2xl sm:text-3xl"
+        />
+      </div>
 
       {/* Full overlay on hover (groupcall.md spec lines 223-236) */}
       {hasActions && showOverlay && (
@@ -246,3 +266,6 @@ export default function VideoTile({
     </div>
   );
 }
+
+// Export memoized component for performance
+export default memo(VideoTile);
