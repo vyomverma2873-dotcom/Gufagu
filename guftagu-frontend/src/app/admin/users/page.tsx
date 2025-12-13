@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Search, MoreVertical, Ban, Shield, Eye, ChevronLeft, ChevronRight, X, AlertTriangle, Download, MessageSquare, FileText, Users, Monitor, Smartphone, Tablet, Globe, Clock } from 'lucide-react';
+import { ArrowLeft, Search, MoreVertical, Ban, Shield, Eye, ChevronLeft, ChevronRight, X, AlertTriangle, Download, MessageSquare, FileText, Users, Monitor, Smartphone, Tablet, Globe, Clock, RefreshCw } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -298,6 +298,38 @@ export default function AdminUsersPage() {
       setIsLoadingDetails(false);
     }
   };
+
+  // Refresh user details (for real-time sync)
+  const refreshUserDetails = async (silent = false) => {
+    if (!selectedUserId) return;
+    
+    if (!silent) setIsLoadingDetails(true);
+    try {
+      const response = await adminApi.getUserDetails(selectedUserId);
+      setUserDetails(response.data);
+      
+      // Also refresh messages if a friend is selected
+      if (activeFriendId) {
+        const msgResponse = await adminApi.getUserMessages(selectedUserId, activeFriendId);
+        setFriendMessages(msgResponse.data.messages || []);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user details:', error);
+    } finally {
+      if (!silent) setIsLoadingDetails(false);
+    }
+  };
+
+  // Auto-refresh when friends tab is active (every 10 seconds)
+  useEffect(() => {
+    if (!detailsModalOpen || activeTab !== 'friends' || !selectedUserId) return;
+    
+    const interval = setInterval(() => {
+      refreshUserDetails(true); // Silent refresh
+    }, 10000); // Refresh every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [detailsModalOpen, activeTab, selectedUserId, activeFriendId]);
 
   // Close details modal
   const closeDetailsModal = () => {
@@ -975,7 +1007,17 @@ export default function AdminUsersPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Friends List */}
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-white mb-3">Friends List</h4>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-white">Friends List</h4>
+                          <button
+                            onClick={() => refreshUserDetails(false)}
+                            disabled={isLoadingDetails}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 text-zinc-300 rounded transition"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${isLoadingDetails ? 'animate-spin' : ''}`} />
+                            Refresh
+                          </button>
+                        </div>
                         {userDetails.friends.length === 0 ? (
                           <p className="text-zinc-400 text-sm text-center py-8">No friends</p>
                         ) : (
