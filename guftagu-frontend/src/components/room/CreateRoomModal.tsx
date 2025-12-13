@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Video, Mic, Monitor, Lock, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, Lock, Copy, Check, ExternalLink } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import RoomFeatures from './RoomFeatures';
 import { roomsApi } from '@/lib/api';
 
 interface CreateRoomModalProps {
@@ -189,31 +190,13 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
                 </div>
               </div>
 
-              {/* Room Settings */}
+              {/* Room Features */}
               <div className="mb-5">
-                <label className="block text-sm font-medium text-neutral-300 mb-3">
-                  Room Settings
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  <SettingToggle
-                    icon={<Video className="w-4 h-4" />}
-                    label="Video"
-                    checked={settings.videoEnabled}
-                    onChange={(v) => setSettings({ ...settings, videoEnabled: v })}
-                  />
-                  <SettingToggle
-                    icon={<Mic className="w-4 h-4" />}
-                    label="Audio"
-                    checked={settings.audioEnabled}
-                    onChange={(v) => setSettings({ ...settings, audioEnabled: v })}
-                  />
-                  <SettingToggle
-                    icon={<Monitor className="w-4 h-4" />}
-                    label="Screen Share"
-                    checked={settings.screenShareEnabled}
-                    onChange={(v) => setSettings({ ...settings, screenShareEnabled: v })}
-                  />
-                </div>
+                <RoomFeatures
+                  videoEnabled={settings.videoEnabled}
+                  audioEnabled={settings.audioEnabled}
+                  screenShareEnabled={settings.screenShareEnabled}
+                />
               </div>
 
               {/* General Error Display */}
@@ -314,32 +297,5 @@ export default function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProp
         </div>
       </div>
     </div>
-  );
-}
-
-// Setting Toggle Component
-function SettingToggle({
-  icon,
-  label,
-  checked,
-  onChange,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-colors ${
-        checked
-          ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400'
-          : 'bg-neutral-800/50 border-neutral-700/50 text-neutral-500'
-      }`}
-    >
-      {icon}
-      <span className="text-sm">{label}</span>
-    </button>
   );
 }
