@@ -172,15 +172,17 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-3xl p-10 md:p-14 shadow-2xl text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Your Journey Starts Here
+              Secure Session Management
             </h2>
-            <p className="text-neutral-400 max-w-md mx-auto mb-8">
-              Take the first step towards building confidence in social interactions. 
-              Practice at your own pace, in a space designed for people like you.
+            <p className="text-neutral-400 max-w-lg mx-auto mb-8">
+              Our platform uses advanced IP-based session management to ensure secure and reliable connections. 
+              Each session is uniquely identified and tracked to prevent unauthorized access, detect multi-device conflicts, 
+              and maintain stable connections for all participants. Your privacy is protected while we deliver 
+              a seamless, secure video chat experience with enterprise-grade session integrity.
             </p>
             <Link href={chatHref}>
               <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-neutral-900 rounded-xl font-medium shadow-lg shadow-white/10 hover:shadow-white/20 transition-all hover:scale-[1.02]">
-                Begin Your Journey
+                Start Secure Session
                 <ArrowRight className="w-4 h-4" />
               </button>
             </Link>
