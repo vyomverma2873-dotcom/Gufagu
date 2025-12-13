@@ -38,6 +38,11 @@ const roomParticipantSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Timestamp when user was kicked (for cooldown tracking)
+    kickedAt: {
+      type: Date,
+      default: null,
+    },
     // Kick count for protection (3 strikes = permanent ban from room)
     kickCount: {
       type: Number,
@@ -103,6 +108,30 @@ roomParticipantSchema.statics.getKickCount = async function(roomCode, userId) {
 roomParticipantSchema.statics.isPermanentlyBanned = async function(roomCode, userId) {
   const kickCount = await this.getKickCount(roomCode, userId);
   return kickCount >= 3;
+};
+
+// Static method to get remaining cooldown time after being kicked (30 seconds)
+roomParticipantSchema.statics.getKickCooldown = async function(roomCode, userId) {
+  const COOLDOWN_SECONDS = 30;
+  
+  // Find the most recent kick record for this user in this room
+  const kickedRecord = await this.findOne({
+    roomCode,
+    userId,
+    isKicked: true,
+    kickedAt: { $ne: null },
+  }).sort({ kickedAt: -1 });
+  
+  if (!kickedRecord || !kickedRecord.kickedAt) {
+    return 0; // No cooldown
+  }
+  
+  const kickedTime = new Date(kickedRecord.kickedAt).getTime();
+  const now = Date.now();
+  const elapsedSeconds = Math.floor((now - kickedTime) / 1000);
+  const remainingSeconds = Math.max(0, COOLDOWN_SECONDS - elapsedSeconds);
+  
+  return remainingSeconds;
 };
 
 // Static method to get user's active rooms

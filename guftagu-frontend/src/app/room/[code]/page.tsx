@@ -64,6 +64,8 @@ export default function RoomPage() {
   const [readyToJoin, setReadyToJoin] = useState(false);
   const [passwordAttempted, setPasswordAttempted] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [kickCooldown, setKickCooldown] = useState(0); // Remaining cooldown seconds
+  const [wasKicked, setWasKicked] = useState(false); // Track if user was in cooldown
 
   // Smooth transition to home page
   const navigateToHome = useCallback((message?: string) => {
@@ -144,6 +146,37 @@ export default function RoomPage() {
     };
   }, [hasJoined]);
 
+  // Kick cooldown countdown timer
+  useEffect(() => {
+    if (kickCooldown <= 0) return;
+
+    const timer = setInterval(() => {
+      setKickCooldown(prev => {
+        if (prev <= 1) {
+          // Cooldown expired, try to join again
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [kickCooldown]);
+
+  // Auto-retry join when cooldown expires (only if user was actually kicked)
+  useEffect(() => {
+    if (kickCooldown === 0 && wasKicked && room && !hasJoined && !isJoining && !error) {
+      // Reset wasKicked flag and retry joining
+      setWasKicked(false);
+      // Small delay before retrying
+      const retryTimer = setTimeout(() => {
+        joinRoom();
+      }, 500);
+      return () => clearTimeout(retryTimer);
+    }
+  }, [kickCooldown, wasKicked, room, hasJoined, isJoining, error]);
+
   // Join room
   const joinRoom = async () => {
     if (!room) return;
@@ -173,6 +206,10 @@ export default function RoomPage() {
         setPasswordError('Incorrect password. Please try again.');
         setPassword('');
         setPasswordAttempted(true);
+      } else if (err.response?.data?.kickCooldown) {
+        // User was kicked and needs to wait
+        setKickCooldown(err.response.data.cooldownSeconds || 30);
+        setWasKicked(true);
       } else {
         setError(err.response?.data?.error || 'Failed to join room');
       }
@@ -314,9 +351,9 @@ export default function RoomPage() {
   };
 
   // Show connecting state for any loading/joining phase (before joined)
-  // Don't show if we're about to or currently showing password prompt
+  // Don't show if we're about to or currently showing password prompt or kick cooldown
   // Also show when isJoining is true (API call in progress) to prevent footer flash
-  if ((authLoading || isLoading || isJoining || (readyToJoin && !hasJoined && !passwordAttempted)) && !error && !webrtc.error && !showPassword) {
+  if ((authLoading || isLoading || isJoining || (readyToJoin && !hasJoined && !passwordAttempted)) && !error && !webrtc.error && !showPassword && kickCooldown === 0) {
     return (
       <>
         <GalaxyBackground />
@@ -327,6 +364,46 @@ export default function RoomPage() {
           </div>
         </div>
       </>
+    );
+  }
+
+  // Kick cooldown view - show countdown timer
+  if (kickCooldown > 0) {
+    return (
+      <div className={`transition-all duration-300 ease-out ${
+        isLeaving ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+      }`}>
+        <GalaxyBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+          <div className="bg-neutral-900/70 backdrop-blur-xl border border-neutral-800/80 rounded-2xl p-8 max-w-md w-full text-center">
+            <div className="text-6xl mb-4">⏳</div>
+            <h2 className="text-xl font-bold text-white mb-2">Temporarily Blocked</h2>
+            <p className="text-neutral-400 mb-6">
+              You were kicked from this room. Please wait before rejoining.
+            </p>
+            
+            {/* Countdown Timer */}
+            <div className="mb-6">
+              <div className="text-6xl font-mono font-bold text-violet-400 mb-2">
+                {kickCooldown}
+              </div>
+              <p className="text-sm text-neutral-500">seconds remaining</p>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="w-full bg-neutral-800 rounded-full h-2 mb-6 overflow-hidden">
+              <div 
+                className="bg-violet-500 h-full rounded-full transition-all duration-1000 ease-linear"
+                style={{ width: `${(kickCooldown / 30) * 100}%` }}
+              />
+            </div>
+            
+            <Button variant="outline" onClick={() => navigateToHome()} className="w-full">
+              Go Home
+            </Button>
+          </div>
+        </div>
+      </div>
     );
   }
 

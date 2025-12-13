@@ -200,7 +200,17 @@ const joinRoom = async (req, res, next) => {
       });
     }
 
-    // Check if user was recently kicked (but can still rejoin)
+    // Check if user is in kick cooldown (30 seconds)
+    const cooldownRemaining = await RoomParticipant.getKickCooldown(code, req.user._id);
+    if (cooldownRemaining > 0) {
+      return res.status(403).json({
+        error: 'You were recently kicked from this room. Please wait before rejoining.',
+        kickCooldown: true,
+        cooldownSeconds: cooldownRemaining,
+      });
+    }
+
+    // Check if user was previously kicked (cooldown expired, can rejoin)
     const kickedRecord = await RoomParticipant.findOne({
       roomCode: code,
       userId: req.user._id,
@@ -209,7 +219,7 @@ const joinRoom = async (req, res, next) => {
 
     const kickCount = await RoomParticipant.getKickCount(code, req.user._id);
     
-    // If kicked but under 3 times, allow rejoin with warning
+    // If kicked but under 3 times and cooldown expired, allow rejoin
     if (kickedRecord && kickCount < 3) {
       // Clear the kicked status to allow rejoin
       await RoomParticipant.updateMany(
@@ -429,14 +439,19 @@ const kickParticipant = async (req, res, next) => {
       return res.status(400).json({ error: 'Cannot kick yourself' });
     }
 
-    // Update participant record
+    // Update participant record with kick timestamp
     const participant = await RoomParticipant.findOneAndUpdate(
       {
         roomCode: code,
         userId,
         leftAt: null,
       },
-      { isKicked: true, leftAt: new Date() },
+      { 
+        isKicked: true, 
+        kickedAt: new Date(),
+        leftAt: new Date(),
+        $inc: { kickCount: 1 }
+      },
       { new: true }
     );
 
