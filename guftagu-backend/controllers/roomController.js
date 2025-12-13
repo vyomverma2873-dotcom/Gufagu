@@ -440,6 +440,20 @@ const kickParticipant = async (req, res, next) => {
     }
 
     // Update participant record with kick timestamp
+    // First, get current kick count to increment
+    const existingParticipant = await RoomParticipant.findOne({
+      roomCode: code,
+      userId,
+      leftAt: null,
+    });
+
+    if (!existingParticipant) {
+      return res.status(404).json({ error: 'Participant not found in room' });
+    }
+
+    const newKickCount = (existingParticipant.kickCount || 0) + 1;
+    const kickedAt = new Date();
+
     const participant = await RoomParticipant.findOneAndUpdate(
       {
         roomCode: code,
@@ -448,16 +462,14 @@ const kickParticipant = async (req, res, next) => {
       },
       { 
         isKicked: true, 
-        kickedAt: new Date(),
-        leftAt: new Date(),
-        $inc: { kickCount: 1 }
+        kickedAt: kickedAt,
+        leftAt: kickedAt,
+        kickCount: newKickCount
       },
       { new: true }
     );
 
-    if (!participant) {
-      return res.status(404).json({ error: 'Participant not found in room' });
-    }
+    logger.info(`User ${userId} kicked from room ${code} - kickedAt: ${kickedAt}, kickCount: ${newKickCount}`);
 
     // Decrement participant count
     room.currentParticipants = Math.max(0, room.currentParticipants - 1);
@@ -474,13 +486,13 @@ const kickParticipant = async (req, res, next) => {
         kicked: true,
       });
 
-      // Notify the kicked user specifically
+      // Notify the kicked user specifically (simple message, no warnings)
       const kickedUser = await User.findById(userId);
       if (kickedUser?.socketId) {
         io.to(kickedUser.socketId).emit('room:host-action', {
           action: 'kick',
           roomCode: code,
-          message: 'You were removed from the room by the host',
+          message: 'You have been kicked from the room',
         });
       }
     }

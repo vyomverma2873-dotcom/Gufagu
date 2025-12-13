@@ -124,7 +124,7 @@ export default function RoomPage() {
 
   // Auto-join room after fetching (direct join flow)
   useEffect(() => {
-    if (room && readyToJoin && !hasJoined && !isJoining && !showPassword && !passwordAttempted && !error) {
+    if (room && readyToJoin && !hasJoined && !isJoining && !showPassword && !passwordAttempted && !error && kickCooldown === 0) {
       // If room requires password, show password prompt directly (no API call needed)
       if (room.hasPassword) {
         setShowPassword(true);
@@ -134,7 +134,7 @@ export default function RoomPage() {
         joinRoom();
       }
     }
-  }, [room, readyToJoin, hasJoined, isJoining, showPassword, passwordAttempted, error]);
+  }, [room, readyToJoin, hasJoined, isJoining, showPassword, passwordAttempted, error, kickCooldown]);
 
   // Hide header/footer when in room (full-screen mode)
   useEffect(() => {
@@ -231,12 +231,8 @@ export default function RoomPage() {
           socket.emit('room:leave', { roomCode: code });
         }
         
-        // Show message based on ban status
-        const message = data.permanentBan
-          ? 'You have been permanently banned from this room'
-          : `You were removed from the room by the host (${data.kickCount || 1}/3 warnings)`;
-        
-        navigateToHome(message);
+        // Simple message without warnings - just redirect home
+        navigateToHome('You have been kicked from the room');
       } else if (data.action === 'mute') {
         // Host muted us - toggle our audio off
         if (webrtc.audioEnabled) {
