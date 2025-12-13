@@ -4,6 +4,7 @@ const {
   createRoom,
   getRoomDetails,
   joinRoom,
+  forceJoinRoom,
   leaveRoom,
   deleteRoom,
   kickParticipant,
@@ -27,6 +28,9 @@ router.get('/:code', getRoomDetails);
 
 // POST /api/rooms/:code/join - Join room
 router.post('/:code/join', joinRoom);
+
+// POST /api/rooms/:code/force-join - Force join room (disconnect from other devices)
+router.post('/:code/force-join', forceJoinRoom);
 
 // POST /api/rooms/:code/leave - Leave room
 router.post('/:code/leave', leaveRoom);

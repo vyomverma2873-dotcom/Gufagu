@@ -163,8 +163,10 @@ export const roomsApi = {
     };
   }) => api.post('/rooms/create', data),
   getRoomDetails: (code: string) => api.get(`/rooms/${code}`),
-  joinRoom: (code: string, password?: string) => 
-    api.post(`/rooms/${code}/join`, { password }),
+  joinRoom: (code: string, password?: string, sessionId?: string) => 
+    api.post(`/rooms/${code}/join`, { password, sessionId }),
+  forceJoinRoom: (code: string, password?: string, sessionId?: string) => 
+    api.post(`/rooms/${code}/force-join`, { password, sessionId }),
   leaveRoom: (code: string) => api.post(`/rooms/${code}/leave`),
   deleteRoom: (code: string) => api.delete(`/rooms/${code}`),
   kickParticipant: (code: string, userId: string) => 

@@ -12,6 +12,7 @@ import ControlsBar from '@/components/room/ControlsBar';
 import ParticipantsPanel from '@/components/room/ParticipantsPanel';
 import InviteModal from '@/components/room/InviteModal';
 import ExpirationTimer from '@/components/room/ExpirationTimer';
+import DeviceConflictModal from '@/components/room/DeviceConflictModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { useWebRTC } from '@/hooks/useWebRTC';
@@ -66,6 +67,18 @@ export default function RoomPage() {
   const [isLeaving, setIsLeaving] = useState(false);
   const [kickCooldown, setKickCooldown] = useState(0); // Remaining cooldown seconds
   const [wasKicked, setWasKicked] = useState(false); // Track if user was in cooldown
+  const [showDeviceConflict, setShowDeviceConflict] = useState(false);
+  const [sessionId, setSessionId] = useState('');
+
+  // Generate or retrieve a unique session ID for this device/browser
+  useEffect(() => {
+    let id = localStorage.getItem('guftagu_session_id');
+    if (!id) {
+      id = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      localStorage.setItem('guftagu_session_id', id);
+    }
+    setSessionId(id);
+  }, []);
 
   // Smooth transition to home page
   const navigateToHome = useCallback((message?: string) => {
@@ -184,7 +197,7 @@ export default function RoomPage() {
     setIsJoining(true);
     setPasswordError(null);
     try {
-      const response = await roomsApi.joinRoom(code, password);
+      const response = await roomsApi.joinRoom(code, password, sessionId);
       const { iceServers: servers, isHost: hostStatus } = response.data.room;
       
       setIceServers(servers || []);
@@ -199,7 +212,10 @@ export default function RoomPage() {
         socket.emit('room:join', { roomCode: code });
       }
     } catch (err: any) {
-      if (err.response?.data?.requiresPassword) {
+      if (err.response?.data?.deviceConflict) {
+        // User is already in room on another device
+        setShowDeviceConflict(true);
+      } else if (err.response?.data?.requiresPassword) {
         setShowPassword(true);
         setPasswordAttempted(true);
       } else if (err.response?.data?.error === 'Invalid password') {
@@ -214,6 +230,35 @@ export default function RoomPage() {
       } else {
         setError(err.response?.data?.error || 'Failed to join room');
       }
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  // Force join - disconnect from other device and join here
+  const handleForceJoin = async () => {
+    if (!room) return;
+
+    setIsJoining(true);
+    setShowDeviceConflict(false);
+
+    try {
+      const response = await roomsApi.forceJoinRoom(code, password, sessionId);
+      const { iceServers: servers, isHost: hostStatus } = response.data.room;
+      
+      setIceServers(servers || []);
+      setIsHost(hostStatus);
+      setHasJoined(true);
+      setShowPassword(false);
+      setPassword('');
+      setPasswordAttempted(false);
+      
+      // Join socket room
+      if (socket) {
+        socket.emit('room:join', { roomCode: code });
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to join room');
     } finally {
       setIsJoining(false);
     }
@@ -253,6 +298,17 @@ export default function RoomPage() {
       }
     };
 
+    const handleForceDisconnect = (data: any) => {
+      if (data.roomCode === code && data.userId === user?._id) {
+        // Disconnected because user joined from another device
+        webrtc.cleanup();
+        if (socket) {
+          socket.emit('room:leave', { roomCode: code });
+        }
+        navigateToHome(data.message || 'You have been disconnected because you joined from another device');
+      }
+    };
+
     const handleParticipantUpdate = (data: any) => {
       if (data.roomCode === code) {
         setRoom(prev => prev ? { 
@@ -264,16 +320,18 @@ export default function RoomPage() {
 
     socket.on('room:host-action', handleHostAction);
     socket.on('room:closed', handleRoomClosed);
+    socket.on('room:force-disconnect', handleForceDisconnect);
     socket.on('room:participant-joined', handleParticipantUpdate);
     socket.on('room:participant-left', handleParticipantUpdate);
 
     return () => {
       socket.off('room:host-action', handleHostAction);
       socket.off('room:closed', handleRoomClosed);
+      socket.off('room:force-disconnect', handleForceDisconnect);
       socket.off('room:participant-joined', handleParticipantUpdate);
       socket.off('room:participant-left', handleParticipantUpdate);
     };
-  }, [socket, hasJoined, code, router, webrtc]);
+  }, [socket, hasJoined, code, router, webrtc, user?._id]);
 
   // Leave room
   const handleLeave = useCallback(async () => {
@@ -614,6 +672,14 @@ export default function RoomPage() {
         confirmText="Leave"
         cancelText="Stay"
         confirmVariant="danger"
+      />
+
+      {/* Device Conflict Modal */}
+      <DeviceConflictModal
+        isOpen={showDeviceConflict}
+        onDisconnectOther={handleForceJoin}
+        onCancel={() => setShowDeviceConflict(false)}
+        isLoading={isJoining}
       />
     </div>
   );

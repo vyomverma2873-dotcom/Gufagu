@@ -25,6 +25,12 @@ const roomParticipantSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Session/Device identifier to track which device is connected
+    sessionId: {
+      type: String,
+      default: null,
+    },
+
     // Participant status
     isHost: {
       type: Boolean,

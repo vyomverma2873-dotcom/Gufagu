@@ -155,7 +155,7 @@ const getRoomDetails = async (req, res, next) => {
 const joinRoom = async (req, res, next) => {
   try {
     const { code } = req.params;
-    const { password } = req.body;
+    const { password, sessionId } = req.body;
 
     const room = await Room.findOne({ roomCode: code, isActive: true });
 
@@ -237,7 +237,23 @@ const joinRoom = async (req, res, next) => {
     });
 
     if (existingParticipant) {
-      // User is already in room
+      // Check if it's a different device/session
+      if (sessionId && existingParticipant.sessionId && existingParticipant.sessionId !== sessionId) {
+        // Device conflict - user is already in room on another device
+        return res.status(409).json({
+          error: "You're already in this room on another device",
+          deviceConflict: true,
+          message: "You're already in this room on another device. You can only be in one device at a time.",
+        });
+      }
+      
+      // Same device or no session tracking - allow re-entry
+      // Update sessionId if provided
+      if (sessionId && existingParticipant.sessionId !== sessionId) {
+        existingParticipant.sessionId = sessionId;
+        await existingParticipant.save();
+      }
+      
       return res.json({
         message: 'Already in room',
         room: {
@@ -265,6 +281,7 @@ const joinRoom = async (req, res, next) => {
       previousParticipant.isKicked = false;
       previousParticipant.joinedAt = new Date();
       previousParticipant.isHost = isHost;
+      previousParticipant.sessionId = sessionId || null;
       participant = await previousParticipant.save();
     } else {
       // Create new participant record
@@ -273,6 +290,7 @@ const joinRoom = async (req, res, next) => {
         roomId: room._id,
         userId: req.user._id,
         isHost,
+        sessionId: sessionId || null,
       });
       await participant.save();
     }
@@ -297,6 +315,127 @@ const joinRoom = async (req, res, next) => {
     }
 
     logger.info(`User ${req.user.username} joined room ${code}`);
+
+    res.json({
+      message: 'Joined room successfully',
+      room: {
+        roomCode: room.roomCode,
+        roomName: room.roomName,
+        iceServers: getIceServers(),
+        isHost,
+        settings: room.settings,
+        maxParticipants: room.maxParticipants,
+        currentParticipants: room.currentParticipants,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Force join a room - disconnect from other devices first
+ * POST /api/rooms/:code/force-join
+ */
+const forceJoinRoom = async (req, res, next) => {
+  try {
+    const { code } = req.params;
+    const { password, sessionId } = req.body;
+
+    const room = await Room.findOne({ roomCode: code, isActive: true });
+
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found or has expired' });
+    }
+
+    // Check if room is expired
+    if (room.isExpired()) {
+      room.isActive = false;
+      await room.save();
+      return res.status(410).json({ error: 'Room has expired' });
+    }
+
+    // Check password if required
+    if (room.passwordHash) {
+      if (!password) {
+        return res.status(401).json({ error: 'Password required', requiresPassword: true });
+      }
+      const isValidPassword = await bcrypt.compare(password, room.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Invalid password' });
+      }
+    }
+
+    // Find existing participant (on other device)
+    const existingParticipant = await RoomParticipant.findOne({
+      roomCode: code,
+      userId: req.user._id,
+      leftAt: null,
+      isKicked: false,
+    });
+
+    const io = req.app.get('io');
+
+    if (existingParticipant) {
+      // Notify the other device that they're being disconnected
+      if (io) {
+        io.to(`room:${code}`).emit('room:force-disconnect', {
+          roomCode: code,
+          userId: req.user._id.toString(),
+          message: 'You have been disconnected because you joined from another device',
+        });
+      }
+
+      // Update the existing participant with new sessionId
+      existingParticipant.sessionId = sessionId || null;
+      await existingParticipant.save();
+
+      logger.info(`User ${req.user.username} force-joined room ${code} from new device`);
+
+      return res.json({
+        message: 'Joined room successfully (disconnected from other device)',
+        room: {
+          roomCode: room.roomCode,
+          roomName: room.roomName,
+          iceServers: getIceServers(),
+          isHost: existingParticipant.isHost,
+          settings: room.settings,
+          maxParticipants: room.maxParticipants,
+          currentParticipants: room.currentParticipants,
+        },
+      });
+    }
+
+    // No existing participant - do normal join
+    const isHost = room.hostUserId.equals(req.user._id);
+    const participant = new RoomParticipant({
+      roomCode: code,
+      roomId: room._id,
+      userId: req.user._id,
+      isHost,
+      sessionId: sessionId || null,
+    });
+    await participant.save();
+
+    // Update participant count
+    room.currentParticipants += 1;
+    await room.save();
+
+    // Emit socket event for participant joined
+    if (io) {
+      io.to(`room:${code}`).emit('room:participant-joined', {
+        roomCode: code,
+        user: {
+          _id: req.user._id,
+          username: req.user.username,
+          displayName: req.user.displayName,
+          profilePicture: req.user.profilePicture,
+        },
+        participantCount: room.currentParticipants,
+      });
+    }
+
+    logger.info(`User ${req.user.username} force-joined room ${code}`);
 
     res.json({
       message: 'Joined room successfully',
@@ -671,6 +810,7 @@ module.exports = {
   createRoom,
   getRoomDetails,
   joinRoom,
+  forceJoinRoom,
   leaveRoom,
   deleteRoom,
   kickParticipant,

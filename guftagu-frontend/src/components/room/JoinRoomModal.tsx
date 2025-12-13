@@ -1,12 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Users, Lock, ArrowRight } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
 import Spinner from '@/components/ui/Spinner';
+import DeviceConflictModal from './DeviceConflictModal';
 import { roomsApi } from '@/lib/api';
+
+// Generate or retrieve a unique session ID for this device/browser
+const getSessionId = (): string => {
+  if (typeof window === 'undefined') return '';
+  
+  let sessionId = localStorage.getItem('guftagu_session_id');
+  if (!sessionId) {
+    sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    localStorage.setItem('guftagu_session_id', sessionId);
+  }
+  return sessionId;
+};
 
 interface JoinRoomModalProps {
   isOpen: boolean;
@@ -35,6 +48,13 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roomPreview, setRoomPreview] = useState<RoomPreview | null>(null);
+  const [showDeviceConflict, setShowDeviceConflict] = useState(false);
+  const [sessionId, setSessionId] = useState('');
+
+  // Get session ID on mount
+  useEffect(() => {
+    setSessionId(getSessionId());
+  }, []);
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow alphanumeric characters, max 8
@@ -74,20 +94,22 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
       return;
     }
 
-    // For non-password rooms, call join API first to check for cooldown
+    // For non-password rooms, call join API first to check for cooldown and device conflicts
     setIsJoining(true);
     setError(null);
 
     try {
-      await roomsApi.joinRoom(roomCode);
+      await roomsApi.joinRoom(roomCode, undefined, sessionId);
       // Join successful, navigate to room
       router.push(`/room/${roomCode}`);
       // Don't close modal - let navigation happen
     } catch (err: any) {
       setIsJoining(false);
       
-      // Check if it's a kick cooldown error
-      if (err.response?.data?.kickCooldown) {
+      // Check if it's a device conflict
+      if (err.response?.data?.deviceConflict) {
+        setShowDeviceConflict(true);
+      } else if (err.response?.data?.kickCooldown) {
         // Show error and redirect to room page to show cooldown timer
         router.push(`/room/${roomCode}`);
       } else {
@@ -97,12 +119,31 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
     }
   };
 
+  const handleForceJoin = async () => {
+    if (!roomPreview) return;
+
+    setIsJoining(true);
+    setError(null);
+
+    try {
+      await roomsApi.forceJoinRoom(roomCode, undefined, sessionId);
+      // Force join successful, navigate to room
+      setShowDeviceConflict(false);
+      router.push(`/room/${roomCode}`);
+    } catch (err: any) {
+      setIsJoining(false);
+      setShowDeviceConflict(false);
+      setError(err.response?.data?.error || 'Failed to join room');
+    }
+  };
+
   const handleClose = () => {
     setStep('code');
     setRoomCode('');
     setError(null);
     setRoomPreview(null);
     setIsJoining(false);
+    setShowDeviceConflict(false);
     onClose();
   };
 
@@ -259,6 +300,14 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
           )}
         </div>
       </div>
+
+      {/* Device Conflict Modal */}
+      <DeviceConflictModal
+        isOpen={showDeviceConflict}
+        onDisconnectOther={handleForceJoin}
+        onCancel={() => setShowDeviceConflict(false)}
+        isLoading={isJoining}
+      />
     </div>
   );
 }
