@@ -38,6 +38,10 @@ interface RoomPreview {
   maxParticipants: number;
   currentParticipants: number;
   hasPassword: boolean;
+  // Kick status
+  kickCooldown?: number;
+  kickCount?: number;
+  isPermanentlyBanned?: boolean;
 }
 
 export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
@@ -50,11 +54,28 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
   const [roomPreview, setRoomPreview] = useState<RoomPreview | null>(null);
   const [showDeviceConflict, setShowDeviceConflict] = useState(false);
   const [sessionId, setSessionId] = useState('');
+  const [kickCooldown, setKickCooldown] = useState(0);
 
   // Get session ID on mount
   useEffect(() => {
     setSessionId(getSessionId());
   }, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (kickCooldown <= 0) return;
+
+    const interval = setInterval(() => {
+      setKickCooldown((prev) => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [kickCooldown]);
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow alphanumeric characters, max 8
@@ -74,7 +95,14 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
 
     try {
       const response = await roomsApi.getRoomDetails(roomCode);
-      setRoomPreview(response.data.room);
+      const roomData = response.data.room;
+      setRoomPreview(roomData);
+      
+      // Set kick cooldown if user was kicked
+      if (roomData.kickCooldown && roomData.kickCooldown > 0) {
+        setKickCooldown(roomData.kickCooldown);
+      }
+      
       setStep('preview');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Room not found');
@@ -144,6 +172,7 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
     setRoomPreview(null);
     setIsJoining(false);
     setShowDeviceConflict(false);
+    setKickCooldown(0);
     onClose();
   };
 
@@ -238,6 +267,42 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
                 )}
               </div>
 
+              {/* Kick Cooldown / Permanently Banned Section */}
+              {roomPreview.isPermanentlyBanned && (
+                <div className="p-4 bg-red-900/40 border border-red-700/50 rounded-xl mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-500/20 rounded-full">
+                      <span className="text-xl">🚫</span>
+                    </div>
+                    <div>
+                      <p className="text-red-400 font-medium">Permanently Banned</p>
+                      <p className="text-red-300/70 text-sm">
+                        You have been banned from this room after {roomPreview.kickCount} kicks
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!roomPreview.isPermanentlyBanned && kickCooldown > 0 && (
+                <div className="p-4 bg-amber-900/40 border border-amber-700/50 rounded-xl mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-500/20 rounded-full">
+                      <span className="text-2xl font-bold text-amber-400">{kickCooldown}</span>
+                    </div>
+                    <div>
+                      <p className="text-amber-400 font-medium">Kicked from room</p>
+                      <p className="text-amber-300/70 text-sm">
+                        Wait {kickCooldown} seconds before rejoining
+                        {roomPreview.kickCount && roomPreview.kickCount > 0 && (
+                          <span className="ml-1">(Kick {roomPreview.kickCount}/3)</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {roomPreview.currentParticipants >= roomPreview.maxParticipants && (
                 <div className="p-3 bg-yellow-900/30 border border-yellow-800/50 rounded-lg mb-4">
                   <p className="text-yellow-400 text-sm text-center">
@@ -291,10 +356,23 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
               <Button 
                 onClick={handleJoin} 
                 isLoading={isLoading || isJoining}
-                disabled={roomPreview ? roomPreview.currentParticipants >= roomPreview.maxParticipants : false}
+                disabled={
+                  roomPreview ? (
+                    roomPreview.currentParticipants >= roomPreview.maxParticipants ||
+                    roomPreview.isPermanentlyBanned ||
+                    kickCooldown > 0
+                  ) : false
+                }
                 className="flex-1"
               >
-                {roomPreview?.hasPassword ? 'Continue' : 'Join Room'}
+                {roomPreview?.isPermanentlyBanned 
+                  ? 'Banned' 
+                  : kickCooldown > 0 
+                    ? `Wait ${kickCooldown}s` 
+                    : roomPreview?.hasPassword 
+                      ? 'Continue' 
+                      : 'Join Room'
+                }
               </Button>
             </>
           )}

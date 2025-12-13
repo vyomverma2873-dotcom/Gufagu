@@ -115,6 +115,17 @@ const getRoomDetails = async (req, res, next) => {
     // Get active participants
     const participants = await RoomParticipant.getActiveParticipants(code);
 
+    // Check if user was kicked and get cooldown info
+    let kickCooldown = 0;
+    let kickCount = 0;
+    let isPermanentlyBanned = false;
+    
+    if (req.user) {
+      kickCooldown = await RoomParticipant.getKickCooldown(code, req.user._id);
+      kickCount = await RoomParticipant.getKickCount(code, req.user._id);
+      isPermanentlyBanned = kickCount >= 3;
+    }
+
     res.json({
       room: {
         roomCode: room.roomCode,
@@ -141,6 +152,10 @@ const getRoomDetails = async (req, res, next) => {
         })),
         createdAt: room.createdAt,
         expiresAt: room.expiresAt,
+        // Kick status for current user
+        kickCooldown,
+        kickCount,
+        isPermanentlyBanned,
       },
     });
   } catch (error) {
