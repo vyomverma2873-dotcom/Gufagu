@@ -171,21 +171,24 @@ export default function Home() {
       <section className="py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-neutral-900/80 backdrop-blur-2xl border border-neutral-700/50 rounded-3xl p-10 md:p-14 shadow-2xl text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
               Secure Session Management
             </h2>
-            <p className="text-neutral-400 max-w-lg mx-auto mb-8">
-              Our platform uses advanced IP-based session management to ensure secure and reliable connections. 
-              Each session is uniquely identified and tracked to prevent unauthorized access, detect multi-device conflicts, 
-              and maintain stable connections for all participants. Your privacy is protected while we deliver 
-              a seamless, secure video chat experience with enterprise-grade session integrity.
+            <p className="text-neutral-400 max-w-2xl mx-auto mb-6 leading-relaxed">
+              Our platform leverages advanced IP address-based session management to deliver a secure and reliable 
+              video chat experience. Every connection is uniquely identified through IP tracking, enabling real-time 
+              detection of unauthorized access attempts and multi-device conflicts.
             </p>
-            <Link href={chatHref}>
-              <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-neutral-900 rounded-xl font-medium shadow-lg shadow-white/10 hover:shadow-white/20 transition-all hover:scale-[1.02]">
-                Start Secure Session
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
+            <p className="text-neutral-400 max-w-2xl mx-auto mb-6 leading-relaxed">
+              This intelligent session system maintains stable connections for all participants by continuously 
+              monitoring session integrity. When anomalies are detected—such as duplicate logins from different 
+              locations—the system automatically resolves conflicts to protect your account and ensure uninterrupted 
+              communication.
+            </p>
+            <p className="text-neutral-500 max-w-xl mx-auto text-sm">
+              Your privacy remains protected through encrypted session tokens and secure IP handling protocols, 
+              meeting enterprise-grade security standards while delivering seamless user experiences.
+            </p>
           </div>
         </div>
       </section>
