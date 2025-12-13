@@ -471,10 +471,9 @@ Guftagu supports room-based group video calls where users can create private roo
 
 ### Room Features
 - **Private Rooms** - Create rooms with unique 6-character codes
-- **Up to 8 Participants** - Support for multi-user video conferencing
+- **Up to 5 Participants** - Support for multi-user video conferencing
 - **Host Controls** - Room creator can kick participants
 - **WebRTC Mesh** - Full mesh topology for peer connections
-- **Real-time Chat** - In-room text messaging
 - **Screen Sharing** - Share screen with all participants (desktop only)
 
 ### Room Creation Flow
