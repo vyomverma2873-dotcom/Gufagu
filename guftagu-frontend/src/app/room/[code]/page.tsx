@@ -107,7 +107,7 @@ export default function RoomPage() {
     // Wait for fade-out animation and message display before navigating
     setTimeout(() => {
       router.push('/');
-    }, message ? 1500 : 300); // Longer delay if showing message
+    }, message ? 3500 : 300); // 3.5 seconds for message display, 300ms for normal exit
   }, [isLeaving, router]);
 
   // WebRTC hook - only initialize after joining
