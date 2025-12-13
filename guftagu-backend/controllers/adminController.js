@@ -139,6 +139,11 @@ exports.getUserDetails = async (req, res) => {
     const { userId } = req.params;
     const Friend = require('../models/Friend');
 
+    // Set no-cache headers to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     const user = await User.findById(userId).select('-__v');
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -1012,7 +1017,12 @@ exports.getUserSessions = async (req, res) => {
 exports.getUserMessages = async (req, res) => {
   try {
     const { userId, friendId } = req.params;
-    const { page = 1, limit = 100 } = req.query;
+    const { page = 1, limit = 500 } = req.query; // Increased default limit
+
+    // Set no-cache headers to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
 
     const messages = await Message.find({
       $or: [
@@ -1022,9 +1032,10 @@ exports.getUserMessages = async (req, res) => {
     })
     .populate('senderId', 'username displayName profilePicture userId')
     .populate('receiverId', 'username displayName profilePicture userId')
-    .sort('timestamp')
+    .sort({ timestamp: 1 }) // Explicit sort order
     .skip((page - 1) * limit)
-    .limit(parseInt(limit));
+    .limit(parseInt(limit))
+    .lean(); // Use lean for faster queries and no caching
 
     const total = await Message.countDocuments({
       $or: [
@@ -1032,6 +1043,8 @@ exports.getUserMessages = async (req, res) => {
         { senderId: friendId, receiverId: userId }
       ]
     });
+
+    logger.info(`Admin fetched ${messages.length} messages between ${userId} and ${friendId} (total: ${total})`);
 
     res.json({
       messages,

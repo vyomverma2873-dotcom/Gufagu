@@ -121,10 +121,10 @@ export const statsApi = {
 export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),
   getUsers: (params?: any) => api.get('/admin/users', { params }),
-  getUserDetails: (userId: string) => api.get(`/admin/users/${userId}`),
+  getUserDetails: (userId: string) => api.get(`/admin/users/${userId}`, { params: { _t: Date.now() } }),
   getUserSessions: (userId: string) => api.get(`/admin/users/${userId}/sessions`),
   getUserMessages: (userId: string, friendId: string, params?: any) => 
-    api.get(`/admin/users/${userId}/messages/${friendId}`, { params }),
+    api.get(`/admin/users/${userId}/messages/${friendId}`, { params: { ...params, _t: Date.now() } }),
   banUser: (userId: string, data: { reason: string; duration?: number; type: 'temporary' | 'permanent'; description?: string }) =>
     api.post(`/admin/users/${userId}/ban`, data),
   unbanUser: (userId: string) => api.post(`/admin/users/${userId}/unban`),
