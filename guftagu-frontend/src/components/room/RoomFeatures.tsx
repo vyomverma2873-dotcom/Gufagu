@@ -68,44 +68,62 @@ function FeatureCard({ feature }: FeatureCardProps) {
     <div className="relative">
       <style jsx>{`
         @keyframes pulse-glow {
-          0%, 100% {
-            box-shadow: 0 0 12px rgba(${
+          0% {
+            box-shadow: 0 0 8px rgba(${
               feature.glowColor === 'blue'
                 ? '59, 130, 246'
                 : feature.glowColor === 'purple'
                   ? '168, 85, 247'
                   : '16, 185, 129'
-            }, 0.5), inset 0 0 12px rgba(${
+            }, 0.4), inset 0 0 8px rgba(${
               feature.glowColor === 'blue'
                 ? '59, 130, 246'
                 : feature.glowColor === 'purple'
                   ? '168, 85, 247'
                   : '16, 185, 129'
-            }, 0.2);
+            }, 0.15);
           }
           50% {
-            box-shadow: 0 0 20px rgba(${
+            box-shadow: 0 0 24px rgba(${
               feature.glowColor === 'blue'
                 ? '59, 130, 246'
                 : feature.glowColor === 'purple'
                   ? '168, 85, 247'
                   : '16, 185, 129'
-            }, 0.8), inset 0 0 20px rgba(${
+            }, 1), inset 0 0 24px rgba(${
               feature.glowColor === 'blue'
                 ? '59, 130, 246'
                 : feature.glowColor === 'purple'
                   ? '168, 85, 247'
                   : '16, 185, 129'
-            }, 0.3);
+            }, 0.4);
+          }
+          100% {
+            box-shadow: 0 0 8px rgba(${
+              feature.glowColor === 'blue'
+                ? '59, 130, 246'
+                : feature.glowColor === 'purple'
+                  ? '168, 85, 247'
+                  : '16, 185, 129'
+            }, 0.4), inset 0 0 8px rgba(${
+              feature.glowColor === 'blue'
+                ? '59, 130, 246'
+                : feature.glowColor === 'purple'
+                  ? '168, 85, 247'
+                  : '16, 185, 129'
+            }, 0.15);
           }
         }
 
         @keyframes scale-pulse {
-          0%, 100% {
+          0% {
             transform: scale(1);
           }
           50% {
-            transform: scale(1.05);
+            transform: scale(1.08);
+          }
+          100% {
+            transform: scale(1);
           }
         }
 
@@ -119,11 +137,11 @@ function FeatureCard({ feature }: FeatureCardProps) {
         }
 
         .glow-pulse {
-          animation: pulse-glow 3s ease-in-out infinite;
+          animation: pulse-glow 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         .scale-pulse {
-          animation: scale-pulse 2.5s ease-in-out infinite;
+          animation: scale-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         .feature-card {
@@ -160,7 +178,7 @@ function FeatureCard({ feature }: FeatureCardProps) {
           -webkit-mask-composite: xor;
           mask-composite: exclude;
           opacity: 0.7;
-          animation: border-shift 4s ease-in-out infinite;
+          animation: border-shift 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         .feature-icon {
