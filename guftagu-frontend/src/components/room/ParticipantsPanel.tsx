@@ -11,6 +11,7 @@ import {
   UserPlus,
   UserMinus,
   Users,
+  Loader2,
 } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 
@@ -45,6 +46,11 @@ interface ParticipantsPanelProps {
   onAddFriend?: (username: string) => void;
   onInvite?: () => void;
   currentUserId: string;
+  loadingActions?: {
+    addingFriend: Set<string>;
+    muting: Set<string>;
+    kicking: Set<string>;
+  };
 }
 
 export default function ParticipantsPanel({
@@ -61,6 +67,7 @@ export default function ParticipantsPanel({
   onAddFriend,
   onInvite,
   currentUserId,
+  loadingActions = { addingFriend: new Set(), muting: new Set(), kicking: new Set() },
 }: ParticipantsPanelProps) {
   const totalParticipants = participants.length + 1; // +1 for local user
 
@@ -184,10 +191,15 @@ export default function ParticipantsPanel({
                 {onAddFriend && participant._id !== currentUserId && (
                   <button
                     onClick={() => onAddFriend(participant.username)}
-                    className="p-2 hover:bg-violet-600 text-neutral-400 hover:text-white rounded-lg transition-colors"
+                    disabled={loadingActions.addingFriend.has(participant._id)}
+                    className="p-2 hover:bg-violet-600 disabled:bg-violet-600/50 text-neutral-400 hover:text-white disabled:text-white disabled:cursor-not-allowed rounded-lg transition-colors"
                     title="Add Friend"
                   >
-                    <UserPlus className="w-4 h-4" />
+                    {loadingActions.addingFriend.has(participant._id) ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <UserPlus className="w-4 h-4" />
+                    )}
                   </button>
                 )}
 
@@ -198,15 +210,18 @@ export default function ParticipantsPanel({
                     {onMuteParticipant && (
                       <button
                         onClick={() => onMuteParticipant(participant._id, !participant.isMuted)}
+                        disabled={loadingActions.muting.has(participant._id)}
                         className={cn(
-                          'p-2 rounded-lg transition-colors',
+                          'p-2 rounded-lg transition-colors disabled:cursor-not-allowed',
                           participant.isMuted
-                            ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/40'
-                            : 'hover:bg-neutral-700 text-neutral-400 hover:text-white'
+                            ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/40 disabled:bg-yellow-500/10'
+                            : 'hover:bg-neutral-700 text-neutral-400 hover:text-white disabled:bg-neutral-700/50'
                         )}
                         title={participant.isMuted ? 'Unmute' : 'Mute'}
                       >
-                        {participant.isMuted ? (
+                        {loadingActions.muting.has(participant._id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : participant.isMuted ? (
                           <MicOff className="w-4 h-4" />
                         ) : (
                           <Mic className="w-4 h-4" />
@@ -218,10 +233,15 @@ export default function ParticipantsPanel({
                     {onKickParticipant && (
                       <button
                         onClick={() => onKickParticipant(participant._id)}
-                        className="p-2 hover:bg-red-500/30 text-neutral-400 hover:text-red-400 rounded-lg transition-colors"
+                        disabled={loadingActions.kicking.has(participant._id)}
+                        className="p-2 hover:bg-red-500/30 disabled:bg-red-500/20 text-neutral-400 hover:text-red-400 disabled:text-red-400 disabled:cursor-not-allowed rounded-lg transition-colors"
                         title="Remove from room"
                       >
-                        <UserMinus className="w-4 h-4" />
+                        {loadingActions.kicking.has(participant._id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <UserMinus className="w-4 h-4" />
+                        )}
                       </button>
                     )}
                   </>

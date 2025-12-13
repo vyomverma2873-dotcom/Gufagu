@@ -33,6 +33,11 @@ interface VideoGridProps {
   onKickParticipant?: (userId: string) => void;
   onAddFriend?: (username: string) => void;
   currentUserId: string;
+  loadingActions?: {
+    addingFriend: Set<string>;
+    muting: Set<string>;
+    kicking: Set<string>;
+  };
 }
 
 // Memoized VideoTile wrapper for performance
@@ -49,6 +54,7 @@ export default function VideoGrid({
   onKickParticipant,
   onAddFriend,
   currentUserId,
+  loadingActions = { addingFriend: new Set(), muting: new Set(), kicking: new Set() },
 }: VideoGridProps) {
   // Total count includes local user
   const totalParticipants = participants.length + 1;
@@ -255,6 +261,9 @@ export default function VideoGrid({
               onMute={() => handleMuteParticipant(participant._id, participant.isMuted)}
               onKick={() => handleKickParticipant(participant._id)}
               onAddFriend={() => handleAddFriend(participant.username)}
+              isAddingFriend={loadingActions.addingFriend.has(participant._id)}
+              isMuting={loadingActions.muting.has(participant._id)}
+              isKicking={loadingActions.kicking.has(participant._id)}
             />
           </div>
         ))}

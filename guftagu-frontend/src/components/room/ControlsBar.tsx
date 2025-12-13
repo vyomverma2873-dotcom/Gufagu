@@ -80,11 +80,15 @@ export default function ControlsBar({
           )}
         </button>
 
-        {/* Screen share toggle - Hidden on mobile */}
+        {/* Screen share toggle */}
         <button
           onClick={onToggleScreenShare}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onToggleScreenShare();
+          }}
           className={cn(
-            'hidden sm:flex p-3 sm:p-4 rounded-full transition-all duration-200',
+            'p-3 sm:p-4 rounded-full transition-all duration-200 touch-manipulation active:scale-95',
             isScreenSharing
               ? 'bg-violet-600 hover:bg-violet-700 text-white'
               : 'bg-neutral-800 hover:bg-neutral-700 text-white'

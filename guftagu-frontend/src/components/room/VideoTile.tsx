@@ -10,6 +10,7 @@ import {
   Crown, 
   UserPlus, 
   UserMinus,
+  Loader2,
 } from 'lucide-react';
 import Avatar from '@/components/ui/Avatar';
 
@@ -27,6 +28,9 @@ interface VideoTileProps {
   onMute?: () => void;
   onKick?: () => void;
   onAddFriend?: () => void;
+  isAddingFriend?: boolean;
+  isMuting?: boolean;
+  isKicking?: boolean;
   className?: string;
 }
 
@@ -44,6 +48,9 @@ function VideoTile({
   onMute,
   onKick,
   onAddFriend,
+  isAddingFriend = false,
+  isMuting = false,
+  isKicking = false,
   className,
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -175,10 +182,15 @@ function VideoTile({
             {onAddFriend && (
               <button
                 onClick={onAddFriend}
-                className="w-full py-2 px-4 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                disabled={isAddingFriend}
+                className="w-full py-2 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-600/50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
               >
-                <UserPlus className="w-4 h-4" />
-                Add Friend
+                {isAddingFriend ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <UserPlus className="w-4 h-4" />
+                )}
+                {isAddingFriend ? 'Sending...' : 'Add Friend'}
               </button>
             )}
 
@@ -188,24 +200,36 @@ function VideoTile({
                 {onMute && (
                   <button
                     onClick={onMute}
+                    disabled={isMuting}
                     className={cn(
-                      'w-full py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium',
+                      'w-full py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium disabled:cursor-not-allowed',
                       isMuted
-                        ? 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
-                        : 'bg-neutral-700 hover:bg-neutral-600 text-white'
+                        ? 'bg-yellow-500/20 hover:bg-yellow-500/30 disabled:bg-yellow-500/10 text-yellow-400'
+                        : 'bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-700/50 text-white'
                     )}
                   >
-                    {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                    {isMuted ? 'Unmute' : 'Mute'}
+                    {isMuting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : isMuted ? (
+                      <MicOff className="w-4 h-4" />
+                    ) : (
+                      <Mic className="w-4 h-4" />
+                    )}
+                    {isMuting ? 'Processing...' : isMuted ? 'Unmute' : 'Mute'}
                   </button>
                 )}
                 {onKick && (
                   <button
                     onClick={onKick}
-                    className="w-full py-2 px-4 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                    disabled={isKicking}
+                    className="w-full py-2 px-4 bg-red-500/20 hover:bg-red-500/30 disabled:bg-red-500/10 disabled:cursor-not-allowed text-red-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
                   >
-                    <UserMinus className="w-4 h-4" />
-                    Kick
+                    {isKicking ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <UserMinus className="w-4 h-4" />
+                    )}
+                    {isKicking ? 'Removing...' : 'Kick'}
                   </button>
                 )}
               </>

@@ -70,6 +70,17 @@ export default function RoomPage() {
   const [showDeviceConflict, setShowDeviceConflict] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [friendRequestToast, setFriendRequestToast] = useState<{show: boolean; message: string; type: 'success' | 'error'}>({show: false, message: '', type: 'success'});
+    
+    // Loading states for action buttons
+    const [loadingActions, setLoadingActions] = useState<{
+      addingFriend: Set<string>;
+      muting: Set<string>;
+      kicking: Set<string>;
+    }>({
+      addingFriend: new Set(),
+      muting: new Set(),
+      kicking: new Set(),
+    });
 
   // Generate or retrieve a unique session ID for this device/browser
   useEffect(() => {
@@ -371,6 +382,13 @@ export default function RoomPage() {
   // Kick participant (host only)
   const kickParticipant = async (userId: string) => {
     if (!isHost) return;
+    
+    // Set loading state
+    setLoadingActions(prev => ({
+      ...prev,
+      kicking: new Set(prev.kicking).add(userId)
+    }));
+    
     try {
       await roomsApi.kickParticipant(code, userId);
       // Also emit socket event for immediate UI update
@@ -379,12 +397,25 @@ export default function RoomPage() {
       }
     } catch (err) {
       console.error('Failed to remove participant');
+    } finally {
+      setLoadingActions(prev => {
+        const newKicking = new Set(prev.kicking);
+        newKicking.delete(userId);
+        return { ...prev, kicking: newKicking };
+      });
     }
   };
 
   // Mute participant (host only)
   const muteParticipant = async (userId: string, mute: boolean) => {
     if (!isHost) return;
+    
+    // Set loading state
+    setLoadingActions(prev => ({
+      ...prev,
+      muting: new Set(prev.muting).add(userId)
+    }));
+    
     try {
       await roomsApi.muteParticipant(code, userId, mute);
       // Also emit socket event for immediate UI update
@@ -393,11 +424,27 @@ export default function RoomPage() {
       }
     } catch (err) {
       console.error('Failed to mute participant');
+    } finally {
+      setLoadingActions(prev => {
+        const newMuting = new Set(prev.muting);
+        newMuting.delete(userId);
+        return { ...prev, muting: newMuting };
+      });
     }
   };
 
   // Add friend
   const addFriend = async (username: string) => {
+    // Find participant by username to get their _id for loading state
+    const participant = webrtc.peers.find(p => p.username === username);
+    const participantId = participant?._id || username;
+    
+    // Set loading state
+    setLoadingActions(prev => ({
+      ...prev,
+      addingFriend: new Set(prev.addingFriend).add(participantId)
+    }));
+    
     try {
       await friendsApi.sendRequest(username);
       setFriendRequestToast({
@@ -416,6 +463,12 @@ export default function RoomPage() {
       });
       setTimeout(() => setFriendRequestToast(prev => ({...prev, show: false})), 3000);
       console.error('Failed to send friend request:', errorMessage);
+    } finally {
+      setLoadingActions(prev => {
+        const newAddingFriend = new Set(prev.addingFriend);
+        newAddingFriend.delete(participantId);
+        return { ...prev, addingFriend: newAddingFriend };
+      });
     }
   };
 
@@ -643,6 +696,7 @@ export default function RoomPage() {
           onKickParticipant={isHost ? kickParticipant : undefined}
           onAddFriend={addFriend}
           currentUserId={user?._id || ''}
+          loadingActions={loadingActions}
         />
       </div>
 
@@ -677,6 +731,7 @@ export default function RoomPage() {
         onAddFriend={addFriend}
         onInvite={() => setShowInvite(true)}
         currentUserId={user?._id || ''}
+        loadingActions={loadingActions}
       />
 
       {/* Invite Modal (groupcall.md lines 276-296) */}
