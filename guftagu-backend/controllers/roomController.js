@@ -103,7 +103,7 @@ const createRoom = async (req, res, next) => {
  */
 const getRoomDetails = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
 
     const room = await Room.findOne({ roomCode: code, isActive: true })
       .populate('hostUserId', 'username displayName profilePicture');
@@ -169,7 +169,7 @@ const getRoomDetails = async (req, res, next) => {
  */
 const joinRoom = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
     const { password, sessionId } = req.body;
 
     const room = await Room.findOne({ roomCode: code, isActive: true });
@@ -366,7 +366,7 @@ const joinRoom = async (req, res, next) => {
  */
 const forceJoinRoom = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
     const { password, sessionId } = req.body;
 
     const room = await Room.findOne({ roomCode: code, isActive: true });
@@ -487,7 +487,7 @@ const forceJoinRoom = async (req, res, next) => {
  */
 const leaveRoom = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
 
     const room = await Room.findOne({ roomCode: code });
 
@@ -536,7 +536,7 @@ const leaveRoom = async (req, res, next) => {
  */
 const deleteRoom = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
 
     const room = await Room.findOne({ roomCode: code });
 
@@ -582,7 +582,7 @@ const deleteRoom = async (req, res, next) => {
  */
 const kickParticipant = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
     const { userId } = req.body;
 
     if (!userId) {
@@ -677,7 +677,7 @@ const kickParticipant = async (req, res, next) => {
  */
 const muteParticipant = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
     const { userId, mute = true } = req.body;
 
     if (!userId) {
@@ -803,7 +803,7 @@ const getUserRooms = async (req, res, next) => {
  */
 const getMeetingToken = async (req, res, next) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code.toUpperCase(); // Normalize to uppercase
 
     const room = await Room.findOne({ roomCode: code, isActive: true });
 

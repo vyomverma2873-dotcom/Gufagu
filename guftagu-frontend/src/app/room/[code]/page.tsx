@@ -45,7 +45,7 @@ export default function RoomPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { socket } = useSocket();
-  const code = params.code as string;
+  const code = (params.code as string).toUpperCase(); // Normalize to uppercase
 
   const [room, setRoom] = useState<RoomData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

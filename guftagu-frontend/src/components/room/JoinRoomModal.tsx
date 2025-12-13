@@ -78,8 +78,8 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
   }, [kickCooldown]);
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow alphanumeric characters, max 8
-    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+    // Only allow alphanumeric characters, max 8, convert to uppercase
+    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8);
     setRoomCode(value);
     setError(null);
   };

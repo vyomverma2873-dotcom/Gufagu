@@ -10,10 +10,15 @@ module.exports = (io, socket) => {
   // Join room socket channel
   socket.on('room:join', async (data) => {
     try {
-      const { roomCode } = data;
+      const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
 
       if (!socket.userId) {
         socket.emit('room:error', { message: 'Authentication required' });
+        return;
+      }
+
+      if (!roomCode) {
+        socket.emit('room:error', { message: 'Room code required' });
         return;
       }
 
@@ -89,9 +94,9 @@ module.exports = (io, socket) => {
   // Leave room socket channel
   socket.on('room:leave', async (data) => {
     try {
-      const { roomCode } = data;
+      const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
 
-      if (!socket.userId) return;
+      if (!socket.userId || !roomCode) return;
 
       // Remove from room peers
       if (roomPeers.has(roomCode)) {
@@ -135,9 +140,10 @@ module.exports = (io, socket) => {
   // Host mute participant
   socket.on('room:host-mute', async (data) => {
     try {
-      const { roomCode, targetUserId, mute = true } = data;
+      const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
+      const { targetUserId, mute = true } = data;
 
-      if (!socket.userId) return;
+      if (!socket.userId || !roomCode) return;
 
       const room = await Room.findOne({ roomCode, isActive: true });
       if (!room || !room.hostUserId.equals(socket.userId)) {
@@ -177,9 +183,10 @@ module.exports = (io, socket) => {
   // Host kick participant
   socket.on('room:host-kick', async (data) => {
     try {
-      const { roomCode, targetUserId } = data;
+      const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
+      const { targetUserId } = data;
 
-      if (!socket.userId) return;
+      if (!socket.userId || !roomCode) return;
 
       const room = await Room.findOne({ roomCode, isActive: true });
       if (!room || !room.hostUserId.equals(socket.userId)) {
@@ -241,9 +248,9 @@ module.exports = (io, socket) => {
   // Close room (host only)
   socket.on('room:close', async (data) => {
     try {
-      const { roomCode } = data;
+      const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
 
-      if (!socket.userId) return;
+      if (!socket.userId || !roomCode) return;
 
       const room = await Room.findOne({ roomCode });
       if (!room || !room.hostUserId.equals(socket.userId)) {
@@ -276,9 +283,10 @@ module.exports = (io, socket) => {
   // Room chat message
   socket.on('room:chat', async (data) => {
     try {
-      const { roomCode, message } = data;
+      const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
+      const { message } = data;
 
-      if (!socket.userId || !message || message.length > 500) return;
+      if (!socket.userId || !roomCode || !message || message.length > 500) return;
 
       const room = await Room.findOne({ roomCode, isActive: true });
       if (!room || !room.settings.chatEnabled) return;
@@ -307,9 +315,10 @@ module.exports = (io, socket) => {
   // Handle room invite
   socket.on('room:invite', async (data) => {
     try {
-      const { roomCode, targetUserIds } = data;
+      const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
+      const { targetUserIds } = data;
 
-      if (!socket.userId || !Array.isArray(targetUserIds)) return;
+      if (!socket.userId || !roomCode || !Array.isArray(targetUserIds)) return;
 
       const room = await Room.findOne({ roomCode, isActive: true });
       if (!room) return;
@@ -377,7 +386,8 @@ module.exports = (io, socket) => {
 
   // Notify peers about media state changes (mute/video off)
   socket.on('webrtc:media-state', (data) => {
-    const { roomCode, audioEnabled, videoEnabled } = data;
+    const roomCode = data.roomCode?.toUpperCase(); // Normalize to uppercase
+    const { audioEnabled, videoEnabled } = data;
     if (!socket.userId || !roomCode) return;
 
     socket.to(`room:${roomCode}`).emit('webrtc:media-state', {
