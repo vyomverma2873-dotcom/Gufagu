@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Copy, Users, Check, Share2, Settings, LogOut, Crown, UserPlus } from 'lucide-react';
+import { Copy, Users, Check, Share2, Settings, LogOut, Crown, UserPlus, Clock } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -11,6 +11,7 @@ import VideoGrid from '@/components/room/VideoGrid';
 import ControlsBar from '@/components/room/ControlsBar';
 import ParticipantsPanel from '@/components/room/ParticipantsPanel';
 import InviteModal from '@/components/room/InviteModal';
+import ExpirationTimer from '@/components/room/ExpirationTimer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSocket } from '@/contexts/SocketContext';
 import { useWebRTC } from '@/hooks/useWebRTC';
@@ -35,6 +36,7 @@ interface RoomData {
     screenShareEnabled: boolean;
     chatEnabled: boolean;
   };
+  expiresAt: string;
 }
 
 export default function RoomPage() {
@@ -395,6 +397,17 @@ export default function RoomPage() {
             Code: {code}
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
+
+          {/* Room Expiration Timer */}
+          {room?.expiresAt && (
+            <ExpirationTimer 
+              expiresAt={room.expiresAt} 
+              onExpired={() => {
+                alert('This room has expired and will be closed.');
+                router.push('/');
+              }}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
