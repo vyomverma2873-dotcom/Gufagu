@@ -31,7 +31,7 @@ interface VideoGridProps {
   participants: Participant[];
   onMuteParticipant?: (userId: string, mute: boolean) => void;
   onKickParticipant?: (userId: string) => void;
-  onAddFriend?: (userId: string) => void;
+  onAddFriend?: (username: string) => void;
   currentUserId: string;
 }
 
@@ -141,8 +141,8 @@ export default function VideoGrid({
   );
 
   const handleAddFriend = useCallback(
-    (userId: string) => {
-      onAddFriend?.(userId);
+    (username: string) => {
+      onAddFriend?.(username);
     },
     [onAddFriend]
   );
@@ -254,7 +254,7 @@ export default function VideoGrid({
               isCurrentUserHost={isHost}
               onMute={() => handleMuteParticipant(participant._id, participant.isMuted)}
               onKick={() => handleKickParticipant(participant._id)}
-              onAddFriend={() => handleAddFriend(participant._id)}
+              onAddFriend={() => handleAddFriend(participant.username)}
             />
           </div>
         ))}

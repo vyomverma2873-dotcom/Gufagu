@@ -69,6 +69,7 @@ export default function RoomPage() {
   const [wasKicked, setWasKicked] = useState(false); // Track if user was in cooldown
   const [showDeviceConflict, setShowDeviceConflict] = useState(false);
   const [sessionId, setSessionId] = useState('');
+  const [friendRequestToast, setFriendRequestToast] = useState<{show: boolean; message: string; type: 'success' | 'error'}>({show: false, message: '', type: 'success'});
 
   // Generate or retrieve a unique session ID for this device/browser
   useEffect(() => {
@@ -396,12 +397,25 @@ export default function RoomPage() {
   };
 
   // Add friend
-  const addFriend = async (userId: string) => {
+  const addFriend = async (username: string) => {
     try {
-      await friendsApi.sendRequest(userId);
-      alert('Friend request sent!');
-    } catch (err) {
-      console.error('Failed to send friend request');
+      await friendsApi.sendRequest(username);
+      setFriendRequestToast({
+        show: true,
+        message: `Friend request sent to ${username}`,
+        type: 'success'
+      });
+      // Auto-hide after 3 seconds
+      setTimeout(() => setFriendRequestToast(prev => ({...prev, show: false})), 3000);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || 'Failed to send friend request';
+      setFriendRequestToast({
+        show: true,
+        message: errorMessage,
+        type: 'error'
+      });
+      setTimeout(() => setFriendRequestToast(prev => ({...prev, show: false})), 3000);
+      console.error('Failed to send friend request:', errorMessage);
     }
   };
 
@@ -532,6 +546,17 @@ export default function RoomPage() {
       {(mutedByHost || webrtc.mutedByHost) && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-4 py-2 rounded-xl animate-fade-in">
           You were muted by the host - You cannot unmute yourself
+        </div>
+      )}
+
+      {/* Friend request toast notification */}
+      {friendRequestToast.show && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl animate-fade-in transition-all duration-300 ${
+          friendRequestToast.type === 'success' 
+            ? 'bg-green-500/20 border border-green-500/50 text-green-400'
+            : 'bg-red-500/20 border border-red-500/50 text-red-400'
+        }`}>
+          {friendRequestToast.message}
         </div>
       )}
 
