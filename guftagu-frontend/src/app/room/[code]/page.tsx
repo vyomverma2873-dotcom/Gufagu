@@ -208,6 +208,7 @@ export default function RoomPage() {
         setPasswordAttempted(true);
       } else if (err.response?.data?.kickCooldown) {
         // User was kicked and needs to wait
+        console.log('[Room Join] Kick cooldown detected:', err.response.data.cooldownSeconds);
         setKickCooldown(err.response.data.cooldownSeconds || 30);
         setWasKicked(true);
       } else {

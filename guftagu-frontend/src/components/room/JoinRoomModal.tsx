@@ -74,13 +74,27 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
       return;
     }
 
-    // For non-password rooms, show joining state and navigate
-    // The room page will handle the actual join API call
-    // Keep modal open during navigation to prevent flash to home screen
+    // For non-password rooms, call join API first to check for cooldown
     setIsJoining(true);
     setError(null);
-    router.push(`/room/${roomCode}`);
-    // Don't close modal - let navigation happen (same as password-protected rooms)
+
+    try {
+      await roomsApi.joinRoom(roomCode);
+      // Join successful, navigate to room
+      router.push(`/room/${roomCode}`);
+      // Don't close modal - let navigation happen
+    } catch (err: any) {
+      setIsJoining(false);
+      
+      // Check if it's a kick cooldown error
+      if (err.response?.data?.kickCooldown) {
+        // Show error and redirect to room page to show cooldown timer
+        router.push(`/room/${roomCode}`);
+      } else {
+        // Other errors - show in modal
+        setError(err.response?.data?.error || 'Failed to join room');
+      }
+    }
   };
 
   const handleClose = () => {

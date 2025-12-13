@@ -123,6 +123,7 @@ roomParticipantSchema.statics.getKickCooldown = async function(roomCode, userId)
   }).sort({ kickedAt: -1 });
   
   if (!kickedRecord || !kickedRecord.kickedAt) {
+    console.log(`[Cooldown Check] No kick record found for user ${userId} in room ${roomCode}`);
     return 0; // No cooldown
   }
   
@@ -130,6 +131,8 @@ roomParticipantSchema.statics.getKickCooldown = async function(roomCode, userId)
   const now = Date.now();
   const elapsedSeconds = Math.floor((now - kickedTime) / 1000);
   const remainingSeconds = Math.max(0, COOLDOWN_SECONDS - elapsedSeconds);
+  
+  console.log(`[Cooldown Check] User ${userId} in room ${roomCode}: kickedAt=${kickedRecord.kickedAt}, elapsed=${elapsedSeconds}s, remaining=${remainingSeconds}s`);
   
   return remainingSeconds;
 };
