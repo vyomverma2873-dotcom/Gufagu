@@ -74,19 +74,13 @@ export default function JoinRoomModal({ isOpen, onClose }: JoinRoomModalProps) {
       return;
     }
 
-    // For non-password rooms, join directly
-    setIsLoading(true);
+    // For non-password rooms, show joining state and navigate
+    // The room page will handle the actual join API call
+    // Keep modal open during navigation to prevent flash to home screen
+    setIsJoining(true);
     setError(null);
-
-    try {
-      await roomsApi.joinRoom(roomCode);
-      router.push(`/room/${roomCode}`);
-      handleClose();
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to join room');
-    } finally {
-      setIsLoading(false);
-    }
+    router.push(`/room/${roomCode}`);
+    // Don't close modal - let navigation happen (same as password-protected rooms)
   };
 
   const handleClose = () => {
